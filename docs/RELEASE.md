@@ -39,7 +39,7 @@ This avoids misleading Firefox skips while still keeping Firefox in the release 
 - `Release Preflight` runs manually and on version tags.
 - `Scheduled Quality` runs weekly and can be started manually to detect dependency or platform drift.
 - `Mutation Testing` runs weekly and can be started manually for a selected profile.
-- `Desktop Packaging` runs manually after the release gate and builds Windows, macOS, and Linux artifacts with SHA-256 manifests. It defaults to unsigned artifacts and can be switched to Windows, macOS, or all-platform signing after secrets are configured.
+- `Desktop Packaging` runs on `v*` tags and can also be started manually. It builds Windows, macOS, and Linux artifacts with SHA-256 manifests. Manual runs default to unsigned artifacts and can be switched to Windows, macOS, or all-platform signing after secrets are configured.
 
 The preflight workflow uploads:
 
@@ -67,7 +67,7 @@ The packaging workflow depends on the same release gate and does not replace it.
 
 Each uploaded desktop artifact includes `SHA256SUMS.txt` and `artifact-manifest.json`. Publish those files with release artifacts so users and maintainers can verify downloads before installing.
 
-For the first public `v6.0.0` desktop release, run `Desktop Packaging` in `unsigned` mode first. After unsigned Windows/macOS/Linux artifacts are stable, rerun it in the relevant signed mode once certificate secrets are configured.
+For the first public `v6.0.0` desktop release, let the tag-triggered `Desktop Packaging` workflow produce unsigned artifacts first. After unsigned Windows/macOS/Linux artifacts are stable, rerun it manually in the relevant signed mode once certificate secrets are configured.
 
 Create the release tag from a clean main branch after the release gate passes:
 

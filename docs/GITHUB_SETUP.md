@@ -36,7 +36,7 @@ macOS signing and notarization:
 1. Push the repository to GitHub.
 2. Confirm `Quality Gate` passes on the default branch.
 3. Run `Release Preflight` manually.
-4. Run `Desktop Packaging` in `unsigned` mode.
+4. Confirm the tag-triggered `Desktop Packaging` workflow completes in unsigned mode.
 5. Download artifacts and verify `SHA256SUMS.txt`.
 6. Create and push the release tag:
 

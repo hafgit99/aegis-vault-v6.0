@@ -13,6 +13,9 @@ on:
           - windows
           - macos
           - all
+  push:
+    tags:
+      - 'v*'
 
 permissions:
   contents: read
