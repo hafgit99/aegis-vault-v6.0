@@ -6,6 +6,7 @@ import type { SecurityLog } from './components/SecurityLogsModal';
 import { VaultEntry, EntryType } from './types';
 import LockScreen from './components/LockScreen';
 import { vaultService } from './lib/vaultService';
+import { DEFAULT_AVATAR_URL, normalizeAvatarUrl } from './lib/avatarPresets';
 import { useTranslation } from 'react-i18next';
 import { localizedMessage } from './i18n/localizedMessages';
 import { 
@@ -84,9 +85,16 @@ export default function App() {
   });
   const [avatarUrl, setAvatarUrl] = useState(() => {
     try {
-      return localStorage.getItem('aegis_user_avatar') || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=faces&q=80';
+      const savedAvatarUrl = localStorage.getItem('aegis_user_avatar');
+      const normalizedAvatarUrl = normalizeAvatarUrl(savedAvatarUrl);
+
+      if (savedAvatarUrl && savedAvatarUrl !== normalizedAvatarUrl) {
+        localStorage.setItem('aegis_user_avatar', normalizedAvatarUrl);
+      }
+
+      return normalizedAvatarUrl;
     } catch (e) {
-      return 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=faces&q=80';
+      return DEFAULT_AVATAR_URL;
     }
   });
   const [isSyncing, setIsSyncing] = useState(false);
@@ -239,8 +247,9 @@ export default function App() {
   };
 
   const handleUpdateAvatarUrl = (newUrl: string) => {
-    setAvatarUrl(newUrl);
-    localStorage.setItem('aegis_user_avatar', newUrl);
+    const normalizedAvatarUrl = normalizeAvatarUrl(newUrl);
+    setAvatarUrl(normalizedAvatarUrl);
+    localStorage.setItem('aegis_user_avatar', normalizedAvatarUrl);
     addSecurityLog(t('app.logs.avatarUpdated'), 'info');
     showToast(t('app.logs.avatarSaved'));
   };

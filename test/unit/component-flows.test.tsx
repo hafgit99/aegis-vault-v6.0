@@ -1106,7 +1106,7 @@ describe('ProfileModal', () => {
 
     const presetButtons = screen.getAllByTitle(/Örnek Avatar/);
     await user.click(presetButtons[1]);
-    expect(onUpdateAvatarUrl).toHaveBeenCalledWith(expect.stringContaining('images.unsplash.com'));
+    expect(onUpdateAvatarUrl).toHaveBeenCalledWith(expect.stringContaining('data:image/svg+xml;utf8,'));
 
     expect(screen.getByText('Oturum Şifreleme')).toBeInTheDocument();
     expect(screen.getByText('AES-256-GCM')).toBeInTheDocument();
