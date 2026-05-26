@@ -75,13 +75,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: macos-latest
+          - platform: macos-13
             artifact-name: aegisvault-macos
-          - platform: ubuntu-22.04
+          - platform: ubuntu-24.04
             artifact-name: aegisvault-linux
           - platform: windows-latest
             artifact-name: aegisvault-windows
     runs-on: ${{ matrix.platform }}
+    timeout-minutes: 120
     env:
       CI: true
       SIGNING_MODE: ${{ github.event.inputs.signing || 'unsigned' }}
@@ -105,8 +106,8 @@ jobs:
           workspaces: src-tauri
 
       - name: Install Linux system dependencies
-        if: matrix.platform == 'ubuntu-22.04'
-        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+        if: matrix.platform == 'ubuntu-24.04'
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
 
       - name: Install dependencies
         run: npm ci
@@ -126,7 +127,7 @@ jobs:
           }
 
       - name: Validate macOS signing secrets
-        if: matrix.platform == 'macos-latest' && (env.SIGNING_MODE == 'macos' || env.SIGNING_MODE == 'all')
+        if: matrix.platform == 'macos-13' && (env.SIGNING_MODE == 'macos' || env.SIGNING_MODE == 'all')
         shell: bash
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
