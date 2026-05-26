@@ -1,0 +1,18 @@
+[package]
+name = "aegisvault"
+version = "6.0.0"
+description = "Local-first encrypted offline password manager and security center."
+authors = ["AegisVault"]
+edition = "2021"
+license = "UNLICENSED"
+repository = "https://github.com/hafgit99/aegis-vault-v6.0"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

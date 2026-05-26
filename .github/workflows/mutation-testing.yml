@@ -1,0 +1,88 @@
+name: Mutation Testing
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Mutation profile to run
+        required: true
+        default: core
+        type: choice
+        options:
+          - core
+          - sqlite
+          - settings
+          - database
+          - app
+          - ui
+          - release
+  schedule:
+    - cron: '0 2 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mutation-testing-${{ github.ref }}-${{ github.event.inputs.profile || 'weekly' }}
+  cancel-in-progress: true
+
+jobs:
+  mutation:
+    name: Run mutation profile
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      CI: true
+      MUTATION_PROFILE: ${{ github.event.inputs.profile || 'release' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run selected mutation profile
+        shell: bash
+        run: |
+          case "$MUTATION_PROFILE" in
+            core)
+              npm run test:mutation
+              ;;
+            sqlite)
+              npm run test:mutation:sqlite
+              ;;
+            settings)
+              npm run test:mutation:settings
+              ;;
+            database)
+              npm run test:mutation:database
+              ;;
+            app)
+              npm run test:mutation:app
+              ;;
+            ui)
+              npm run test:mutation:ui
+              ;;
+            release)
+              npm run test:mutation:release
+              ;;
+            *)
+              echo "Unknown mutation profile: $MUTATION_PROFILE"
+              exit 1
+              ;;
+          esac
+
+      - name: Upload mutation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-reports-${{ env.MUTATION_PROFILE }}
+          path: reports/mutation/
+          retention-days: 14

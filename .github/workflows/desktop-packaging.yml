@@ -1,0 +1,171 @@
+name: Desktop Packaging
+
+on:
+  workflow_dispatch:
+    inputs:
+      signing:
+        description: Signing mode for desktop artifacts
+        required: true
+        default: unsigned
+        type: choice
+        options:
+          - unsigned
+          - windows
+          - macos
+          - all
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-packaging-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preflight:
+    name: Release gate
+    runs-on: ubuntu-latest
+    env:
+      CI: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify release version
+        run: npm run release:verify-version -- ${{ github.ref_name }}
+
+      - name: Full dependency audit
+        run: npm run audit:all
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium firefox
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit coverage
+        run: npm run test:coverage
+
+      - name: Build web assets
+        run: npm run build
+
+      - name: Build budget
+        run: npm run build:budget
+
+      - name: Release E2E gate
+        run: npm run test:e2e:release
+
+  package:
+    name: Build desktop artifacts
+    needs: preflight
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            artifact-name: aegisvault-macos
+          - platform: ubuntu-22.04
+            artifact-name: aegisvault-linux
+          - platform: windows-latest
+            artifact-name: aegisvault-windows
+    runs-on: ${{ matrix.platform }}
+    env:
+      CI: true
+      SIGNING_MODE: ${{ github.event.inputs.signing || 'unsigned' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install Linux system dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify release version
+        run: npm run release:verify-version -- ${{ github.ref_name }}
+
+      - name: Validate Windows signing secrets
+        if: matrix.platform == 'windows-latest' && (env.SIGNING_MODE == 'windows' || env.SIGNING_MODE == 'all')
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          if (-not $env:WINDOWS_CERTIFICATE -or -not $env:WINDOWS_CERTIFICATE_PASSWORD) {
+            throw "Windows signing requested, but WINDOWS_CERTIFICATE or WINDOWS_CERTIFICATE_PASSWORD is missing."
+          }
+
+      - name: Validate macOS signing secrets
+        if: matrix.platform == 'macos-latest' && (env.SIGNING_MODE == 'macos' || env.SIGNING_MODE == 'all')
+        shell: bash
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          missing=0
+          for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+            if [ -z "${!name}" ]; then
+              echo "$name is missing"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "macOS signing requested, but one or more Apple signing/notarization secrets are missing."
+            exit 1
+          fi
+
+      - name: Build desktop package
+        uses: tauri-apps/tauri-action@v0
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          args: --verbose
+
+      - name: Generate artifact checksums
+        run: npm run desktop:checksums
+
+      - name: Upload desktop artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}
+          path: |
+            src-tauri/target/release/bundle/
+          retention-days: 30

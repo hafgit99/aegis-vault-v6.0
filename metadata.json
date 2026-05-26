@@ -1,0 +1,7 @@
+{
+  "name": "AegisVault",
+  "description": "Local-first encrypted offline password manager and security center.",
+  "repository": "https://github.com/hafgit99/aegis-vault-v6.0",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

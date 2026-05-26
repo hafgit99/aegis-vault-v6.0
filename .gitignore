@@ -1,0 +1,14 @@
+node_modules/
+build/
+dist/
+coverage/
+playwright-report/
+test-results/
+reports/
+.stryker-tmp/
+src-tauri/target/
+src-tauri/gen/
+.DS_Store
+*.log
+.env*
+!.env.example

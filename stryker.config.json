@@ -1,0 +1,50 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "vitest",
+  "packageManager": "npm",
+  "reporters": ["html", "clear-text", "progress"],
+  "coverageAnalysis": "perTest",
+  "mutate": [
+    "src/lib/backupCrypto.ts",
+    "src/lib/crypto-types.ts",
+    "src/lib/importer.ts",
+    "src/lib/fileStore.ts",
+    "src/lib/vaultService.ts",
+    "src/lib/Argon2WorkerService.ts",
+    "src/lib/vault/**/*.ts",
+    "src/i18n/localizedMessages.ts",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx",
+    "!src/vite-env.d.ts"
+  ],
+  "testFiles": [
+    "test/unit/argon2-worker-service.test.ts",
+    "test/unit/crypto.test.ts",
+    "test/unit/crypto-types.test.ts",
+    "test/unit/file-store.test.ts",
+    "test/unit/i18n.test.ts",
+    "test/unit/importer.test.ts",
+    "test/unit/vault-auth.test.ts",
+    "test/unit/vault-service.test.ts"
+  ],
+  "ignorePatterns": [
+    "/coverage",
+    "/dist",
+    "/playwright-report",
+    "/reports",
+    "/test-results"
+  ],
+  "ignoreStatic": true,
+  "vitest": {
+    "configFile": "vitest.config.ts"
+  },
+  "thresholds": {
+    "high": 80,
+    "low": 75,
+    "break": 75
+  },
+  "dryRunTimeoutMinutes": 90,
+  "timeoutMS": 60000,
+  "concurrency": 2,
+  "cleanTempDir": "always"
+}
