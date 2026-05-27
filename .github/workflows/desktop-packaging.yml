@@ -75,14 +75,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: macos-13
+          - platform: macos-latest
             artifact-name: aegisvault-macos
+            rust-targets: "aarch64-apple-darwin,x86_64-apple-darwin"
           - platform: ubuntu-24.04
             artifact-name: aegisvault-linux
+            rust-targets: ""
           - platform: windows-latest
             artifact-name: aegisvault-windows
+            rust-targets: ""
     runs-on: ${{ matrix.platform }}
-    timeout-minutes: 120
+    timeout-minutes: 45
     env:
       CI: true
       SIGNING_MODE: ${{ github.event.inputs.signing || 'unsigned' }}
@@ -99,6 +102,21 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-targets }}
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            src-tauri/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
 
       - name: Install Linux system dependencies
         if: matrix.platform == 'ubuntu-24.04'
@@ -122,7 +140,7 @@ jobs:
           }
 
       - name: Validate macOS signing secrets
-        if: matrix.platform == 'macos-13' && (env.SIGNING_MODE == 'macos' || env.SIGNING_MODE == 'all')
+        if: runner.os == 'macOS' && (env.SIGNING_MODE == 'macos' || env.SIGNING_MODE == 'all')
         shell: bash
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
@@ -144,7 +162,8 @@ jobs:
             exit 1
           fi
 
-      - name: Build desktop package
+      - name: Build desktop package (macOS universal)
+        if: runner.os == 'macOS'
         env:
           WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
           WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
@@ -154,6 +173,13 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: npm run desktop:build -- --target universal-apple-darwin
+
+      - name: Build desktop package
+        if: runner.os != 'macOS'
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
         run: npm run desktop:build
 
       - name: Generate artifact checksums
@@ -165,4 +191,5 @@ jobs:
           name: ${{ matrix.artifact-name }}
           path: |
             src-tauri/target/release/bundle/
+            src-tauri/target/universal-apple-darwin/release/bundle/
           retention-days: 30
