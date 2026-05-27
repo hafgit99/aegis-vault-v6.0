@@ -28,7 +28,7 @@ describe('LockScreen', () => {
 
     render(<LockScreen onUnlock={vi.fn()} onAddLog={vi.fn()} />);
 
-    expect(screen.getByRole('heading', { name: /Kasa/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Kasa Ayarlarını Yapın' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'EN' }));
     expect(await screen.findByRole('heading', { name: /Configure Your Vault/i })).toBeInTheDocument();

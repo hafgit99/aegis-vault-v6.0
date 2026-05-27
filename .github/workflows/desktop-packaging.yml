@@ -14,6 +14,8 @@ on:
           - macos
           - all
   push:
+    branches:
+      - main
     tags:
       - 'v*'
 
@@ -45,6 +47,7 @@ jobs:
         run: npm ci
 
       - name: Verify release version
+        if: startsWith(github.ref, 'refs/tags/')
         run: npm run release:verify-version -- ${{ github.ref_name }}
 
       - name: Full dependency audit
@@ -126,6 +129,7 @@ jobs:
         run: npm ci
 
       - name: Verify release version
+        if: startsWith(github.ref, 'refs/tags/')
         run: npm run release:verify-version -- ${{ github.ref_name }}
 
       - name: Validate Windows signing secrets
