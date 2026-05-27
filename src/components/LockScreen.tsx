@@ -189,7 +189,7 @@ export default function LockScreen({ onUnlock, onAddLog }: LockScreenProps) {
             onClick={() => handleSetLanguage(language.code)}
             className={`px-2.5 py-1.5 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
               i18n.language === language.code
-                ? 'bg-primary text-white'
+                ? 'bg-secondary-container/55 text-secondary border border-secondary/25 shadow-sm shadow-secondary/10'
                 : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5'
             }`}
           >
