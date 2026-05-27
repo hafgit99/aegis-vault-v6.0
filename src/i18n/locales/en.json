@@ -669,6 +669,7 @@
       "generator": "Password Generator",
       "settings": "Settings",
       "trash": "Trash",
+      "donate": "Donate",
       "addEntry": "Add New Entry",
       "lockVault": "Lock Vault"
     },
@@ -681,6 +682,22 @@
       "profile": "Profile & Session Info",
       "adminProfileAlt": "Admin Profile",
       "addRecordAria": "Add new secure record"
+    },
+    "donatePage": {
+      "badge": "Offline donation addresses",
+      "title": "Support AegisVault",
+      "description": "Choose a network, copy the verified wallet address, and send only from the matching chain. AegisVault does not load payment trackers or third-party donation widgets.",
+      "walletsAvailable": "Wallets available",
+      "assetCount": "{{count}} networks",
+      "selectedNetwork": "Selected network",
+      "addressLabel": "Receiving address",
+      "copyAddress": "Copy Address",
+      "copyPaymentUri": "Copy URI",
+      "copied": "Copied",
+      "usdtWarning": "Send USDT only on Ethereum ERC-20 to this address. Transfers from other networks may be unrecoverable.",
+      "noteVerify": "Always compare the first and last characters before sending.",
+      "noteNetwork": "Use the exact network shown on the selected card.",
+      "notePrivacy": "No external payment widget is loaded; copying happens locally on your device."
     },
     "dashboard": {
       "title": "Security Overview",

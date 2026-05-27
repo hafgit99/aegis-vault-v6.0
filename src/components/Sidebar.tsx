@@ -6,7 +6,8 @@ import {
   Settings, 
   Plus, 
   Power,
-  Trash2
+  Trash2,
+  HeartHandshake
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
@@ -95,6 +96,19 @@ export default function Sidebar({ activeTab, setActiveTab, onAddNewEntry, onLock
         >
           <Trash2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
           <span className="text-label-caps">{t('app.sidebar.trash')}</span>
+        </div>
+
+        {/* Donate */}
+        <div 
+          onClick={() => setActiveTab('donate')}
+          className={`px-4 py-3 flex items-center gap-3 cursor-pointer group transition-all duration-200 rounded-r-lg ${
+            activeTab === 'donate' 
+              ? 'bg-secondary-container/40 text-secondary border-l-4 border-tertiary' 
+              : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/30'
+          }`}
+        >
+          <HeartHandshake className="w-5 h-5 group-hover:scale-110 transition-transform" />
+          <span className="text-label-caps">{t('app.sidebar.donate')}</span>
         </div>
       </nav>
 

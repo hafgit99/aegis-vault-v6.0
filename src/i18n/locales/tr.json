@@ -670,6 +670,7 @@
       "generator": "Parola Üretici",
       "settings": "Ayarlar",
       "trash": "Çöp Kutusu",
+      "donate": "Bağış",
       "addEntry": "Yeni Kayıt Ekle",
       "lockVault": "Kasayı Kilitle"
     },
@@ -682,6 +683,22 @@
       "profile": "Profil & Oturum Bilgileri",
       "adminProfileAlt": "Yönetici Profili",
       "addRecordAria": "Yeni güvenli kayıt ekle"
+    },
+    "donatePage": {
+      "badge": "Çevrimdışı bağış adresleri",
+      "title": "AegisVault'u Destekle",
+      "description": "Ağı seçin, doğrulanmış cüzdan adresini kopyalayın ve yalnızca eşleşen zincirden gönderim yapın. AegisVault ödeme izleyicisi veya üçüncü taraf bağış bileşeni yüklemez.",
+      "walletsAvailable": "Kullanılabilir cüzdanlar",
+      "assetCount": "{{count}} ağ",
+      "selectedNetwork": "Seçili ağ",
+      "addressLabel": "Alıcı adresi",
+      "copyAddress": "Adresi Kopyala",
+      "copyPaymentUri": "URI Kopyala",
+      "copied": "Kopyalandı",
+      "usdtWarning": "Bu adrese USDT yalnızca Ethereum ERC-20 ağı üzerinden gönderilmelidir. Farklı ağlardan yapılan transferler geri alınamayabilir.",
+      "noteVerify": "Göndermeden önce adresin ilk ve son karakterlerini mutlaka karşılaştırın.",
+      "noteNetwork": "Seçili kartta gösterilen ağı birebir kullanın.",
+      "notePrivacy": "Harici ödeme bileşeni yüklenmez; kopyalama işlemi cihazınızda yerel gerçekleşir."
     },
     "dashboard": {
       "title": "Güvenliğe Genel Bakış",

@@ -24,6 +24,7 @@ const DetailPanel = lazy(() => import('./components/DetailPanel'));
 const ProfileModal = lazy(() => import('./components/ProfileModal'));
 const DatabaseModal = lazy(() => import('./components/DatabaseModal'));
 const SecurityLogsModal = lazy(() => import('./components/SecurityLogsModal'));
+const Donate = lazy(() => import('./components/Donate'));
 
 const INITIAL_ENTRIES: VaultEntry[] = [
   {
@@ -539,6 +540,8 @@ export default function App() {
             onClearTrash={handleClearTrash}
           />
         );
+      case 'donate':
+        return <Donate />;
       case 'vault':
       default:
         return (

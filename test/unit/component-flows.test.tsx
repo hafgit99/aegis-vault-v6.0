@@ -10,6 +10,7 @@ import ProfileModal from '../../src/components/ProfileModal';
 import SecurityAudit from '../../src/components/SecurityAudit';
 import SecurityLogsModal from '../../src/components/SecurityLogsModal';
 import Sidebar from '../../src/components/Sidebar';
+import Donate from '../../src/components/Donate';
 import TrashBin from '../../src/components/TrashBin';
 import { VaultEntry } from '../../src/types';
 
@@ -932,6 +933,7 @@ describe('Sidebar', () => {
     await user.click(screen.getByText('Parola Üretici'));
     await user.click(screen.getByText('Ayarlar'));
     await user.click(screen.getByText('Çöp Kutusu'));
+    await user.click(screen.getByText('Bağış'));
     await user.click(screen.getByRole('button', { name: /Yeni Kayıt Ekle/i }));
     await user.click(screen.getByText('Kasayı Kilitle'));
 
@@ -939,8 +941,32 @@ describe('Sidebar', () => {
     expect(setActiveTab).toHaveBeenNthCalledWith(2, 'generator');
     expect(setActiveTab).toHaveBeenNthCalledWith(3, 'settings');
     expect(setActiveTab).toHaveBeenNthCalledWith(4, 'trash');
+    expect(setActiveTab).toHaveBeenNthCalledWith(5, 'donate');
     expect(onAddNewEntry).toHaveBeenCalled();
     expect(onLock).toHaveBeenCalled();
+  });
+});
+
+describe('Donate', () => {
+  it('renders crypto donation addresses and copies the selected network address', async () => {
+    await i18n.changeLanguage('en');
+    const user = userEvent.setup();
+    const writeText = vi.fn(async () => undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+
+    render(<Donate />);
+
+    expect(screen.getByRole('heading', { name: 'Support AegisVault' })).toBeInTheDocument();
+    expect(screen.getByText('81H1rKZHjpSsnr6Epumw9XVTfqAnqSHcTKm7D3VsEd74')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'ETH Ethereum Ethereum' }));
+    await user.click(screen.getByRole('button', { name: 'Copy Address' }));
+
+    expect(writeText).toHaveBeenCalledWith('0x4bd17Cc073D08E3E021Fd315d840554c840843E1');
+    expect(await screen.findByRole('button', { name: 'Copied' })).toBeInTheDocument();
   });
 });
 

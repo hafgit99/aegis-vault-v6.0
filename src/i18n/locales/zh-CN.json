@@ -669,6 +669,7 @@
       "generator": "密码生成器",
       "settings": "设置",
       "trash": "回收站",
+      "donate": "捐赠",
       "addEntry": "新增条目",
       "lockVault": "锁定保险库"
     },
@@ -681,6 +682,22 @@
       "profile": "个人资料与会话信息",
       "adminProfileAlt": "管理员头像",
       "addRecordAria": "新增安全条目"
+    },
+    "donatePage": {
+      "badge": "离线捐赠地址",
+      "title": "支持 AegisVault",
+      "description": "选择网络，复制已核对的钱包地址，并只从匹配的链发送。AegisVault 不加载支付跟踪器或第三方捐赠组件。",
+      "walletsAvailable": "可用钱包",
+      "assetCount": "{{count}} 个网络",
+      "selectedNetwork": "已选网络",
+      "addressLabel": "收款地址",
+      "copyAddress": "复制地址",
+      "copyPaymentUri": "复制 URI",
+      "copied": "已复制",
+      "usdtWarning": "向此地址发送 USDT 时只能使用 Ethereum ERC-20 网络。其他网络的转账可能无法找回。",
+      "noteVerify": "发送前请务必核对地址的开头和结尾字符。",
+      "noteNetwork": "请使用所选卡片中显示的完全相同网络。",
+      "notePrivacy": "不会加载外部支付组件；复制操作只在本设备本地完成。"
     },
     "dashboard": {
       "title": "安全概览",
