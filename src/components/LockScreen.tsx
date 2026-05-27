@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   KeyRound, ShieldCheck, ShieldAlert, Copy, Check, Download,
-  Eye, EyeOff, Lock, Unlock, ArrowRight, Laptop, Sparkles, RefreshCw
+  Eye, EyeOff, Lock, Unlock, ArrowRight, Laptop, Sparkles, RefreshCw,
+  Fingerprint, HardDrive, WifiOff, Layers3
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { vaultService } from '../lib/vaultService';
@@ -20,6 +21,12 @@ export default function LockScreen({ onUnlock, onAddLog }: LockScreenProps) {
   const handleSetLanguage = (language: SupportedLanguage) => {
     i18n.changeLanguage(language);
   };
+
+  const securityHighlights = [
+    { icon: HardDrive, title: t('app.lockScreen.highlightLocalTitle'), description: t('app.lockScreen.highlightLocalDescription') },
+    { icon: WifiOff, title: t('app.lockScreen.highlightOfflineTitle'), description: t('app.lockScreen.highlightOfflineDescription') },
+    { icon: Fingerprint, title: t('app.lockScreen.highlightTwoPartTitle'), description: t('app.lockScreen.highlightTwoPartDescription') },
+  ];
 
   // Configured check
   const [isConfigured, setIsConfigured] = useState(() => {
@@ -177,7 +184,7 @@ export default function LockScreen({ onUnlock, onAddLog }: LockScreenProps) {
   };
 
   return (
-    <div id="vault-lock-screen" className="fixed inset-0 z-[200] bg-[#0a0c10] bg-radial-at-t from-[#111622] via-[#090b0f] to-[#040507] flex flex-col items-center justify-center p-4 overflow-y-auto">
+    <div id="vault-lock-screen" className="fixed inset-0 z-[200] bg-[#0a0c10] bg-radial-at-t from-[#111622] via-[#090b0f] to-[#040507] flex flex-col items-center justify-center p-4 pt-16 lg:pt-4 overflow-y-auto">
       {/* Dynamic particles or visual background grid for cosmic theme */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f293708_1px,transparent_1px),linear-gradient(to_bottom,#1f293708_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none" />
 
@@ -198,30 +205,85 @@ export default function LockScreen({ onUnlock, onAddLog }: LockScreenProps) {
         ))}
       </div>
 
-      {/* Header Logo */}
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col items-center mb-8 text-center relative z-10"
-      >
-        <div className="w-14 h-14 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-center shadow-xl shadow-primary/5 mb-3 group">
-          <Lock className="w-7 h-7 text-primary group-hover:scale-110 transition-transform" />
-        </div>
-        <h1 className="text-2xl font-outfit text-on-surface font-extrabold tracking-tight">AEGIS<span className="text-primary">VAULT</span></h1>
-        <p className="text-xs text-on-surface-variant/70 mt-1 uppercase tracking-widest font-mono">{t('app.lockScreen.tagline')}</p>
-      </motion.div>
+      <main className="relative z-10 grid w-full max-w-6xl grid-cols-1 lg:grid-cols-[minmax(0,1fr)_460px] gap-8 lg:gap-10 items-center">
+        <motion.section
+          initial={{ opacity: 0, x: -24 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.05 }}
+          className="hidden lg:flex flex-col justify-center min-h-[600px]"
+        >
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-14 h-14 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-center shadow-xl shadow-primary/5">
+              <Lock className="w-7 h-7 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-outfit text-on-surface font-extrabold tracking-tight">AEGIS<span className="text-primary">VAULT</span></h1>
+              <p className="text-xs text-on-surface-variant/70 uppercase tracking-widest font-mono">{t('app.lockScreen.tagline')}</p>
+            </div>
+          </div>
+
+          <div className="max-w-2xl">
+            <div className="inline-flex items-center gap-2 rounded-lg border border-tertiary/15 bg-tertiary/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-tertiary mb-5">
+              <ShieldCheck className="w-4 h-4" />
+              {t('app.lockScreen.heroEyebrow')}
+            </div>
+            <h2 className="font-outfit text-[44px] leading-[1.02] font-extrabold text-on-surface tracking-tight max-w-xl">
+              {t('app.lockScreen.heroTitle')}
+            </h2>
+            <p className="mt-5 max-w-xl text-sm leading-relaxed text-on-surface-variant/85">
+              {t('app.lockScreen.heroDescription')}
+            </p>
+          </div>
+
+          <div className="mt-8 grid grid-cols-1 gap-3 max-w-2xl">
+            {securityHighlights.map((item) => (
+              <div key={item.title} className="flex items-start gap-4 rounded-xl border border-white/5 bg-surface-container/35 p-4">
+                <div className="w-10 h-10 rounded-xl bg-surface-container-high border border-white/10 flex items-center justify-center shrink-0">
+                  <item.icon className="w-5 h-5 text-tertiary" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-on-surface">{item.title}</h3>
+                  <p className="mt-1 text-xs leading-relaxed text-on-surface-variant/75">{item.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-7 max-w-2xl rounded-xl border border-primary/10 bg-[#111827]/55 p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <Layers3 className="w-5 h-5 text-primary" />
+              <p className="text-xs font-bold uppercase tracking-wider text-primary">{t('app.lockScreen.trustPanelTitle')}</p>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              {[t('app.lockScreen.trustItemEncryption'), t('app.lockScreen.trustItemStorage'), t('app.lockScreen.trustItemRecovery')].map((item) => (
+                <div key={item} className="rounded-lg bg-surface-container-lowest/50 border border-white/5 px-3 py-2">
+                  <p className="text-[11px] leading-snug text-on-surface-variant/85">{item}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.section>
+
+        <section className="w-full flex flex-col items-center lg:items-stretch">
+          <motion.div 
+            initial={{ opacity: 0, y: -16 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="lg:hidden flex flex-col items-center mb-6 text-center"
+          >
+            <div className="w-14 h-14 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-center shadow-xl shadow-primary/5 mb-3">
+              <Lock className="w-7 h-7 text-primary" />
+            </div>
+            <h1 className="text-2xl font-outfit text-on-surface font-extrabold tracking-tight">AEGIS<span className="text-primary">VAULT</span></h1>
+            <p className="text-xs text-on-surface-variant/70 mt-1 uppercase tracking-widest font-mono">{t('app.lockScreen.heroEyebrow')}</p>
+          </motion.div>
 
       {/* Main card box info */}
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.1 }}
-        className="relative w-full max-w-[440px] bg-[#0f121d]/90 border border-white/10 rounded-[2rem] shadow-2xl p-7 sm:p-8 backdrop-blur-xl z-10"
+        className="relative w-full max-w-[460px] bg-[#0f121d]/90 border border-white/10 rounded-[2rem] shadow-2xl p-7 sm:p-8 backdrop-blur-xl z-10"
       >
-        {/* Flare decor */}
-        <div className="absolute -top-12 left-1/4 w-32 h-16 bg-primary/20 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute -bottom-12 right-1/4 w-32 h-16 bg-tertiary/20 rounded-full blur-2xl pointer-events-none" />
-
         {/* Navigation Tabs (Login vs Setup / Generate) */}
         <div className="flex bg-[#121625] p-1 rounded-xl mb-6 border border-white/5 relative z-20 shadow-inner">
           <button
@@ -562,6 +624,8 @@ export default function LockScreen({ onUnlock, onAddLog }: LockScreenProps) {
         <ShieldCheck className="w-3.5 h-3.5 text-tertiary/70" />
         <span>{t('app.lockScreen.footer')}</span>
       </div>
+        </section>
+      </main>
     </div>
   );
 }
