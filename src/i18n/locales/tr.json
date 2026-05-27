@@ -691,6 +691,8 @@
       "walletsAvailable": "Kullanılabilir cüzdanlar",
       "assetCount": "{{count}} ağ",
       "selectedNetwork": "Seçili ağ",
+      "qrCodeLabel": "{{asset}} bağış adresi QR kodu",
+      "scanAddress": "{{asset}} alıcı adresini doldurmak için tarayın.",
       "addressLabel": "Alıcı adresi",
       "copyAddress": "Adresi Kopyala",
       "copyPaymentUri": "URI Kopyala",

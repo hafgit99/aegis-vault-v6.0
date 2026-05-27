@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import { BadgeCheck, Check, Coins, Copy, Info, ShieldCheck, Wallet } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import QRCode from 'react-qr-code';
 
 type DonationAsset = {
   id: string;
@@ -194,6 +195,25 @@ export default function Donate() {
           </div>
 
           <div className="space-y-4">
+            <div className="flex flex-col items-center gap-3 rounded-xl bg-surface-container-lowest/80 border border-white/5 p-4">
+              <div
+                className="bg-white p-3 rounded-xl shadow-lg shadow-black/20"
+                role="img"
+                aria-label={t('app.donatePage.qrCodeLabel', { asset: selectedAsset.symbol })}
+              >
+                <QRCode
+                  value={selectedAsset.address}
+                  size={164}
+                  level="M"
+                  bgColor="#ffffff"
+                  fgColor="#0b1020"
+                />
+              </div>
+              <p className="text-[11px] text-on-surface-variant/75 text-center leading-relaxed">
+                {t('app.donatePage.scanAddress', { asset: selectedAsset.symbol })}
+              </p>
+            </div>
+
             <div>
               <label className="text-[10px] uppercase tracking-wider text-on-surface-variant/70 font-bold mb-2 block">
                 {t('app.donatePage.addressLabel')}

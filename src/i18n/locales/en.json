@@ -690,6 +690,8 @@
       "walletsAvailable": "Wallets available",
       "assetCount": "{{count}} networks",
       "selectedNetwork": "Selected network",
+      "qrCodeLabel": "{{asset}} donation address QR code",
+      "scanAddress": "Scan to fill the {{asset}} receiving address.",
       "addressLabel": "Receiving address",
       "copyAddress": "Copy Address",
       "copyPaymentUri": "Copy URI",

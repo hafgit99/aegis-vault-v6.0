@@ -960,9 +960,11 @@ describe('Donate', () => {
     render(<Donate />);
 
     expect(screen.getByRole('heading', { name: 'Support AegisVault' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'SOL donation address QR code' })).toBeInTheDocument();
     expect(screen.getByText('81H1rKZHjpSsnr6Epumw9XVTfqAnqSHcTKm7D3VsEd74')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'ETH Ethereum Ethereum' }));
+    expect(screen.getByRole('img', { name: 'ETH donation address QR code' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Copy Address' }));
 
     expect(writeText).toHaveBeenCalledWith('0x4bd17Cc073D08E3E021Fd315d840554c840843E1');
