@@ -1,9 +1,30 @@
 import { createHash } from 'node:crypto';
-import { readdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { access, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-const rootArg = process.argv[2] ?? 'src-tauri/target/release/bundle';
-const rootDir = path.resolve(rootArg);
+const bundleCandidates = [
+  'src-tauri/target/universal-apple-darwin/release/bundle',
+  'src-tauri/target/release/bundle',
+];
+
+async function resolveRoot() {
+  const explicit = process.argv[2];
+  if (explicit) return path.resolve(explicit);
+
+  for (const candidate of bundleCandidates) {
+    const resolved = path.resolve(candidate);
+    try {
+      await access(resolved);
+      return resolved;
+    } catch { /* try next */ }
+  }
+
+  throw new Error(
+    `No bundle directory found. Searched:\n${bundleCandidates.map(c => `  - ${path.resolve(c)}`).join('\n')}`
+  );
+}
+
+const rootDir = await resolveRoot();
 const checksumFileName = 'SHA256SUMS.txt';
 const manifestFileName = 'artifact-manifest.json';
 const ignoredNames = new Set([checksumFileName, manifestFileName]);
