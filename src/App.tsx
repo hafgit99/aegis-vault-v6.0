@@ -13,7 +13,7 @@ import { supportedLanguages, SupportedLanguage } from './i18n';
 import { 
   Search, RefreshCw, UserRoundCheck, Database, 
   Filter, LayoutGrid, Network, LockKeyhole, 
-  ShieldPlus, ShieldX, CloudOff, ShieldCheck, Plus, Key, CreditCard, FileText, Lock, Languages
+  ShieldPlus, ShieldX, CloudOff, ShieldCheck, Plus, Key, CreditCard, FileText, Lock, Languages, ChevronDown
 } from 'lucide-react';
 
 const SecurityAudit = lazy(() => import('./components/SecurityAudit'));
@@ -77,6 +77,7 @@ export default function App() {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isDatabaseModalOpen, setIsDatabaseModalOpen] = useState(false);
   const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
+  const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
   
   const [userName, setUserName] = useState(() => {
     try {
@@ -258,7 +259,10 @@ export default function App() {
 
   const handleSetLanguage = (language: SupportedLanguage) => {
     i18n.changeLanguage(language);
+    setIsLanguageMenuOpen(false);
   };
+
+  const currentLanguage = supportedLanguages.find(language => language.code === i18n.language) ?? supportedLanguages[0];
 
   const handleAddEntry = async (entry: VaultEntry) => {
     try {
@@ -820,23 +824,51 @@ export default function App() {
           
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-5">
-              <div
-                className="h-9 flex items-center gap-2 px-2.5 rounded-lg bg-surface-container/50 border border-outline-variant/20 text-on-surface-variant focus-within:border-primary/40 focus-within:text-primary transition-colors"
-                title={t('app.header.languageSelector')}
-              >
-                <Languages className="w-4 h-4 shrink-0" />
-                <select
-                  value={i18n.language}
-                  onChange={(event) => handleSetLanguage(event.target.value as SupportedLanguage)}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsLanguageMenuOpen((isOpen) => !isOpen)}
+                  className={`h-9 flex items-center gap-2 px-2.5 rounded-lg bg-surface-container/70 border text-on-surface-variant hover:text-primary transition-colors ${
+                    isLanguageMenuOpen ? 'border-primary/40 text-primary' : 'border-outline-variant/20'
+                  }`}
                   aria-label={t('app.header.languageSelector')}
-                  className="bg-transparent text-xs font-bold text-on-surface outline-none cursor-pointer"
+                  aria-haspopup="menu"
+                  aria-expanded={isLanguageMenuOpen}
+                  title={t('app.header.languageSelector')}
                 >
-                  {supportedLanguages.map((language) => (
-                    <option key={language.code} value={language.code}>
-                      {t(language.labelKey)}
-                    </option>
-                  ))}
-                </select>
+                  <Languages className="w-4 h-4 shrink-0" />
+                  <span className="text-xs font-bold text-on-surface min-w-10 text-left">{t(currentLanguage.labelKey)}</span>
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isLanguageMenuOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                <AnimatePresence>
+                  {isLanguageMenuOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                      className="absolute right-0 top-11 z-50 w-44 rounded-xl border border-outline-variant/25 bg-surface-container-high shadow-2xl shadow-black/30 p-1.5"
+                      role="menu"
+                    >
+                      {supportedLanguages.map((language) => (
+                        <button
+                          key={language.code}
+                          type="button"
+                          onClick={() => handleSetLanguage(language.code)}
+                          className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-xs font-bold transition-colors ${
+                            i18n.language === language.code
+                              ? 'bg-secondary-container/40 text-secondary'
+                              : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5'
+                          }`}
+                          role="menuitem"
+                        >
+                          <span>{t(language.labelKey)}</span>
+                          {i18n.language === language.code && <ShieldCheck className="w-3.5 h-3.5" />}
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
               <RefreshCw 
                 onClick={handleHeaderSync}
