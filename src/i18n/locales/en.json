@@ -681,6 +681,7 @@
       "lockSafely": "Lock Vault Securely",
       "profile": "Profile & Session Info",
       "adminProfileAlt": "Admin Profile",
+      "languageSelector": "Change language",
       "addRecordAria": "Add new secure record"
     },
     "donatePage": {

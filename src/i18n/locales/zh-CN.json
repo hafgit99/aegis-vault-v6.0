@@ -681,6 +681,7 @@
       "lockSafely": "安全锁定保险库",
       "profile": "个人资料与会话信息",
       "adminProfileAlt": "管理员头像",
+      "languageSelector": "切换语言",
       "addRecordAria": "新增安全条目"
     },
     "donatePage": {

@@ -9,10 +9,11 @@ import { vaultService } from './lib/vaultService';
 import { DEFAULT_AVATAR_URL, normalizeAvatarUrl } from './lib/avatarPresets';
 import { useTranslation } from 'react-i18next';
 import { localizedMessage } from './i18n/localizedMessages';
+import { supportedLanguages, SupportedLanguage } from './i18n';
 import { 
   Search, RefreshCw, UserRoundCheck, Database, 
   Filter, LayoutGrid, Network, LockKeyhole, 
-  ShieldPlus, ShieldX, CloudOff, ShieldCheck, Plus, Key, CreditCard, FileText, Lock
+  ShieldPlus, ShieldX, CloudOff, ShieldCheck, Plus, Key, CreditCard, FileText, Lock, Languages
 } from 'lucide-react';
 
 const SecurityAudit = lazy(() => import('./components/SecurityAudit'));
@@ -63,7 +64,7 @@ const INITIAL_ENTRIES: VaultEntry[] = [
 ];
 
 export default function App() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [isLocked, setIsLocked] = useState(true);
   const [activeTab, setActiveTab] = useState('vault');
   const [entries, setEntries] = useState<VaultEntry[]>([]);
@@ -253,6 +254,10 @@ export default function App() {
     localStorage.setItem('aegis_user_avatar', normalizedAvatarUrl);
     addSecurityLog(t('app.logs.avatarUpdated'), 'info');
     showToast(t('app.logs.avatarSaved'));
+  };
+
+  const handleSetLanguage = (language: SupportedLanguage) => {
+    i18n.changeLanguage(language);
   };
 
   const handleAddEntry = async (entry: VaultEntry) => {
@@ -815,6 +820,24 @@ export default function App() {
           
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-5">
+              <div
+                className="h-9 flex items-center gap-2 px-2.5 rounded-lg bg-surface-container/50 border border-outline-variant/20 text-on-surface-variant focus-within:border-primary/40 focus-within:text-primary transition-colors"
+                title={t('app.header.languageSelector')}
+              >
+                <Languages className="w-4 h-4 shrink-0" />
+                <select
+                  value={i18n.language}
+                  onChange={(event) => handleSetLanguage(event.target.value as SupportedLanguage)}
+                  aria-label={t('app.header.languageSelector')}
+                  className="bg-transparent text-xs font-bold text-on-surface outline-none cursor-pointer"
+                >
+                  {supportedLanguages.map((language) => (
+                    <option key={language.code} value={language.code}>
+                      {t(language.labelKey)}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <RefreshCw 
                 onClick={handleHeaderSync}
                 className={`w-5 h-5 text-on-surface-variant hover:text-primary cursor-pointer transition-transform duration-700 ${
