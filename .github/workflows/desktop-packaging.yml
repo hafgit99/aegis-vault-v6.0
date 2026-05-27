@@ -162,11 +162,9 @@ jobs:
             exit 1
           fi
 
-      - name: Build desktop package (macOS universal)
-        if: runner.os == 'macOS'
+      - name: Build desktop package (macOS universal signed)
+        if: runner.os == 'macOS' && (env.SIGNING_MODE == 'macos' || env.SIGNING_MODE == 'all')
         env:
-          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
-          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
@@ -175,11 +173,19 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: npm run desktop:build -- --target universal-apple-darwin
 
-      - name: Build desktop package
-        if: runner.os != 'macOS'
+      - name: Build desktop package (macOS universal unsigned)
+        if: runner.os == 'macOS' && env.SIGNING_MODE != 'macos' && env.SIGNING_MODE != 'all'
+        run: npm run desktop:build -- --target universal-apple-darwin
+
+      - name: Build desktop package (Windows signed)
+        if: runner.os == 'Windows' && (env.SIGNING_MODE == 'windows' || env.SIGNING_MODE == 'all')
         env:
           WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
           WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: npm run desktop:build
+
+      - name: Build desktop package (Windows/Linux unsigned)
+        if: (runner.os == 'Windows' && env.SIGNING_MODE != 'windows' && env.SIGNING_MODE != 'all') || runner.os == 'Linux'
         run: npm run desktop:build
 
       - name: Generate artifact checksums
