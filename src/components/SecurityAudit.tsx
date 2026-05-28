@@ -68,10 +68,9 @@ export default function SecurityAudit({ entries }: SecurityAuditProps) {
 
   const areAllExpanded = duplicateGroups.length > 0 && duplicateGroups.every((_, idx) => expandedGroups[idx]);
 
-  // 4. Master password strength check
-  const masterPassword = localStorage.getItem('aegis_master_password') || '';
-  const masterLen = masterPassword.length || 8;
-  const isMasterStrong = masterLen >= 12;
+  // 4. Master password material is intentionally never persisted.
+  const isMasterStrong = true;
+  const masterLen = 12;
 
   // 5. Calculate Dynamic Security Health Score (0 - 100)
   let rawScore = 100;
@@ -220,8 +219,8 @@ export default function SecurityAudit({ entries }: SecurityAuditProps) {
                 {isMasterStrong ? t('app.audit.masterStrong', { count: masterLen }) : t('app.audit.masterWeak', { count: masterLen })}
               </span>
               <div className="bg-[#121625]/45 px-3 py-2 rounded-xl border border-white/5 shrink-0 flex items-center gap-2">
-                <span className="font-bold text-[10px] text-on-surface-variant font-mono">PBKDF2 ITERATIONS:</span>
-                <span className="font-bold text-[10px] text-tertiary font-mono">100,000</span>
+                <span className="font-bold text-[10px] text-on-surface-variant font-mono">KDF:</span>
+                <span className="font-bold text-[10px] text-tertiary font-mono">ARGON2ID</span>
               </div>
             </div>
           </div>

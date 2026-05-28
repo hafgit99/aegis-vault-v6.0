@@ -9,6 +9,10 @@ import { useTranslation } from 'react-i18next';
 import { VaultEntry, AttachmentFile } from '../types';
 import { getEncryptedFile, saveEncryptedFile } from '../lib/fileStore';
 import { VaultCryptoService } from '../lib/vault/VaultCryptoService';
+import { generateRandomString } from '../lib/crypto-types';
+import { writeClipboardSecret } from '../lib/clipboard';
+import { authenticatePasskey, registerPasskey } from '../lib/webauthnPasskey';
+import { generateTOTP, generateTotpSecret, getTotpRemainingSeconds, TotpAlgorithm } from '../lib/totp';
 
 interface DetailPanelProps {
   entry: VaultEntry | null;
@@ -28,6 +32,14 @@ export default function DetailPanel({ entry, onClose, onDelete, onUpdate }: Deta
   const [editUsername, setEditUsername] = useState('');
   const [editPassword, setEditPassword] = useState('');
   const [editUrl, setEditUrl] = useState('');
+  const [editTotpSecret, setEditTotpSecret] = useState('');
+  const [editTotpIssuer, setEditTotpIssuer] = useState('');
+  const [editTotpAlgorithm, setEditTotpAlgorithm] = useState<TotpAlgorithm>('SHA-1');
+  const [editTotpDigits, setEditTotpDigits] = useState(6);
+  const [editTotpPeriod, setEditTotpPeriod] = useState(30);
+  const [totpCode, setTotpCode] = useState('');
+  const [totpRemaining, setTotpRemaining] = useState(30);
+  const [totpError, setTotpError] = useState<string | null>(null);
   const [editCardholder, setEditCardholder] = useState('');
   const [editCardNumber, setEditCardNumber] = useState('');
   const [editExpiryDate, setEditExpiryDate] = useState('');
@@ -40,6 +52,13 @@ export default function DetailPanel({ entry, onClose, onDelete, onUpdate }: Deta
   const [editPasskeyCredentialId, setEditPasskeyCredentialId] = useState('');
   const [editPasskeyPublicKey, setEditPasskeyPublicKey] = useState('');
   const [editPasskeyAAGUID, setEditPasskeyAAGUID] = useState('');
+  const [editPasskeyPublicKeyAlgorithm, setEditPasskeyPublicKeyAlgorithm] = useState<number | undefined>(undefined);
+  const [editPasskeyAuthenticatorData, setEditPasskeyAuthenticatorData] = useState('');
+  const [editPasskeyClientDataJSON, setEditPasskeyClientDataJSON] = useState('');
+  const [editPasskeyTransports, setEditPasskeyTransports] = useState<string[]>([]);
+  const [isRegisteringPasskey, setIsRegisteringPasskey] = useState(false);
+  const [isVerifyingPasskey, setIsVerifyingPasskey] = useState(false);
+  const [passkeyMessage, setPasskeyMessage] = useState<string | null>(null);
 
   // Identity
   const [editIdFullName, setEditIdFullName] = useState('');
@@ -64,6 +83,11 @@ export default function DetailPanel({ entry, onClose, onDelete, onUpdate }: Deta
       setEditUsername(entry.username || '');
       setEditPassword(entry.password || '');
       setEditUrl(entry.url || '');
+      setEditTotpSecret(entry.totpSecret || '');
+      setEditTotpIssuer(entry.totpIssuer || '');
+      setEditTotpAlgorithm(entry.totpAlgorithm || 'SHA-1');
+      setEditTotpDigits(entry.totpDigits || 6);
+      setEditTotpPeriod(entry.totpPeriod || 30);
       setEditCardholder(entry.cardholder || '');
       setEditCardNumber(entry.cardNumber || '');
       setEditExpiryDate(entry.expiryDate || '');
@@ -76,6 +100,11 @@ export default function DetailPanel({ entry, onClose, onDelete, onUpdate }: Deta
       setEditPasskeyCredentialId(entry.passkeyCredentialId || '');
       setEditPasskeyPublicKey(entry.passkeyPublicKey || '');
       setEditPasskeyAAGUID(entry.passkeyAAGUID || '');
+      setEditPasskeyPublicKeyAlgorithm(entry.passkeyPublicKeyAlgorithm);
+      setEditPasskeyAuthenticatorData(entry.passkeyAuthenticatorData || '');
+      setEditPasskeyClientDataJSON(entry.passkeyClientDataJSON || '');
+      setEditPasskeyTransports(entry.passkeyTransports || []);
+      setPasskeyMessage(null);
 
       setEditIdFullName(entry.idFullName || '');
       setEditIdNumber(entry.idNumber || '');
@@ -93,10 +122,47 @@ export default function DetailPanel({ entry, onClose, onDelete, onUpdate }: Deta
     setIsDownloading(false);
   }, [entry]);
 
+  useEffect(() => {
+    if (!entry?.totpSecret) {
+      setTotpCode('');
+      setTotpError(null);
+      return;
+    }
+
+    let cancelled = false;
+    const refreshTotp = async () => {
+      try {
+        const code = await generateTOTP({
+          secret: entry.totpSecret || '',
+          algorithm: entry.totpAlgorithm || 'SHA-1',
+          digits: entry.totpDigits || 6,
+          period: entry.totpPeriod || 30,
+        });
+        if (!cancelled) {
+          setTotpCode(code);
+          setTotpRemaining(getTotpRemainingSeconds(entry.totpPeriod || 30));
+          setTotpError(null);
+        }
+      } catch (error: any) {
+        if (!cancelled) {
+          setTotpCode('');
+          setTotpError(error?.message || t('app.detail.fields.totpInvalid'));
+        }
+      }
+    };
+
+    refreshTotp();
+    const interval = window.setInterval(refreshTotp, 1000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [entry?.totpSecret, entry?.totpAlgorithm, entry?.totpDigits, entry?.totpPeriod]);
+
   if (!entry) return null;
 
   const handleCopy = (text: string, fieldName: string) => {
-    navigator.clipboard.writeText(text);
+    writeClipboardSecret(text);
     setCopiedField(fieldName);
     setTimeout(() => setCopiedField(null), 2000);
   };
@@ -147,7 +213,7 @@ export default function DetailPanel({ entry, onClose, onDelete, onUpdate }: Deta
         });
       }, 150);
 
-      const fileId = "file-" + Math.random().toString(36).substring(2, 11);
+      const fileId = `file-${generateRandomString(18, 'abcdefghijklmnopqrstuvwxyz0123456789')}`;
       const reader = new FileReader();
       reader.onload = async (event) => {
         try {
@@ -200,6 +266,11 @@ export default function DetailPanel({ entry, onClose, onDelete, onUpdate }: Deta
       username: entry.type === 'login' ? editUsername : entry.type === 'passkey' ? editPasskeyUser : editIdFullName,
       password: entry.type === 'login' ? editPassword : undefined,
       url: entry.type === 'login' ? editUrl : undefined,
+      totpSecret: entry.type === 'login' && editTotpSecret ? editTotpSecret : undefined,
+      totpIssuer: entry.type === 'login' && editTotpSecret ? (editTotpIssuer || editTitle) : undefined,
+      totpAlgorithm: entry.type === 'login' && editTotpSecret ? editTotpAlgorithm : undefined,
+      totpDigits: entry.type === 'login' && editTotpSecret ? editTotpDigits : undefined,
+      totpPeriod: entry.type === 'login' && editTotpSecret ? editTotpPeriod : undefined,
       cardholder: entry.type === 'card' ? editCardholder : undefined,
       cardNumber: entry.type === 'card' ? editCardNumber : undefined,
       expiryDate: entry.type === 'card' ? editExpiryDate : undefined,
@@ -209,6 +280,10 @@ export default function DetailPanel({ entry, onClose, onDelete, onUpdate }: Deta
       passkeyCredentialId: entry.type === 'passkey' ? editPasskeyCredentialId : undefined,
       passkeyPublicKey: entry.type === 'passkey' ? editPasskeyPublicKey : undefined,
       passkeyAAGUID: entry.type === 'passkey' ? editPasskeyAAGUID : undefined,
+      passkeyPublicKeyAlgorithm: entry.type === 'passkey' ? editPasskeyPublicKeyAlgorithm : undefined,
+      passkeyAuthenticatorData: entry.type === 'passkey' ? editPasskeyAuthenticatorData : undefined,
+      passkeyClientDataJSON: entry.type === 'passkey' ? editPasskeyClientDataJSON : undefined,
+      passkeyTransports: entry.type === 'passkey' ? editPasskeyTransports : undefined,
       idFullName: entry.type === 'identity' ? editIdFullName : undefined,
       idNumber: entry.type === 'identity' ? editIdNumber : undefined,
       idSerial: entry.type === 'identity' ? editIdSerial : undefined,
@@ -232,6 +307,40 @@ export default function DetailPanel({ entry, onClose, onDelete, onUpdate }: Deta
     };
     onUpdate(updated);
     setIsEditing(false);
+  };
+
+  const handleRegisterEditPasskey = async () => {
+    setPasskeyMessage(null);
+    setIsRegisteringPasskey(true);
+    try {
+      const credential = await registerPasskey(editPasskeyDomain, editPasskeyUser);
+      setEditPasskeyCredentialId(credential.credentialId);
+      setEditPasskeyPublicKey(credential.publicKey);
+      setEditPasskeyAAGUID(credential.aaguid || 'authenticator-managed');
+      setEditPasskeyPublicKeyAlgorithm(credential.publicKeyAlgorithm);
+      setEditPasskeyAuthenticatorData(credential.authenticatorData || '');
+      setEditPasskeyClientDataJSON(credential.clientDataJSON);
+      setEditPasskeyTransports(credential.transports || []);
+      setPasskeyMessage(t('app.detail.fields.passkeyRegistered'));
+    } catch (error: any) {
+      setPasskeyMessage(error?.message || t('app.detail.fields.passkeyRegistrationFailed'));
+    } finally {
+      setIsRegisteringPasskey(false);
+    }
+  };
+
+  const handleVerifyPasskey = async () => {
+    if (!entry.passkeyCredentialId) return;
+    setPasskeyMessage(null);
+    setIsVerifyingPasskey(true);
+    try {
+      await authenticatePasskey(entry.passkeyCredentialId);
+      setPasskeyMessage(t('app.detail.fields.passkeyVerified'));
+    } catch (error: any) {
+      setPasskeyMessage(error?.message || t('app.detail.fields.passkeyVerificationFailed'));
+    } finally {
+      setIsVerifyingPasskey(false);
+    }
   };
 
   const typeLabel = entry.type === 'login' ? t('app.detail.types.login') : entry.type === 'card' ? t('app.detail.types.card') : entry.type === 'passkey' ? t('app.detail.types.passkey') : entry.type === 'identity' ? t('app.detail.types.identity') : t('app.detail.types.note');
@@ -368,6 +477,26 @@ export default function DetailPanel({ entry, onClose, onDelete, onUpdate }: Deta
                 <span className="text-sm text-on-surface-variant/40 italic">{t('app.detail.fields.processAddressMissing')}</span>
               )}
             </FieldRow>
+            {entry.totpSecret && (
+              <div className="bg-surface-container-high/40 border border-tertiary/20 p-4 rounded-xl flex items-center justify-between">
+                <div>
+                  <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1.5">{t('app.detail.fields.totpCode')}</span>
+                  {totpError ? (
+                    <span className="text-xs text-error">{totpError}</span>
+                  ) : (
+                    <span className="text-2xl font-geist-mono font-bold text-tertiary tracking-[0.25em]">{totpCode}</span>
+                  )}
+                  <span className="text-[10px] text-on-surface-variant/60 block mt-1">
+                    {entry.totpIssuer || entry.title} · {totpRemaining}s
+                  </span>
+                </div>
+                {totpCode && (
+                  <button onClick={() => handleCopy(totpCode, 'totp')} className="p-2 hover:bg-white/5 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer">
+                    {copiedField === 'totp' ? <Check className="w-4 h-4 text-tertiary" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -392,6 +521,33 @@ export default function DetailPanel({ entry, onClose, onDelete, onUpdate }: Deta
             <div className="bg-surface-container-high/40 border border-white/5 p-3.5 rounded-xl">
               <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1.5">{t('app.detail.fields.website')}</span>
               <input type="url" value={editUrl} onChange={(e) => setEditUrl(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded px-3 py-1.5 text-sm text-on-surface outline-none focus:border-tertiary/45 font-semibold" placeholder="https://example.com" />
+            </div>
+            <div className="bg-surface-container-high/40 border border-white/5 p-3.5 rounded-xl space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">{t('app.detail.fields.totpSecret')}</span>
+                <button type="button" onClick={() => setEditTotpSecret(generateTotpSecret())} className="py-1 px-2 bg-tertiary/15 hover:bg-tertiary/25 text-tertiary text-[10px] font-bold rounded-lg border border-tertiary/10 flex items-center gap-1 transition-all cursor-pointer">
+                  <Sparkles className="w-3 h-3" /> {t('app.detail.fields.generateTotpSecret')}
+                </button>
+              </div>
+              <input type="text" value={editTotpSecret} onChange={(e) => setEditTotpSecret(e.target.value.toUpperCase())} className="w-full bg-white/5 border border-white/10 rounded px-3 py-1.5 text-xs text-on-surface font-geist-mono outline-none focus:border-tertiary/45" placeholder={t('app.detail.fields.totpSecretPlaceholder')} />
+              {editTotpSecret && (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                  <input type="text" value={editTotpIssuer} onChange={(e) => setEditTotpIssuer(e.target.value)} className="bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-on-surface outline-none focus:border-tertiary/45" placeholder={t('app.detail.fields.totpIssuerPlaceholder')} />
+                  <select value={editTotpAlgorithm} onChange={(e) => setEditTotpAlgorithm(e.target.value as TotpAlgorithm)} className="bg-[#121625] border border-white/10 rounded px-2 py-1 text-xs text-on-surface outline-none focus:border-tertiary/45">
+                    <option value="SHA-1">SHA-1</option>
+                    <option value="SHA-256">SHA-256</option>
+                    <option value="SHA-512">SHA-512</option>
+                  </select>
+                  <select value={editTotpDigits} onChange={(e) => setEditTotpDigits(Number(e.target.value))} className="bg-[#121625] border border-white/10 rounded px-2 py-1 text-xs text-on-surface outline-none focus:border-tertiary/45">
+                    <option value={6}>6 digits</option>
+                    <option value={8}>8 digits</option>
+                  </select>
+                  <select value={editTotpPeriod} onChange={(e) => setEditTotpPeriod(Number(e.target.value))} className="bg-[#121625] border border-white/10 rounded px-2 py-1 text-xs text-on-surface outline-none focus:border-tertiary/45">
+                    <option value={30}>30s</option>
+                    <option value={60}>60s</option>
+                  </select>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -445,10 +601,25 @@ export default function DetailPanel({ entry, onClose, onDelete, onUpdate }: Deta
             <FieldRow label={t('app.detail.fields.passkeyDomain')} value={entry.passkeyDomain} fieldKey="passkeyDomain" />
             <FieldRow label={t('app.detail.fields.usernameOrEmail')} value={entry.passkeyUser} fieldKey="passkeyUser" />
             <div className="p-3.5 bg-tertiary/5 rounded-xl border border-tertiary/20 space-y-2.5">
-              <div className="flex items-center gap-2">
-                <Fingerprint className="w-4 h-4 text-tertiary" />
-                <span className="text-xs font-bold text-on-surface">{t('app.detail.fields.passkeySecrets')}</span>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Fingerprint className="w-4 h-4 text-tertiary" />
+                  <span className="text-xs font-bold text-on-surface">{t('app.detail.fields.passkeySecrets')}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleVerifyPasskey}
+                  disabled={!entry.passkeyCredentialId || isVerifyingPasskey}
+                  className="py-1 px-2 bg-tertiary/15 hover:bg-tertiary/25 text-tertiary text-[10px] font-bold rounded-lg border border-tertiary/10 flex items-center gap-1 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Fingerprint className="w-3 h-3" /> {isVerifyingPasskey ? t('app.detail.fields.verifyingPasskey') : t('app.detail.fields.verifyPasskey')}
+                </button>
               </div>
+              {passkeyMessage && (
+                <div className="p-2 bg-surface-container-high/50 border border-white/5 rounded-lg text-[11px] text-on-surface-variant">
+                  {passkeyMessage}
+                </div>
+              )}
               <div className="space-y-2 text-[11px] font-mono leading-relaxed text-on-surface-variant border-t border-white/5 pt-2">
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0 flex-1">
@@ -504,17 +675,20 @@ export default function DetailPanel({ entry, onClose, onDelete, onUpdate }: Deta
                   <Fingerprint className="w-4 h-4 text-tertiary" />
                   <span className="text-xs font-bold text-on-surface">{t('app.detail.fields.passkeySecrets')}</span>
                 </div>
-                <button type="button" onClick={() => {
-                  const randomCredId = Array.from({length: 32}, () => Math.floor(Math.random()*16).toString(16)).join('');
-                  const randomPubKey = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA" + Array.from({length: 40}, () => Math.floor(Math.random()*16).toString(16)).join('') + "...\n-----END PUBLIC KEY-----";
-                  const randomAaguid = "adce0002-35bc-c60a-2b7b-" + Array.from({length: 12}, () => Math.floor(Math.random()*16).toString(16)).join('');
-                  setEditPasskeyCredentialId(randomCredId);
-                  setEditPasskeyPublicKey(randomPubKey);
-                  setEditPasskeyAAGUID(randomAaguid);
-                }} className="py-1 px-2 bg-tertiary/15 hover:bg-tertiary/25 text-tertiary text-[10px] font-bold rounded-lg border border-tertiary/10 flex items-center gap-1 transition-all cursor-pointer">
-                  <Sparkles className="w-3 h-3" /> {t('app.detail.fields.refreshKeys')}
+                <button
+                  type="button"
+                  onClick={handleRegisterEditPasskey}
+                  disabled={isRegisteringPasskey}
+                  className="py-1 px-2 bg-tertiary/15 hover:bg-tertiary/25 text-tertiary text-[10px] font-bold rounded-lg border border-tertiary/10 flex items-center gap-1 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Fingerprint className="w-3 h-3" /> {isRegisteringPasskey ? t('app.detail.fields.registeringPasskey') : t('app.detail.fields.refreshKeys')}
                 </button>
               </div>
+              {passkeyMessage && (
+                <div className="p-2 bg-surface-container-high/50 border border-white/5 rounded-lg text-[11px] text-on-surface-variant">
+                  {passkeyMessage}
+                </div>
+              )}
               <div className="space-y-2 border-t border-white/5 pt-2">
                 <div><span className="text-[9px] uppercase font-bold text-on-surface-variant/50 block mb-1">Cred ID</span><input type="text" value={editPasskeyCredentialId} onChange={(e) => setEditPasskeyCredentialId(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-on-surface font-mono outline-none focus:border-tertiary/45" /></div>
                 <div><span className="text-[9px] uppercase font-bold text-on-surface-variant/50 block mb-1">Public Key</span><input type="text" value={editPasskeyPublicKey} onChange={(e) => setEditPasskeyPublicKey(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-on-surface font-mono outline-none focus:border-tertiary/45" /></div>

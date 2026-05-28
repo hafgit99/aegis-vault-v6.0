@@ -9,6 +9,9 @@ import { useTranslation } from 'react-i18next';
 import { vaultService } from '../lib/vaultService';
 import { clearAllOPFSFiles } from '../lib/SQLiteOPFS';
 import { supportedLanguages, SupportedLanguage } from '../i18n';
+import { generateRandomString } from '../lib/crypto-types';
+import { writeClipboardSecret } from '../lib/clipboard';
+import { clearStoredSecretKey, getStoredSecretKey, hasLocalSecretConfiguration, persistSecretKey } from '../lib/secureSecretStore';
 
 interface LockScreenProps {
   onUnlock: () => void;
@@ -31,7 +34,8 @@ export default function LockScreen({ onUnlock, onAddLog }: LockScreenProps) {
   // Configured check
   const [isConfigured, setIsConfigured] = useState(() => {
     try {
-      return !!localStorage.getItem('aegis_secret_key');
+      return localStorage.getItem('aegis_vault_configured') === 'true'
+        || hasLocalSecretConfiguration();
     } catch (e) {
       return false;
     }
@@ -55,28 +59,45 @@ export default function LockScreen({ onUnlock, onAddLog }: LockScreenProps) {
   const [setupStep, setSetupStep] = useState(1); // 1: Password, 2: Secret Key generated, 3: Confirmation
   const [showSetupPassword, setShowSetupPassword] = useState(false);
 
-  // Autofill secret key if remember device is enabled
+  // Autofill secret key if remember device is enabled.
   useEffect(() => {
     if (isConfigured) {
-      try {
-        const savedKey = localStorage.getItem('aegis_remembered_secret_key');
-        if (savedKey) {
-          setLoginSecretKey(savedKey);
-        }
-      } catch (e) {}
+      let isMounted = true;
+      getStoredSecretKey()
+        .then((storedSecretKey) => {
+          if (isMounted && storedSecretKey) {
+            setLoginSecretKey(storedSecretKey);
+          }
+        })
+        .catch(() => {
+          if (isMounted) {
+            setLoginSecretKey('');
+          }
+        });
+
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [isConfigured]);
+
+  useEffect(() => {
+    if (!isConfigured) {
+      getStoredSecretKey()
+        .then((storedSecretKey) => {
+          if (storedSecretKey) {
+            setIsConfigured(true);
+            setActiveTab('login');
+          }
+        })
+        .catch(() => undefined);
     }
   }, [isConfigured]);
 
   // Generate a random 1Password style Secret Key: A3-XXXXXX-XXXXXX-XXXXX-XXXXX
   const generateNewSecretKey = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    const segment = (len: number) => {
-      let str = '';
-      for (let i = 0; i < len; i++) {
-        str += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      return str;
-    };
+    const segment = (len: number) => generateRandomString(len, chars);
     return `A3-${segment(6)}-${segment(6)}-${segment(5)}-${segment(5)}`;
   };
 
@@ -97,7 +118,7 @@ export default function LockScreen({ onUnlock, onAddLog }: LockScreenProps) {
   };
 
   const handleCopySecretKey = () => {
-    navigator.clipboard.writeText(generatedSecretKey);
+    writeClipboardSecret(generatedSecretKey);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -133,11 +154,9 @@ export default function LockScreen({ onUnlock, onAddLog }: LockScreenProps) {
       // 1. Initialize SQLite and derive master key
       await vaultService.initDb(setupPassword, generatedSecretKey, true);
 
-      // 2. Save device state flag
-      localStorage.setItem('aegis_secret_key', generatedSecretKey);
-      if (rememberDevice) {
-        localStorage.setItem('aegis_remembered_secret_key', generatedSecretKey);
-      }
+      // 2. Save only configuration state by default. The secret key lives in session memory unless device remembering is enabled.
+      localStorage.setItem('aegis_vault_configured', 'true');
+      await persistSecretKey(generatedSecretKey, rememberDevice);
       onAddLog(t('app.lockScreen.logs.setupCompleted'), "warning");
       setIsConfigured(true);
       onUnlock();
@@ -153,8 +172,10 @@ export default function LockScreen({ onUnlock, onAddLog }: LockScreenProps) {
     e.preventDefault();
     setErrorMsg(null);
 
-    const storedSecretKey = localStorage.getItem('aegis_secret_key');
-    if (!storedSecretKey) {
+    const isVaultConfigured = localStorage.getItem('aegis_vault_configured') === 'true'
+      || hasLocalSecretConfiguration()
+      || !!loginSecretKey.trim();
+    if (!isVaultConfigured) {
       setErrorMsg(t('app.lockScreen.errors.missingConfig'));
       return;
     }
@@ -166,11 +187,8 @@ export default function LockScreen({ onUnlock, onAddLog }: LockScreenProps) {
       // Initialize db & verify master password with Argon2id + HKDF derived key
       await vaultService.initDb(loginPassword, cleanedInput, false);
 
-      if (rememberDevice) {
-        localStorage.setItem('aegis_remembered_secret_key', cleanedInput);
-      } else {
-        localStorage.removeItem('aegis_remembered_secret_key');
-      }
+      localStorage.setItem('aegis_vault_configured', 'true');
+      await persistSecretKey(cleanedInput, rememberDevice);
 
       onAddLog(t('app.lockScreen.logs.vaultUnlocked'), "info");
       onUnlock();
@@ -593,6 +611,7 @@ export default function LockScreen({ onUnlock, onAddLog }: LockScreenProps) {
                         try {
                           const currentLanguage = i18n.language;
                           localStorage.clear();
+                          await clearStoredSecretKey();
                           if (currentLanguage === 'tr' || currentLanguage === 'en' || currentLanguage === 'zh-CN') {
                             localStorage.setItem('aegis_language', currentLanguage);
                           }

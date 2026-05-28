@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { BadgeCheck, Check, Coins, Copy, Info, ShieldCheck, Wallet } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import QRCode from 'react-qr-code';
+import { writeClipboardSecret } from '../lib/clipboard';
 
 type DonationAsset = {
   id: string;
@@ -113,7 +114,7 @@ export default function Donate() {
   );
 
   const copyValue = async (value: string, copiedKey: string) => {
-    await navigator.clipboard.writeText(value);
+    await writeClipboardSecret(value);
     setCopiedValue(copiedKey);
     window.setTimeout(() => setCopiedValue(current => (current === copiedKey ? null : current)), 1800);
   };

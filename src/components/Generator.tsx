@@ -3,6 +3,7 @@ import { Copy, RefreshCw, Check, ShieldAlert } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { VaultCryptoService } from '../lib/vault/VaultCryptoService';
+import { writeClipboardSecret } from '../lib/clipboard';
 
 export default function Generator() {
   const { t } = useTranslation();
@@ -80,7 +81,7 @@ export default function Generator() {
 
   const copyToClipboard = () => {
     if (password === selectOneMessage) return;
-    navigator.clipboard.writeText(password);
+    writeClipboardSecret(password);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

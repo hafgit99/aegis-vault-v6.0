@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">AegisVault application icon</title>
+  <desc id="desc">A dark rounded-square vault shield mark with cyan and gold security accents.</desc>
+  <defs>
+    <linearGradient id="bg" x1="120" y1="80" x2="904" y2="944" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#172132"/>
+      <stop offset="0.48" stop-color="#0a0f18"/>
+      <stop offset="1" stop-color="#030507"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="50%" cy="30%" r="58%">
+      <stop offset="0" stop-color="#48d4ff" stop-opacity="0.24"/>
+      <stop offset="0.52" stop-color="#48d4ff" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#48d4ff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="shield" x1="284" y1="182" x2="740" y2="824" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#effaff"/>
+      <stop offset="0.2" stop-color="#99e7ff"/>
+      <stop offset="0.56" stop-color="#1382aa"/>
+      <stop offset="1" stop-color="#08364a"/>
+    </linearGradient>
+    <linearGradient id="shieldEdge" x1="294" y1="170" x2="730" y2="830" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.34" stop-color="#6ee7ff"/>
+      <stop offset="1" stop-color="#0b2231"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="388" y1="360" x2="656" y2="668" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffe7a3"/>
+      <stop offset="0.5" stop-color="#d99c3b"/>
+      <stop offset="1" stop-color="#85551b"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="34" stdDeviation="34" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+    <filter id="innerGlow" x="-15%" y="-15%" width="130%" height="130%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="8" result="blur"/>
+      <feOffset dy="2"/>
+      <feComposite in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1" result="inner"/>
+      <feColorMatrix in="inner" type="matrix" values="0 0 0 0 0.33 0 0 0 0 0.94 0 0 0 0 1 0 0 0 0.85 0"/>
+      <feComposite in2="SourceGraphic" operator="over"/>
+    </filter>
+    <clipPath id="roundClip">
+      <rect x="64" y="64" width="896" height="896" rx="210"/>
+    </clipPath>
+  </defs>
+
+  <rect width="1024" height="1024" rx="232" fill="url(#bg)"/>
+  <g clip-path="url(#roundClip)">
+    <circle cx="512" cy="310" r="520" fill="url(#halo)"/>
+    <path d="M92 282h196M736 282h196M124 744h236M664 744h236" fill="none" stroke="#66d9ff" stroke-opacity="0.12" stroke-width="16" stroke-linecap="round"/>
+    <path d="M152 388h126m468 0h126M144 622h132m470 0h132" fill="none" stroke="#d9a33f" stroke-opacity="0.13" stroke-width="10" stroke-linecap="round"/>
+    <circle cx="310" cy="282" r="15" fill="#65dbff" fill-opacity="0.42"/>
+    <circle cx="714" cy="282" r="15" fill="#65dbff" fill-opacity="0.42"/>
+    <circle cx="302" cy="744" r="13" fill="#d9a33f" fill-opacity="0.42"/>
+    <circle cx="722" cy="744" r="13" fill="#d9a33f" fill-opacity="0.42"/>
+  </g>
+
+  <g filter="url(#softShadow)">
+    <path d="M512 150c105 76 203 104 302 104 1 231-92 433-302 560-210-127-303-329-302-560 99 0 197-28 302-104Z" fill="#06111a"/>
+    <path d="M512 184c92 64 179 90 266 95-8 205-88 368-266 477-178-109-258-272-266-477 87-5 174-31 266-95Z" fill="url(#shieldEdge)"/>
+    <path d="M512 218c79 51 151 76 225 84-14 175-82 312-225 405-143-93-211-230-225-405 74-8 146-33 225-84Z" fill="url(#shield)" filter="url(#innerGlow)"/>
+  </g>
+
+  <path d="M512 274c59 36 114 55 169 62-16 137-68 241-169 313-101-72-153-176-169-313 55-7 110-26 169-62Z" fill="#07121b" fill-opacity="0.72"/>
+  <path d="M512 274v375c101-72 153-176 169-313-55-7-110-26-169-62Z" fill="#ffffff" fill-opacity="0.05"/>
+
+  <g filter="url(#softShadow)">
+    <rect x="363" y="445" width="298" height="236" rx="58" fill="#061018"/>
+    <rect x="390" y="472" width="244" height="182" rx="40" fill="url(#gold)"/>
+    <path d="M420 445v-46c0-57 39-104 92-104s92 47 92 104v46" fill="none" stroke="#c9efff" stroke-width="50" stroke-linecap="round"/>
+    <path d="M420 445v-46c0-57 39-104 92-104s92 47 92 104v46" fill="none" stroke="#07121b" stroke-opacity="0.62" stroke-width="24" stroke-linecap="round"/>
+  </g>
+
+  <circle cx="512" cy="552" r="43" fill="#07121b"/>
+  <path d="M512 584l-26 82h52l-26-82Z" fill="#07121b"/>
+  <circle cx="512" cy="552" r="17" fill="#56d9ff" fill-opacity="0.72"/>
+  <path d="M418 512h188M418 612h188" fill="none" stroke="#fff3c4" stroke-opacity="0.42" stroke-width="8" stroke-linecap="round"/>
+  <path d="M322 326c-15 114 19 246 93 335" fill="none" stroke="#ffffff" stroke-opacity="0.18" stroke-width="18" stroke-linecap="round"/>
+  <path d="M356 284c50-13 101-34 156-66 69 41 133 64 194 72" fill="none" stroke="#ffffff" stroke-opacity="0.24" stroke-width="14" stroke-linecap="round"/>
+</svg>

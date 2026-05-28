@@ -84,14 +84,15 @@ export default function Settings({ onReset, entries, onImport, onAddLog }: Setti
   };
   const [encryptionType, setEncryptionType] = useState(() => {
     try {
-      return localStorage.getItem('aegis_cipher_suite') || 'AES-256-GCM';
+      const stored = localStorage.getItem('aegis_cipher_suite');
+      return stored === 'AES-256-GCM' ? stored : 'AES-256-GCM';
     } catch (e) {
       return 'AES-256-GCM';
     }
   });
 
   const handleSetEncryptionType = async (val: string) => {
-    if (val === encryptionType) return;
+    if (val !== 'AES-256-GCM' || val === encryptionType) return;
     
     try {
       if (vaultService.isUnlocked()) {
@@ -136,7 +137,6 @@ export default function Settings({ onReset, entries, onImport, onAddLog }: Setti
   const [exportPassword, setExportPassword] = useState('');
   const [exportConfirmPassword, setExportConfirmPassword] = useState('');
   const [showExportPassword, setShowExportPassword] = useState(false);
-  const [useMasterPassword, setUseMasterPassword] = useState(false);
   const [plainWarningAccepted, setPlainWarningAccepted] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -220,7 +220,8 @@ export default function Settings({ onReset, entries, onImport, onAddLog }: Setti
 
     setTimeout(() => {
       const dbHealth = vaultService.sqliteDb ? t('app.settingsPage.diagnostics.dbHealthy') : t('app.settingsPage.diagnostics.dbLocked');
-      const cryptoEngine = localStorage.getItem('aegis_cipher_suite') || "AES-256-GCM";
+      const storedCipher = localStorage.getItem('aegis_cipher_suite');
+      const cryptoEngine = storedCipher === 'AES-256-GCM' ? storedCipher : "AES-256-GCM";
       const airgapActive = localStorage.getItem('aegis_airgap') !== 'false';
       const airgapStatus = airgapActive ? t('app.settingsPage.diagnostics.airgapActive') : t('app.settingsPage.diagnostics.airgapPassive');
 
@@ -262,15 +263,6 @@ export default function Settings({ onReset, entries, onImport, onAddLog }: Setti
     setPlainWarningAccepted(false);
     setExportSuccessPreview(null);
     
-    // If user has not typed anything, try to offer master password choice
-    const defaultPassword = localStorage.getItem('aegis_master_password') || 'demo1453';
-    // If they already typed a password in the inline field, use that
-    if (exportPassword.trim()) {
-      setUseMasterPassword(false);
-    } else {
-      setUseMasterPassword(true);
-    }
-    
     setShowExportModal(true);
   };
 
@@ -281,23 +273,19 @@ export default function Settings({ onReset, entries, onImport, onAddLog }: Setti
       let actualPassword = '';
       
       if (exportMethod === 'encrypted') {
-        if (useMasterPassword) {
-          actualPassword = localStorage.getItem('aegis_master_password') || 'demo1453';
-        } else {
-          const pass = exportPassword.trim();
-          const confirmPass = exportConfirmPassword.trim();
-          
-          if (!pass) {
-            throw new Error(t('app.settingsPage.backupErrors.passwordRequired'));
-          }
-          if (pass.length < 4) {
-            throw new Error(t('app.settingsPage.backupErrors.passwordTooShort'));
-          }
-          if (pass !== confirmPass) {
-            throw new Error(t('app.settingsPage.backupErrors.passwordMismatch'));
-          }
-          actualPassword = pass;
+        const pass = exportPassword.trim();
+        const confirmPass = exportConfirmPassword.trim();
+        
+        if (!pass) {
+          throw new Error(t('app.settingsPage.backupErrors.passwordRequired'));
         }
+        if (pass.length < 4) {
+          throw new Error(t('app.settingsPage.backupErrors.passwordTooShort'));
+        }
+        if (pass !== confirmPass) {
+          throw new Error(t('app.settingsPage.backupErrors.passwordMismatch'));
+        }
+        actualPassword = pass;
       } else {
         // Plaintext mode
         if (!plainWarningAccepted) {
@@ -315,6 +303,7 @@ export default function Settings({ onReset, entries, onImport, onAddLog }: Setti
           encrypted: true,
           version: "1.1.0",
           timestamp: new Date().toISOString(),
+          kdf: encrypted.kdf,
           salt: encrypted.salt,
           iv: encrypted.iv,
           data: encrypted.data
@@ -349,6 +338,7 @@ export default function Settings({ onReset, entries, onImport, onAddLog }: Setti
   "app": "AegisVault",
   "encrypted": true,
   "timestamp": "${backupObject.timestamp}",
+  "kdf": "${backupObject.kdf?.algorithm || 'argon2id'}",
   "salt": "${backupObject.salt.substring(0, 12)}...",
   "iv": "${backupObject.iv}",
   "data": "${backupObject.data.substring(0, 36)}..."
@@ -417,10 +407,12 @@ export default function Settings({ onReset, entries, onImport, onAddLog }: Setti
           throw new Error(t('app.settingsPage.importErrors.encryptedExpected'));
         }
         
-        const defaultPassword = localStorage.getItem('aegis_master_password') || 'demo1453';
-        const actualPassword = importPassword.trim() || defaultPassword;
+        const actualPassword = importPassword.trim();
+        if (!actualPassword) {
+          throw new Error(t('app.settingsPage.importErrors.importPasswordRequired'));
+        }
 
-        const decryptedText = await decryptData(payload.data, payload.salt, payload.iv, actualPassword);
+        const decryptedText = await decryptData(payload.data, payload.salt, payload.iv, actualPassword, payload.kdf);
         rawItems = JSON.parse(decryptedText);
 
       } else if (importSource === 'aegis_plain') {
@@ -635,8 +627,7 @@ export default function Settings({ onReset, entries, onImport, onAddLog }: Setti
               <label className="text-sm font-semibold text-on-surface block">{t('app.settingsPage.cipherSuite')}</label>
               <div className="space-y-2">
                 {[
-                  { id: "AES-256-GCM", title: t('app.settingsPage.cipherOptions.aesTitle'), desc: t('app.settingsPage.cipherOptions.aesDescription') },
-                  { id: "CHACHA20-POLY1305", title: t('app.settingsPage.cipherOptions.chachaTitle'), desc: t('app.settingsPage.cipherOptions.chachaDescription') }
+                  { id: "AES-256-GCM", title: t('app.settingsPage.cipherOptions.aesTitle'), desc: t('app.settingsPage.cipherOptions.aesDescription') }
                 ].map((cipher) => (
                   <div 
                     key={cipher.id}
@@ -1372,69 +1363,44 @@ export default function Settings({ onReset, entries, onImport, onAddLog }: Setti
                       </p>
                     </div>
 
-                    {/* Choose Master Password as fallback check */}
-                    <div 
-                      onClick={() => setUseMasterPassword(!useMasterPassword)}
-                      className={`p-4 rounded-xl border cursor-pointer flex items-center justify-between transition-all ${
-                        useMasterPassword 
-                          ? 'bg-secondary-container/20 border-secondary/40' 
-                          : 'border-white/5 hover:bg-white/5'
-                      }`}
-                    >
-                      <div className="pr-3 text-left">
-                        <span className="text-xs font-bold text-on-surface block">{t('app.settingsPage.exportModal.useMasterPassword')}</span>
-                        <span className="text-[10px] text-on-surface-variant/60 mt-0.5 block">{t('app.settingsPage.exportModal.useMasterPasswordDescription')}</span>
-                      </div>
-                      <div className="flex-shrink-0">
-                        {useMasterPassword ? (
-                          <CheckSquare className="w-5 h-5 text-secondary" />
-                        ) : (
-                          <Square className="w-5 h-5 text-on-surface-variant/40" />
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Custom Password Input */}
-                    {!useMasterPassword && (
-                      <div className="space-y-3 text-left">
-                        <div className="space-y-1">
-                          <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider block">{t('app.settingsPage.exportModal.newBackupPassword')}</label>
-                          <div className="relative">
-                            <input
-                              type={showExportPassword ? 'text' : 'password'}
-                              value={exportPassword}
-                              onChange={(e) => setExportPassword(e.target.value)}
-                              placeholder={t('app.settingsPage.exportModal.newBackupPasswordPlaceholder')}
-                              className="w-full bg-surface-container-high/60 border border-white/5 focus:border-tertiary/40 rounded-xl px-4 py-3 text-[13px] outline-none text-on-surface pr-10"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setShowExportPassword(!showExportPassword)}
-                              className="absolute right-3 top-3.5 text-on-surface-variant/60 hover:text-on-surface"
-                            >
-                              {showExportPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="space-y-1">
-                          <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider block">{t('app.settingsPage.exportModal.repeatPassword')}</label>
+                    <div className="space-y-3 text-left">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider block">{t('app.settingsPage.exportModal.newBackupPassword')}</label>
+                        <div className="relative">
                           <input
                             type={showExportPassword ? 'text' : 'password'}
-                            value={exportConfirmPassword}
-                            onChange={(e) => setExportConfirmPassword(e.target.value)}
-                            placeholder={t('app.settingsPage.exportModal.repeatPasswordPlaceholder')}
-                            className="w-full bg-surface-container-high/60 border border-white/5 focus:border-tertiary/40 rounded-xl px-4 py-3 text-[13px] outline-none text-on-surface"
+                            value={exportPassword}
+                            onChange={(e) => setExportPassword(e.target.value)}
+                            placeholder={t('app.settingsPage.exportModal.newBackupPasswordPlaceholder')}
+                            className="w-full bg-surface-container-high/60 border border-white/5 focus:border-tertiary/40 rounded-xl px-4 py-3 text-[13px] outline-none text-on-surface pr-10"
                           />
+                          <button
+                            type="button"
+                            onClick={() => setShowExportPassword(!showExportPassword)}
+                            className="absolute right-3 top-3.5 text-on-surface-variant/60 hover:text-on-surface"
+                          >
+                            {showExportPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
                         </div>
-
-                        {exportPassword && exportConfirmPassword && exportPassword !== exportConfirmPassword && (
-                          <span className="text-[11px] text-error font-semibold block animate-flash">
-                            {t('app.settingsPage.exportModal.passwordMismatch')}
-                          </span>
-                        )}
                       </div>
-                    )}
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider block">{t('app.settingsPage.exportModal.repeatPassword')}</label>
+                        <input
+                          type={showExportPassword ? 'text' : 'password'}
+                          value={exportConfirmPassword}
+                          onChange={(e) => setExportConfirmPassword(e.target.value)}
+                          placeholder={t('app.settingsPage.exportModal.repeatPasswordPlaceholder')}
+                          className="w-full bg-surface-container-high/60 border border-white/5 focus:border-tertiary/40 rounded-xl px-4 py-3 text-[13px] outline-none text-on-surface"
+                        />
+                      </div>
+
+                      {exportPassword && exportConfirmPassword && exportPassword !== exportConfirmPassword && (
+                        <span className="text-[11px] text-error font-semibold block animate-flash">
+                          {t('app.settingsPage.exportModal.passwordMismatch')}
+                        </span>
+                      )}
+                    </div>
 
                     <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex gap-2.5 text-xs text-yellow-500/90 leading-relaxed text-left">
                       <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
@@ -1445,7 +1411,7 @@ export default function Settings({ onReset, entries, onImport, onAddLog }: Setti
 
                     <button
                       type="button"
-                      disabled={isExporting || (!useMasterPassword && (!exportPassword || exportPassword !== exportConfirmPassword))}
+                      disabled={isExporting || !exportPassword || exportPassword !== exportConfirmPassword}
                       onClick={handleExportActualBackup}
                       className="w-full py-3 bg-tertiary text-[#0E121E] hover:bg-tertiary-hover disabled:opacity-40 disabled:cursor-not-allowed font-bold rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer"
                     >

@@ -26,7 +26,7 @@ test.describe('authenticated settings transfer coverage', () => {
 
     await expect(page.getByRole('heading', { name: 'Backup Encryption Key' })).toBeVisible();
     await expect(page.getByText('AegisVault Secure Data Transfer Protocol')).toBeVisible();
-    await expect(page.getByText('Use My Current Master Password')).toBeVisible();
+    await expect(page.getByText('Use My Current Master Password')).not.toBeVisible();
 
     const backupPassword = page.getByPlaceholder('Independent password only for this backup');
     const confirmPassword = page.getByPlaceholder('Confirm the password').last();

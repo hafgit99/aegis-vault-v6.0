@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   bufferToHex,
+  bufferToBase64Url,
   ensureArrayBuffer,
   generateRandomBytes,
+  generateRandomString,
   hexToBuffer,
   isLikelyHex,
   toBufferSource,
@@ -24,6 +26,16 @@ describe('crypto type utilities', () => {
     expect(() => generateRandomBytes(1.5)).toThrow(RangeError);
   });
 
+  it('generates bounded random strings and rejects invalid random string inputs', () => {
+    const value = generateRandomString(12, 'ABC');
+
+    expect(value).toHaveLength(12);
+    expect(value).toMatch(/^[ABC]+$/);
+    expect(() => generateRandomString(0, 'ABC')).toThrow(RangeError);
+    expect(() => generateRandomString(2.5, 'ABC')).toThrow(RangeError);
+    expect(() => generateRandomString(8, '')).toThrow(RangeError);
+  });
+
   it('round-trips hex and rejects invalid input', () => {
     const bytes = new Uint8Array([0, 15, 16, 255]);
 
@@ -36,7 +48,17 @@ describe('crypto type utilities', () => {
     expect(() => hexToBuffer('zz')).toThrow(SyntaxError);
   });
 
+  it('converts buffers to base64url without padding', () => {
+    expect(bufferToBase64Url(new Uint8Array([1, 2, 3, 4]))).toBe('AQIDBA');
+  });
+
   it('rejects non-Uint8Array values for array buffer conversion', () => {
     expect(() => ensureArrayBuffer('not-bytes' as unknown as Uint8Array)).toThrow(TypeError);
+  });
+
+  it('passes non-Uint8Array buffer sources through unchanged', () => {
+    const view = new DataView(new ArrayBuffer(4));
+
+    expect(toBufferSource(view)).toBe(view);
   });
 });

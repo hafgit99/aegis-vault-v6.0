@@ -21,6 +21,42 @@ const fileStoreMock = vi.hoisted(() => ({
 
 vi.mock('../../src/lib/fileStore', () => fileStoreMock);
 
+const mockWebAuthn = () => {
+  const rawId = new Uint8Array([1, 2, 3, 4]).buffer;
+  const publicKey = new Uint8Array([5, 6, 7, 8]).buffer;
+  const clientDataJSON = new Uint8Array([9, 10, 11, 12]).buffer;
+  const authenticatorData = new Uint8Array(60);
+  authenticatorData.set([0xad, 0xce, 0x00, 0x02, 0x35, 0xbc, 0xc6, 0x0a, 0x2b, 0x7b, 0x12, 0x34, 0x56, 0x78, 0x90, 0xab], 37);
+
+  vi.stubGlobal('PublicKeyCredential', vi.fn());
+  Object.defineProperty(navigator, 'credentials', {
+    configurable: true,
+    value: {
+      create: vi.fn(async () => ({
+        type: 'public-key',
+        rawId,
+        response: {
+          clientDataJSON,
+          getPublicKey: () => publicKey,
+          getPublicKeyAlgorithm: () => -7,
+          getAuthenticatorData: () => authenticatorData.buffer,
+          getTransports: () => ['internal'],
+        },
+      })),
+      get: vi.fn(async () => ({
+        type: 'public-key',
+        rawId,
+        response: {
+          authenticatorData: authenticatorData.buffer,
+          clientDataJSON,
+          signature: new Uint8Array([13, 14, 15]).buffer,
+          userHandle: null,
+        },
+      })),
+    },
+  });
+};
+
 const baseEntry = (entry: Partial<VaultEntry>): VaultEntry => ({
   id: entry.id ?? 'entry-1',
   title: entry.title ?? 'Entry',
@@ -79,6 +115,33 @@ describe('AddEntryModal', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it('saves a login entry with TOTP authenticator settings', async () => {
+    await i18n.changeLanguage('en');
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+
+    render(<AddEntryModal isOpen onClose={vi.fn()} onSave={onSave} />);
+
+    await user.type(screen.getByPlaceholderText(/ProtonMail/i), 'GitHub');
+    await user.type(screen.getByPlaceholderText(/email address/i), 'octo@example.com');
+    await user.type(screen.getByPlaceholderText(/Base32 secret/i), 'JBSWY3DPEHPK3PXP');
+    await user.type(screen.getByPlaceholderText('Issuer'), 'GitHub');
+    await user.selectOptions(screen.getByDisplayValue('6 digits'), '8');
+    await user.selectOptions(screen.getByDisplayValue('30s'), '60');
+    await user.click(screen.getByRole('button', { name: 'Save Item' }));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'GitHub',
+      username: 'octo@example.com',
+      type: 'login',
+      totpSecret: 'JBSWY3DPEHPK3PXP',
+      totpIssuer: 'GitHub',
+      totpAlgorithm: 'SHA-1',
+      totpDigits: 8,
+      totpPeriod: 60,
+    }));
+  });
+
   it('saves a card entry and masks the subtitle with the final digits', async () => {
     const user = userEvent.setup();
     const onSave = vi.fn();
@@ -106,6 +169,7 @@ describe('AddEntryModal', () => {
 
   it('saves a passkey entry with generated credential metadata', async () => {
     await i18n.changeLanguage('en');
+    mockWebAuthn();
     const user = userEvent.setup();
     const onSave = vi.fn();
 
@@ -116,6 +180,7 @@ describe('AddEntryModal', () => {
     await user.type(screen.getByPlaceholderText(/google.com/i), 'github.com');
     await user.type(screen.getByPlaceholderText(/email address/i), 'octo@example.com');
     await user.click(screen.getByRole('button', { name: /Generate Secure Key/i }));
+    await screen.findByText('AQIDBA');
     await user.click(screen.getByRole('button', { name: 'Save Item' }));
 
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
@@ -124,9 +189,11 @@ describe('AddEntryModal', () => {
       username: 'octo@example.com',
       passkeyDomain: 'github.com',
       passkeyUser: 'octo@example.com',
-      passkeyCredentialId: expect.stringMatching(/^[a-f0-9]{32}$/),
-      passkeyPublicKey: expect.stringContaining('BEGIN PUBLIC KEY'),
-      passkeyAAGUID: expect.stringMatching(/^adce0002-35bc-c60a-2b7b-/),
+      passkeyCredentialId: 'AQIDBA',
+      passkeyPublicKey: 'BQYHCA',
+      passkeyAAGUID: 'adce0002-35bc-c60a-2b7b-1234567890ab',
+      passkeyPublicKeyAlgorithm: -7,
+      passkeyTransports: ['internal'],
       strength: 'IMMUTABLE',
       subtitle: 'Passkey (github.com)',
     }));
@@ -241,7 +308,6 @@ describe('AddEntryModal', () => {
 describe('SecurityAudit', () => {
   it('surfaces weak and reused passwords and can reveal a duplicate password', async () => {
     const user = userEvent.setup();
-    localStorage.setItem('aegis_master_password', 'short');
     const entries = [
       baseEntry({ id: '1', title: 'GitHub', username: 'octo', password: 'shared123', strength: 'GOOD' }),
       baseEntry({ id: '2', title: 'Email', username: 'ada', password: 'shared123', strength: 'GOOD' }),
@@ -263,8 +329,6 @@ describe('SecurityAudit', () => {
   });
   it('shows clean audit states for unique strong passwords and a strong master key', async () => {
     await i18n.changeLanguage('en');
-    localStorage.setItem('aegis_master_password', 'VeryStrongMasterKey123!');
-
     render(
       <SecurityAudit
         entries={[
@@ -281,7 +345,7 @@ describe('SecurityAudit', () => {
     expect(screen.getByText('All Secure')).toBeInTheDocument();
     expect(screen.getByText('Great! No Colliding Records Found')).toBeInTheDocument();
     expect(screen.getByText('Nice! No Weak Passwords')).toBeInTheDocument();
-    expect(screen.getByText(/exceeds the 12-character threshold/)).toBeInTheDocument();
+    expect(screen.getByText(/verified without being stored/i)).toBeInTheDocument();
     expect(screen.queryByText('Show All')).not.toBeInTheDocument();
   });
 
@@ -535,6 +599,7 @@ describe('DetailPanel', () => {
 
   it('copies passkey secrets and saves refreshed passkey metadata', async () => {
     await i18n.changeLanguage('en');
+    mockWebAuthn();
     const user = userEvent.setup();
     const onUpdate = vi.fn();
     const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined);
@@ -568,6 +633,7 @@ describe('DetailPanel', () => {
 
     await user.click(screen.getByRole('button', { name: 'Edit' }));
     await user.click(screen.getByRole('button', { name: /Refresh/i }));
+    await screen.findByText(/registered/i);
     await user.click(screen.getByRole('button', { name: /Save Changes/i }));
 
     expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({
@@ -575,11 +641,62 @@ describe('DetailPanel', () => {
       type: 'passkey',
       username: 'octo@example.com',
       passkeyDomain: 'github.com',
-      passkeyCredentialId: expect.stringMatching(/^[a-f0-9]{32}$/),
-      passkeyPublicKey: expect.stringContaining('BEGIN PUBLIC KEY'),
-      passkeyAAGUID: expect.stringMatching(/^adce0002-35bc-c60a-2b7b-/),
+      passkeyCredentialId: 'AQIDBA',
+      passkeyPublicKey: 'BQYHCA',
+      passkeyAAGUID: 'adce0002-35bc-c60a-2b7b-1234567890ab',
+      passkeyPublicKeyAlgorithm: -7,
+      passkeyTransports: ['internal'],
       strength: 'IMMUTABLE',
       subtitle: 'Passkey (github.com)',
+    }));
+  });
+
+  it('renders, copies, and edits login TOTP codes', async () => {
+    await i18n.changeLanguage('en');
+    const user = userEvent.setup();
+    const onUpdate = vi.fn();
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined);
+
+    render(
+      <DetailPanel
+        entry={baseEntry({
+          id: 'login-totp',
+          title: 'GitHub',
+          type: 'login',
+          username: 'octo@example.com',
+          url: 'https://github.com',
+          totpSecret: 'JBSWY3DPEHPK3PXP',
+          totpIssuer: 'GitHub',
+          totpAlgorithm: 'SHA-1',
+          totpDigits: 6,
+          totpPeriod: 30,
+        })}
+        onClose={vi.fn()}
+        onDelete={vi.fn()}
+        onUpdate={onUpdate}
+      />
+    );
+
+    const code = await screen.findByText(/^\d{6}$/);
+    await user.click(within(code.closest('div')!.parentElement as HTMLElement).getByRole('button'));
+    expect(writeText).toHaveBeenCalledWith(expect.stringMatching(/^\d{6}$/));
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    await user.clear(screen.getByPlaceholderText('Base32 secret'));
+    await user.type(screen.getByPlaceholderText('Base32 secret'), 'JBSWY3DPEHPK3PXP');
+    await user.clear(screen.getByPlaceholderText('Issuer'));
+    await user.type(screen.getByPlaceholderText('Issuer'), 'GitHub Updated');
+    await user.selectOptions(screen.getByDisplayValue('6 digits'), '8');
+    await user.selectOptions(screen.getByDisplayValue('30s'), '60');
+    await user.click(screen.getByRole('button', { name: /Save Changes/i }));
+
+    expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'login-totp',
+      totpSecret: 'JBSWY3DPEHPK3PXP',
+      totpIssuer: 'GitHub Updated',
+      totpAlgorithm: 'SHA-1',
+      totpDigits: 8,
+      totpPeriod: 60,
     }));
   });
 

@@ -1,4 +1,4 @@
-{
+﻿{
   "app": {
     "language": {
       "title": "语言",
@@ -94,6 +94,10 @@
       "passwordPlaceholder": "设置密码",
       "generateStrongPassword": "生成随机强密码",
       "websiteUrl": "网站 URL",
+      "totpSecret": "Authenticator TOTP 密钥",
+      "totpSecretPlaceholder": "Base32 密钥，例如 JBSWY3DPEHPK3PXP",
+      "totpIssuerPlaceholder": "发行方",
+      "generateTotpSecret": "生成 TOTP 密钥",
       "cardholder": "持卡人姓名",
       "cardholderPlaceholder": "卡片上的姓名",
       "cardNumber": "卡号",
@@ -104,6 +108,8 @@
       "cryptoPasskeySecrets": "加密 Passkey 密钥",
       "cryptoPasskeyDescription": "按照 FIDO2 / WebAuthn 标准加密的唯一密钥。",
       "generateSecureKey": "生成安全密钥",
+      "passkeyRegistering": "正在打开认证器...",
+      "passkeyRegistrationFailed": "无法完成 Passkey 注册。",
       "fullName": "证件上的姓名",
       "fullNamePlaceholder": "证件上显示的完整姓名",
       "idNumber": "身份证件号码",
@@ -230,7 +236,7 @@
       "masterDescription": "本地解锁密码的加密抗性检查。",
       "perfect": "完美",
       "needsImprovement": "需要改进",
-      "masterStrong": "当前主密码长度为 {{count}} 个字符。它超过 12 字符门槛，对暴力破解攻击具有很高熵值。",
+      "masterStrong": "主密码不会被存储，只会用于验证。AegisVault 仅保存强化后的认证元数据用于解锁检查。",
       "masterWeak": "当前主密码长度为 {{count}} 个字符。强烈建议至少使用 12 个字符，以获得符合高安全标准的密码抗性。",
       "duplicateMatches": "重复密码匹配（{{count}}）",
       "duplicateDescription": "共享同一密码并形成安全暴露的账户组。",
@@ -296,6 +302,12 @@
         "showPassword": "显示密码",
         "generatePassword": "生成强密码",
         "website": "网站 URL",
+        "totpCode": "一次性验证码",
+        "totpSecret": "TOTP 密钥",
+        "totpSecretPlaceholder": "Base32 密钥",
+        "totpIssuerPlaceholder": "发行方",
+        "generateTotpSecret": "生成",
+        "totpInvalid": "TOTP 密钥无效。",
         "cardholder": "持卡人",
         "cardholderName": "持卡人姓名",
         "cardNumber": "卡号",
@@ -328,7 +340,14 @@
         "encrypting": "正在加密...",
         "removeAttachment": "移除附件",
         "neverExpires": "无期限",
-        "refreshKeys": "刷新"
+        "refreshKeys": "刷新",
+        "registeringPasskey": "正在注册...",
+        "verifyPasskey": "验证",
+        "verifyingPasskey": "正在验证...",
+        "passkeyRegistered": "Passkey 凭据已通过认证器注册。",
+        "passkeyRegistrationFailed": "无法完成 Passkey 注册。",
+        "passkeyVerified": "认证器断言已成功完成。",
+        "passkeyVerificationFailed": "无法完成 Passkey 验证。"
       },
       "fileErrors": {
         "tooLarge": "文件大小不能超过 200MB 限制。",
@@ -568,7 +587,7 @@
         "airgapPassive": "未启用（允许网络）"
       },
       "backupErrors": {
-        "passwordRequired": "请为加密备份设置密码，或启用主密码选项。",
+        "passwordRequired": "请为加密备份设置一个独立的备份密码。",
         "passwordTooShort": "为保证安全，备份密码至少需要 4 个字符。",
         "passwordMismatch": "您输入的备份密码不一致。请检查。",
         "plainWarningRequired": "要下载明文备份，请确认风险警告并勾选确认框。",
@@ -576,6 +595,7 @@
       },
       "importErrors": {
         "encryptedExpected": "请上传加密的 AegisVault 备份，或选择 AegisVault 明文选项。",
+        "importPasswordRequired": "请输入备份密码以解密此加密备份。",
         "fileIsEncrypted": "此备份文件已加密。请选择 AegisVault 加密备份选项。",
         "noCompatibleData": "文件已读取，但无法解析出兼容记录。请检查列名。",
         "parse": "文件解析错误：{{message}}",
@@ -655,8 +675,6 @@
         "proofNote": "* 如您所见，“data”字段由无意义的十六进制字符组成。没有密码，任何人都无法解密此文件。",
         "howPasswordWorks": "加密备份密码如何工作？",
         "passwordExplanation": "备份 JSON 文件中的所有数据（密码、卡片、备注）都会在浏览器内使用您设置的密码加密。用文本编辑器打开文件的人只会看到无意义的随机字符。恢复时需要输入此密码。",
-        "useMasterPassword": "使用当前主密码",
-        "useMasterPasswordDescription": "使用您登录系统时的主密码来加密备份。",
         "newBackupPassword": "创建新的备份密码",
         "newBackupPasswordPlaceholder": "仅用于此备份的独立密码",
         "repeatPassword": "再次输入密码",
@@ -842,3 +860,5 @@
     }
   }
 }
+
+

@@ -38,6 +38,7 @@ Desktop builds must depend on the existing release gate. Packaging must not repl
 
 ```bash
 npm run lint
+npm run security:scan
 npm run audit:all
 npm run test:coverage
 npm run build

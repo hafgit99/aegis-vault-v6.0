@@ -73,6 +73,8 @@ const entry = (overrides: Partial<VaultEntry> = {}): VaultEntry => ({
 
 describe('VaultService', () => {
   beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
     sqliteMock.instances.length = 0;
     sqliteMock.SQLiteOPFS.mockClear();
     Object.values(authMock).forEach((mock) => mock.mockClear());
@@ -194,15 +196,37 @@ describe('VaultService', () => {
         passkeyPublicKey: 'public-key',
         passkeyAAGUID: 'aaguid-1',
       });
+    (cryptoMock.decryptTextField as any)
+      .mockResolvedValueOnce('dec:title-cipher')
+      .mockResolvedValueOnce('dec:username-cipher')
+      .mockResolvedValueOnce('dec:website-cipher')
+      .mockResolvedValueOnce('dec:category-cipher')
+      .mockResolvedValueOnce('dec:password-cipher')
+      .mockResolvedValueOnce('dec:notes-cipher')
+      .mockResolvedValueOnce('JBSWY3DPEHPK3PXP');
     db.getAllPasswords.mockReturnValue([
       {
         id: 'row-1',
-        title: 'GitHub',
-        username: 'octo',
+        title: 'dec:title-cipher',
+        username: 'dec:username-cipher',
+        encrypted_title: 'title-cipher',
+        title_iv: 'title-iv',
+        encrypted_username: 'username-cipher',
+        username_iv: 'username-iv',
+        encrypted_website: 'website-cipher',
+        website_iv: 'website-iv',
+        encrypted_category: 'category-cipher',
+        category_iv: 'category-iv',
         encrypted_password: 'password-cipher',
         iv: 'password-iv',
         encrypted_notes: 'notes-cipher',
         notes_iv: 'notes-iv',
+        totp_secret: 'totp-cipher',
+        totp_iv: 'totp-iv',
+        totp_issuer: 'GitHub',
+        totp_algorithm: 'SHA-1',
+        totp_digits: 6,
+        totp_period: 30,
         encrypted_card_details: 'card-cipher',
         card_details_iv: 'card-iv',
         encrypted_identity_details: 'identity-cipher',
@@ -225,11 +249,17 @@ describe('VaultService', () => {
     expect(entries).toEqual([
       expect.objectContaining({
         id: 'row-1',
-        title: 'GitHub',
-        username: 'octo',
+        title: 'dec:title-cipher',
+        username: 'dec:username-cipher',
         password: 'dec:password-cipher',
         notes: 'dec:notes-cipher',
-        url: 'https://github.com',
+        totpSecret: 'JBSWY3DPEHPK3PXP',
+        totpIssuer: 'GitHub',
+        totpAlgorithm: 'SHA-1',
+        totpDigits: 6,
+        totpPeriod: 30,
+        url: 'dec:website-cipher',
+        type: 'dec:category-cipher',
         themeColor: 'primary',
         favorite: true,
         attachment: expect.objectContaining({ id: 'file-1' }),
@@ -359,7 +389,8 @@ describe('VaultService', () => {
     }), expect.any(Uint8Array));
     expect(db.putPassword).toHaveBeenCalledWith(expect.objectContaining({
       id: 'entry-1',
-      category: 'card',
+      category: 'encrypted',
+      encrypted_category: 'enc:card',
       strength: 'IMMUTABLE',
       encrypted_card_details: expect.stringContaining('json:'),
       attachments: [expect.objectContaining({ id: 'file-1' })],
@@ -381,16 +412,29 @@ describe('VaultService', () => {
       password: 'short-pass',
       notes: '',
       url: 'https://short.example',
+      totpSecret: 'JBSWY3DPEHPK3PXP',
+      totpIssuer: 'GitHub',
+      totpAlgorithm: 'SHA-1',
+      totpDigits: 6,
+      totpPeriod: 30,
       favorite: true,
       deletedAt: '2026-05-01T00:00:00.000Z',
     }), false);
 
     expect(db.putPassword).toHaveBeenLastCalledWith(expect.objectContaining({
       id: 'login-good',
-      title: 'Short Login',
-      username: 'short-user',
-      category: 'login',
-      website: 'https://short.example',
+      title: '[encrypted]',
+      username: '',
+      category: 'encrypted',
+      website: '',
+      encrypted_title: 'enc:Short Login',
+      title_iv: 'iv:Short Login',
+      encrypted_username: 'enc:short-user',
+      username_iv: 'iv:short-user',
+      encrypted_category: 'enc:login',
+      category_iv: 'iv:login',
+      encrypted_website: 'enc:https://short.example',
+      website_iv: 'iv:https://short.example',
       strength: 'GOOD',
       favorite: 1,
       tags: [],
@@ -401,6 +445,12 @@ describe('VaultService', () => {
       iv: 'iv:short-pass',
       encrypted_notes: null,
       notes_iv: null,
+      totp_secret: 'enc:JBSWY3DPEHPK3PXP',
+      totp_iv: 'iv:JBSWY3DPEHPK3PXP',
+      totp_issuer: 'GitHub',
+      totp_algorithm: 'SHA-1',
+      totp_digits: 6,
+      totp_period: 30,
       encrypted_card_details: null,
       card_details_iv: null,
       encrypted_identity_details: null,
@@ -508,8 +558,10 @@ describe('VaultService', () => {
     }), expect.any(Uint8Array));
     expect(db.putPassword).toHaveBeenLastCalledWith(expect.objectContaining({
       id: 'identity-1',
-      username: 'Ada Lovelace',
-      category: 'identity',
+      username: '',
+      encrypted_username: 'enc:Ada Lovelace',
+      category: 'encrypted',
+      encrypted_category: 'enc:identity',
       website: '',
       strength: 'IMMUTABLE',
       encrypted_identity_details: expect.stringContaining('json:'),
@@ -539,9 +591,12 @@ describe('VaultService', () => {
     }), expect.any(Uint8Array));
     expect(db.putPassword).toHaveBeenLastCalledWith(expect.objectContaining({
       id: 'passkey-1',
-      username: 'octo@example.com',
-      category: 'passkey',
-      website: 'github.com',
+      username: '',
+      encrypted_username: 'enc:octo@example.com',
+      category: 'encrypted',
+      encrypted_category: 'enc:passkey',
+      website: '',
+      encrypted_website: 'enc:github.com',
       strength: 'IMMUTABLE',
       encrypted_passkey_meta: expect.stringContaining('json:'),
       passkey_meta_iv: 'json-iv',
@@ -557,7 +612,8 @@ describe('VaultService', () => {
 
     expect(db.putPassword).toHaveBeenLastCalledWith(expect.objectContaining({
       id: 'note-1',
-      category: 'note',
+      category: 'encrypted',
+      encrypted_category: 'enc:note',
       strength: 'IMMUTABLE',
       encrypted_notes: 'enc:sealed note',
       notes_iv: 'iv:sealed note',
@@ -600,6 +656,7 @@ describe('VaultService', () => {
     service.sqliteDb = db;
     service.aesKey = oldKey;
     service.rawKey = oldRawKey;
+    sessionStorage.setItem('aegis_session_secret_key', 'A3-SECRET-KEY');
     db.getMetadata.mockReturnValue({ credential: { scheme: 'argon2id-v1', verificationHash: 'hash', salt: 'salt' } });
     vi.spyOn(service, 'getPasswords').mockResolvedValue([entry({ id: 'rekeyed-entry' })]);
     authMock.deriveMasterKey.mockResolvedValueOnce({
@@ -621,7 +678,7 @@ describe('VaultService', () => {
     expect(db.putMetadata).toHaveBeenCalledWith('main_salt', expect.objectContaining({ id: 'main_salt' }));
     expect(db.putMetadata).toHaveBeenCalledWith('auth_credential', expect.objectContaining({ id: 'auth_credential' }));
     expect(db.flushToOPFS).toHaveBeenCalled();
-    expect(localStorage.getItem('aegis_master_password')).toBe('new-password');
+    expect(localStorage.getItem('aegis_master_password')).toBeNull();
     expect(service.aesKey).toBe(newKey);
     expect(service.rawKey).toBe(newRawKey);
   });
@@ -654,6 +711,7 @@ describe('VaultService', () => {
     service.sqliteDb = db;
     service.aesKey = oldKey;
     service.rawKey = oldRawKey;
+    sessionStorage.setItem('aegis_session_secret_key', 'A3-SECRET-KEY');
     db.getMetadata.mockReturnValue({ credential: { scheme: 'argon2id-v1', verificationHash: 'hash', salt: 'salt' } });
     vi.spyOn(service, 'getPasswords').mockResolvedValue([entry({ id: 'entry-that-fails' })]);
     db.putPassword.mockImplementationOnce(() => {

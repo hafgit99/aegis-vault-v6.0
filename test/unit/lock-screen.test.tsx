@@ -20,6 +20,8 @@ vi.mock('../../src/lib/SQLiteOPFS', () => ({
 describe('LockScreen', () => {
   beforeEach(async () => {
     await i18n.changeLanguage('tr');
+    localStorage.clear();
+    sessionStorage.clear();
     vi.clearAllMocks();
   });
 
@@ -85,7 +87,9 @@ describe('LockScreen', () => {
     await waitFor(() => {
       expect(vaultService.initDb).toHaveBeenCalledWith('MasterPassword123!', generatedKey.textContent, true);
     });
-    expect(localStorage.getItem('aegis_secret_key')).toBe(generatedKey.textContent);
+    expect(localStorage.getItem('aegis_vault_configured')).toBe('true');
+    expect(localStorage.getItem('aegis_secret_key')).toBeNull();
+    expect(sessionStorage.getItem('aegis_session_secret_key')).toBe(generatedKey.textContent);
     expect(localStorage.getItem('aegis_remembered_secret_key')).toBe(generatedKey.textContent);
     expect(onAddLog).toHaveBeenCalledWith(expect.any(String), 'warning');
     expect(onUnlock).toHaveBeenCalled();
@@ -127,7 +131,9 @@ describe('LockScreen', () => {
     await waitFor(() => {
       expect(vaultService.initDb).toHaveBeenCalledWith('MasterPassword123!', generatedKey.textContent, true);
     });
-    expect(localStorage.getItem('aegis_secret_key')).toBe(generatedKey.textContent);
+    expect(localStorage.getItem('aegis_vault_configured')).toBe('true');
+    expect(localStorage.getItem('aegis_secret_key')).toBeNull();
+    expect(sessionStorage.getItem('aegis_session_secret_key')).toBe(generatedKey.textContent);
     expect(localStorage.getItem('aegis_remembered_secret_key')).toBeNull();
   });
 
@@ -146,6 +152,7 @@ describe('LockScreen', () => {
 
     expect(await screen.findByText('setup failed hard')).toBeInTheDocument();
     expect(localStorage.getItem('aegis_secret_key')).toBeNull();
+    expect(sessionStorage.getItem('aegis_session_secret_key')).toBeNull();
     expect(localStorage.getItem('aegis_remembered_secret_key')).toBeNull();
   });
 
@@ -157,7 +164,7 @@ describe('LockScreen', () => {
 
     render(<LockScreen onUnlock={onUnlock} onAddLog={vi.fn()} />);
 
-    expect(screen.getByDisplayValue('A3-REMEMBERED-KEY01-KEY02-KEY03')).toBeInTheDocument();
+    expect(await screen.findByDisplayValue('A3-REMEMBERED-KEY01-KEY02-KEY03')).toBeInTheDocument();
     await user.type(screen.getByPlaceholderText(/Master.*girin/i), 'MasterPassword123!');
     const rememberDevice = screen.getByRole('checkbox');
     await user.click(rememberDevice);
@@ -172,6 +179,9 @@ describe('LockScreen', () => {
       );
     });
     expect(localStorage.getItem('aegis_remembered_secret_key')).toBeNull();
+    expect(localStorage.getItem('aegis_vault_configured')).toBe('true');
+    expect(localStorage.getItem('aegis_secret_key')).toBeNull();
+    expect(sessionStorage.getItem('aegis_session_secret_key')).toBe('A3-REMEMBERED-KEY01-KEY02-KEY03');
     expect(onUnlock).toHaveBeenCalled();
   });
 
@@ -206,6 +216,7 @@ describe('LockScreen', () => {
       expect(clearAllOPFSFiles).toHaveBeenCalled();
     });
     expect(localStorage.getItem('aegis_secret_key')).toBeNull();
+    expect(sessionStorage.getItem('aegis_session_secret_key')).toBeNull();
     expect(localStorage.getItem('aegis_remembered_secret_key')).toBeNull();
     expect(localStorage.getItem('aegis_language')).toBe('tr');
     expect(onAddLog).toHaveBeenCalledWith(expect.any(String), 'warning');

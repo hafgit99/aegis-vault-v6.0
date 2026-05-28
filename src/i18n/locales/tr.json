@@ -1,4 +1,4 @@
-{
+﻿{
   "app": {
     "language": {
       "title": "Dil",
@@ -94,6 +94,10 @@
       "passwordPlaceholder": "şifre belirleyin",
       "generateStrongPassword": "Rastgele Güçlü Şifre Üret",
       "websiteUrl": "Web Sitesi URL",
+      "totpSecret": "Authenticator TOTP Sırrı",
+      "totpSecretPlaceholder": "Base32 sır, örn. JBSWY3DPEHPK3PXP",
+      "totpIssuerPlaceholder": "Sağlayıcı",
+      "generateTotpSecret": "TOTP Sırrı Üret",
       "cardholder": "Kart Sahibinin Adı",
       "cardholderPlaceholder": "Kart üzerindeki isim",
       "cardNumber": "Kart Numarası",
@@ -104,6 +108,8 @@
       "cryptoPasskeySecrets": "Kripto Geçit Sırları",
       "cryptoPasskeyDescription": "FIDO2 / WebAuthn standardına göre şifrelenmiş benzersiz anahtarlar.",
       "generateSecureKey": "Güvenli Anahtar Üret",
+      "passkeyRegistering": "Kimlik dogrulayici aciliyor...",
+      "passkeyRegistrationFailed": "Passkey kaydi tamamlanamadi.",
       "fullName": "Kart Üzerindeki Ad Soyad",
       "fullNamePlaceholder": "Kimlikte yazdığı şekliyle ad soyad",
       "idNumber": "T.C. Kimlik Numarası",
@@ -230,7 +236,7 @@
       "masterDescription": "Uygulama yerel kilit açma şifresinin kripto direnci denetimi.",
       "perfect": "KUSURSUZ",
       "needsImprovement": "GELİŞTİRİLMELİ",
-      "masterStrong": "Mevcut ana parolanız {{count}} karakter uzunluğundadır. Şifreniz 12 karakter barajını aşarak kaba kuvvet saldırılarına karşı son derece dirençli bir entropi oluşturuyor.",
+      "masterStrong": "Ana parola saklanmadan doğrulanır. AegisVault kilit açma kontrolleri için yalnızca güçlendirilmiş kimlik doğrulama metadatası tutar.",
       "masterWeak": "Mevcut ana parolanız {{count}} karakter uzunluğundadır. Askeri standartlara uygun yüksek şifre direnci sağlamak için ana şifrenizin en az 12 karakter olmasını önemle tavsiye ederiz.",
       "duplicateMatches": "Çakışan Parola Eşleşmeleri ({{count}})",
       "duplicateDescription": "Aynı şifreyi paylaşan ve siber güvenlik açığı teşkil eden hesap grupları.",
@@ -251,7 +257,7 @@
       "weakPassword": "ZAYIF PAROLA",
       "characterCount": "{{count}} Karakter",
       "noWeakTitle": "Tebrikler! Güçsüz Parola Yok",
-      "noWeakDescription": "Tüm kasa kayıtlarınız askeri şifreleme uzunluğu olan minimum 12 karakter barajını aşmıştır.",
+      "noWeakDescription": "Tüm kasa kayıtlarınız bu denetimde kullanılan minimum 12 karakter eşiğini aşmıştır.",
       "sandboxTitle": "Yerel Güvenlik Sandbox Kontrolü",
       "sandboxDescription": "Uygulama çevrimdışı air-gap durum bütünlüğü doğrulaması.",
       "sandboxStatus": "AKTİF / SIZDIRMAZ",
@@ -296,6 +302,12 @@
         "showPassword": "Parolayı Göster",
         "generatePassword": "Güçlü Şifre Üret",
         "website": "WEB SİTESİ URL",
+        "totpCode": "TEK KULLANIMLIK KOD",
+        "totpSecret": "TOTP SIRRI",
+        "totpSecretPlaceholder": "Base32 sır",
+        "totpIssuerPlaceholder": "Sağlayıcı",
+        "generateTotpSecret": "Üret",
+        "totpInvalid": "TOTP sırrı geçersiz.",
         "cardholder": "KART SAHİBİ",
         "cardholderName": "KART SAHİBİNİN ADI",
         "cardNumber": "KART NUMARASI",
@@ -328,7 +340,14 @@
         "encrypting": "Kriptolanıyor...",
         "removeAttachment": "Eki Kaldır",
         "neverExpires": "Süresiz",
-        "refreshKeys": "Yenile"
+        "refreshKeys": "Yenile",
+        "registeringPasskey": "Kaydediliyor...",
+        "verifyPasskey": "Dogrula",
+        "verifyingPasskey": "Dogrulaniyor...",
+        "passkeyRegistered": "Passkey kimlik bilgisi authenticator ile kaydedildi.",
+        "passkeyRegistrationFailed": "Passkey kaydi tamamlanamadi.",
+        "passkeyVerified": "Authenticator dogrulama istegi basariyla tamamlandi.",
+        "passkeyVerificationFailed": "Passkey dogrulamasi tamamlanamadi."
       },
       "fileErrors": {
         "tooLarge": "Dosya boyutu 200MB limitini aşamaz!",
@@ -398,7 +417,7 @@
       "records": "{{count}} Kayıt",
       "items": "{{count}} Öge",
       "whyNotCloud": "Neden SaaS Bulutu Değil?",
-      "whyNotCloudText": "AegisVault her saniye yerel şifrelenmiş veritabanını tarayıcı üzerinde tutar ve bulut ortamına göndermez. Bu, sıfır ağ riski ve tam sızdırmaz güvenlik demektir. Ancak, tarayıcı verileri silinirse şifrelerinize ulaşamazsınız. Bu sebeple belirli aralıklarla \"Şifreli Yedek Al\" panelinden şifreli belgelerinizi kaydetmenizi önemle tavsiye ederiz.",
+      "whyNotCloudText": "AegisVault yerel şifrelenmiş veritabanını tarayıcı üzerinde tutar ve bir bulut servisine göndermez. Bu, uzak servis maruziyetini azaltır; ancak tarayıcı verileri silinirse şifrelerinize ulaşamazsınız. Bu sebeple belirli aralıklarla \"Şifreli Yedek Al\" panelinden şifreli belgelerinizi kaydetmenizi önemle tavsiye ederiz.",
       "wipeTitle": "ACİL DURUM FABRİKA SIFIRLAMA (WIPE OUT)",
       "wipeDescription": "Bu eylem tarayıcınızın belleğindeki tüm kullanıcı verilerini, şifreleri, kimlikleri ve kayıtları bütünüyle siler ve geri döndürülemez biçimde yok eder.",
       "wipeBackupWarning": "Lütfen işlemi yapmadan önce yedek aldığınızdan kesinlikle emin olun!",
@@ -569,7 +588,7 @@
         "airgapPassive": "Pasif (Ağ İzin Verildi)"
       },
       "backupErrors": {
-        "passwordRequired": "Şifreli yedekleme için lütfen bir parola belirleyin veya master parola seçeneğini aktif edin.",
+        "passwordRequired": "Şifreli yedekleme için lütfen bağımsız bir yedek parolası belirleyin.",
         "passwordTooShort": "Güvenliğiniz için yedek şifresi en az 4 karakter olmalıdır.",
         "passwordMismatch": "Girdiğiniz yedek şifreleri birbiriyle eşleşmiyor. Lütfen kontrol edin.",
         "plainWarningRequired": "Düz metin yedek indirmek için lütfen risk uyarısını onaylayıp onay kutusunu işaretleyin.",
@@ -577,6 +596,7 @@
       },
       "importErrors": {
         "encryptedExpected": "Lütfen şifreli bir AegisVault yedeği yükleyin ya da 'AegisVault Düz Metin' seçeneğini seçin.",
+        "importPasswordRequired": "Bu şifreli yedeği çözmek için yedek parolasını girin.",
         "fileIsEncrypted": "Bu yedek dosyası şifrelenmiştir. Lütfen 'AegisVault Şifreli Yedek' seçeneğini seçin.",
         "noCompatibleData": "Dosya okundu fakat sıfır uyumlu kayıt ayrıştırılabildi. Sütun adlarını kontrol edin.",
         "parse": "Dosya ayrıştırma hatası: {{message}}",
@@ -656,8 +676,6 @@
         "proofNote": "* Gördüğünüz gibi \"data\" alanı anlamsız Hex karakterlerinden oluşmaktadır. Şifrenizi bilmeyen hiç kimse bu dosyayı asla çözemez.",
         "howPasswordWorks": "ŞİFRELİ YEDEKLEMEDE PAROLA NASIL ÇALIŞIR?",
         "passwordExplanation": "Yedek json dosyasındaki tüm veriler (şifreleriniz, kartlarınız, notlarınız) belirlediğiniz bir şifreyle tarayıcı içinde şifrelenir. Bu sayede dosyayı not defteriyle açan biri sadece anlamsız rastgele harfler görür. Geri yüklerken bu şifreyi girmeniz istenir.",
-        "useMasterPassword": "Mevcut Master Parolamı Kullan",
-        "useMasterPasswordDescription": "Yedeği şifrelemek için sisteme giriş yaptığınız ana şifreyi kullanır.",
         "newBackupPassword": "YENİ YEDEK PAROLASI OLUŞTURUN",
         "newBackupPasswordPlaceholder": "Yalnızca bu yedeğe özel bağımsız şifre",
         "repeatPassword": "PAROLAYI TEKRAR GİRİN",
@@ -843,3 +861,5 @@
     }
   }
 }
+
+

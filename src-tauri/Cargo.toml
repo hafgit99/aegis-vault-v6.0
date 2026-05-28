@@ -11,6 +11,7 @@ repository = "https://github.com/hafgit99/aegis-vault-v6.0"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
 tauri = { version = "2", features = [] }
 
 [features]

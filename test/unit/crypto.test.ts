@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { decryptData, encryptData } from '../../src/lib/backupCrypto';
+import { writeClipboardSecret } from '../../src/lib/clipboard';
 import { VaultCryptoService } from '../../src/lib/vault/VaultCryptoService';
 
 async function createAesKey() {
@@ -15,7 +16,8 @@ describe('backup crypto', () => {
     const encrypted = await encryptData('{"secret":"value"}', 'correct horse battery staple');
 
     expect(encrypted.data).not.toContain('secret');
-    await expect(decryptData(encrypted.data, encrypted.salt, encrypted.iv, 'correct horse battery staple'))
+    expect(encrypted.kdf).toMatchObject({ algorithm: 'argon2id', memorySize: 65536 });
+    await expect(decryptData(encrypted.data, encrypted.salt, encrypted.iv, 'correct horse battery staple', encrypted.kdf))
       .resolves.toBe('{"secret":"value"}');
   });
 
@@ -23,8 +25,39 @@ describe('backup crypto', () => {
     localStorage.setItem('aegis_language', 'en');
     const encrypted = await encryptData('classified', 'right-password');
 
-    await expect(decryptData(encrypted.data, encrypted.salt, encrypted.iv, 'wrong-password'))
+    await expect(decryptData(encrypted.data, encrypted.salt, encrypted.iv, 'wrong-password', encrypted.kdf))
       .rejects.toThrow('Password is incorrect or the backup file is corrupted.');
+  });
+
+  it('decrypts legacy PBKDF2 backup payloads when KDF metadata is absent', async () => {
+    const password = 'legacy-backup-password';
+    const salt = window.crypto.getRandomValues(new Uint8Array(16));
+    const iv = window.crypto.getRandomValues(new Uint8Array(12));
+    const baseKey = await window.crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(password),
+      { name: 'PBKDF2' },
+      false,
+      ['deriveKey']
+    );
+    const key = await window.crypto.subtle.deriveKey(
+      { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+      baseKey,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['encrypt']
+    );
+    const ciphertext = await window.crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv },
+      key,
+      new TextEncoder().encode('legacy backup')
+    );
+    const toHex = (bytes: Uint8Array | ArrayBuffer) => Array.from(new Uint8Array(bytes))
+      .map(byte => byte.toString(16).padStart(2, '0'))
+      .join('');
+
+    await expect(decryptData(toHex(ciphertext), toHex(salt), toHex(iv), password))
+      .resolves.toBe('legacy backup');
   });
 
   it('returns localized encryption errors when encryption fails', async () => {
@@ -34,6 +67,20 @@ describe('backup crypto', () => {
 
     await expect(encryptData('classified', 'backup-password'))
       .rejects.toThrow('Encryption failed.');
+  });
+});
+
+describe('clipboard security', () => {
+  it('clears copied secrets after the safety delay', async () => {
+    vi.useFakeTimers();
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined);
+
+    await writeClipboardSecret('TemporarySecret123!');
+    expect(writeText).toHaveBeenCalledWith('TemporarySecret123!');
+
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(writeText).toHaveBeenCalledWith('');
+    vi.useRealTimers();
   });
 });
 
@@ -95,17 +142,13 @@ describe('vault crypto service', () => {
     expect(VaultCryptoService.generateSecurePassword()).toMatch(/^[0-9]{18}$/);
   });
 
-  it('uses the Math.random fallback when crypto random generation fails', () => {
+  it('fails closed when cryptographic random generation is unavailable', () => {
     const getRandomValues = vi.spyOn(window.crypto, 'getRandomValues');
     getRandomValues.mockImplementation(() => {
       throw new Error('rng unavailable');
     });
-    const mathRandom = vi.spyOn(Math, 'random').mockReturnValue(0);
 
-    const password = VaultCryptoService.generateSecurePassword();
-
-    expect(password).toBe('a'.repeat(16));
-    expect(mathRandom).toHaveBeenCalled();
+    expect(() => VaultCryptoService.generateSecurePassword()).toThrow('rng unavailable');
   });
 
   it('encrypts and decrypts AES-GCM text fields', async () => {
@@ -171,37 +214,15 @@ describe('vault crypto service', () => {
     await expect(VaultCryptoService.decryptJSON(key)).resolves.toBeNull();
   });
 
-  it('encrypts and authenticates ChaCha20 text fields with a raw key', async () => {
+  it('ignores legacy ChaCha20 settings and continues to use audited AES-GCM', async () => {
     localStorage.setItem('aegis_cipher_suite', 'CHACHA20-POLY1305');
+    const key = await createAesKey();
     const rawKey = new Uint8Array(32).fill(7);
 
-    const encrypted = await VaultCryptoService.encryptTextField(null, 'stream secret', rawKey);
+    const encrypted = await VaultCryptoService.encryptTextField(key, 'stream secret', rawKey);
 
     expect(encrypted.encrypted).not.toContain('stream secret');
-    await expect(VaultCryptoService.decryptTextField(null, encrypted.encrypted, encrypted.iv, rawKey))
+    await expect(VaultCryptoService.decryptTextField(key, encrypted.encrypted, encrypted.iv, rawKey))
       .resolves.toBe('stream secret');
-  });
-
-  it('encrypts and decrypts ChaCha20 payloads that span multiple blocks', async () => {
-    localStorage.setItem('aegis_cipher_suite', 'CHACHA20-POLY1305');
-    const rawKey = new Uint8Array(32).fill(11);
-    const longText = 'vault-block-'.repeat(12);
-
-    const encrypted = await VaultCryptoService.encryptTextField(null, longText, rawKey);
-
-    expect(encrypted.iv).toHaveLength(24);
-    await expect(VaultCryptoService.decryptTextField(null, encrypted.encrypted, encrypted.iv, rawKey))
-      .resolves.toBe(longText);
-  });
-
-  it('rejects tampered or undersized ChaCha20 payloads', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    localStorage.setItem('aegis_cipher_suite', 'CHACHA20-POLY1305');
-    const rawKey = new Uint8Array(32).fill(9);
-    const encrypted = await VaultCryptoService.encryptTextField(null, 'integrity checked', rawKey);
-    const tampered = `${encrypted.encrypted.slice(0, -2)}00`;
-
-    await expect(VaultCryptoService.decryptTextField(null, tampered, encrypted.iv, rawKey)).resolves.toBeNull();
-    await expect(VaultCryptoService.decryptTextField(null, 'abcd', encrypted.iv, rawKey)).resolves.toBeNull();
   });
 });

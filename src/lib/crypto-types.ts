@@ -32,6 +32,24 @@ export function generateRandomBytes(length: number): Uint8Array {
   return crypto.getRandomValues(new Uint8Array(length));
 }
 
+export function generateRandomString(length: number, charset: string): string {
+  if (length <= 0 || !Number.isInteger(length)) {
+    throw new RangeError(`Length must be positive integer, got ${length}`);
+  }
+  if (!charset) {
+    throw new RangeError('Charset must not be empty');
+  }
+
+  const randomValues = new Uint32Array(length);
+  crypto.getRandomValues(randomValues);
+
+  let value = '';
+  for (let i = 0; i < length; i++) {
+    value += charset[randomValues[i] % charset.length];
+  }
+  return value;
+}
+
 export function bufferToHex(buffer: Uint8Array | ArrayBuffer): string {
   const bytes = ArrayBuffer.isView(buffer)
     ? new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength)
@@ -40,6 +58,17 @@ export function bufferToHex(buffer: Uint8Array | ArrayBuffer): string {
   return Array.from(bytes)
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
+}
+
+export function bufferToBase64Url(buffer: Uint8Array | ArrayBuffer): string {
+  const bytes = ArrayBuffer.isView(buffer)
+    ? new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength)
+    : new Uint8Array(buffer);
+  const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join('');
+  return btoa(binary)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/g, '');
 }
 
 export function hexToBuffer(hex: string): Uint8Array {

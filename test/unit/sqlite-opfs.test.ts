@@ -312,10 +312,14 @@ describe('SQLiteOPFS', () => {
       favorite: true,
       deletedAt: '2026-05-01T00:00:00.000Z',
     });
+    const insertStmt = sqlMock.stmtInstances.at(-1);
     const rows = db.getAllPasswords();
     const row = db.getPassword('1');
 
-    expect(sqlite.run).toHaveBeenCalledWith(expect.stringContaining("Ada''s Login"));
+    expect(sqlite.prepare).toHaveBeenCalledWith(expect.stringContaining('INSERT OR REPLACE INTO passwords'));
+    expect(insertStmt?.bind).toHaveBeenCalledWith(expect.arrayContaining(["row'1", "Ada's Login"]));
+    expect(insertStmt?.run).toHaveBeenCalled();
+    expect(insertStmt?.free).toHaveBeenCalled();
     expect(rows[0]).toEqual(expect.objectContaining({
       id: '1',
       tags: ['work'],
@@ -381,6 +385,29 @@ describe('SQLiteOPFS', () => {
     expect(selected?.favorite).toBe(true);
   });
 
+  it('falls back safely when tag and attachment JSON columns are malformed', async () => {
+    const db = new SQLiteOPFS('unit_vault');
+    await db.open();
+    const sqlite = sqlMock.dbInstances[0];
+    sqlite.rows = [
+      {
+        id: 'malformed-json',
+        title: 'Malformed JSON',
+        tags: 'not-json',
+        attachments: '{broken',
+        search_index: '[]',
+      },
+    ];
+
+    const [row] = db.getAllPasswords();
+    const selected = db.getPassword('malformed-json');
+
+    expect(row.tags).toEqual([]);
+    expect(row.attachments).toEqual([]);
+    expect(selected?.tags).toEqual([]);
+    expect(selected?.attachments).toEqual([]);
+  });
+
   it('writes every password persistence field in the expected order', async () => {
     const db = new SQLiteOPFS('unit_vault');
     await db.open();
@@ -433,19 +460,25 @@ describe('SQLiteOPFS', () => {
       history_iv: 'historyiv',
     });
 
-    const sql = sqlite.run.mock.calls[0][0] as string;
+    const sql = sqlite.prepare.mock.calls.at(-1)?.[0] as string;
+    const values = sqlMock.stmtInstances.at(-1)?.bind.mock.calls[0][0] as unknown[];
     expect(sql).toContain('(id, title, encrypted_title, title_iv, username, encrypted_username, username_iv');
-    expect(sql).toContain("'full', 'Full Entry', 'et', 'tiv', 'ada', 'eu', 'uiv'");
-    expect(sql).toContain("'ep', 'piv', 'Finance', 'ec', 'civ'");
-    expect(sql).toContain("'https://example.test', 'ew', 'wiv', 'egt', 'gtiv'");
-    expect(sql).toContain("'[\"full\",\"entry\"]', '2026-05-24T00:00:00.000Z', 'STRONG'");
-    expect(sql).toContain("'[\"finance\"]', 2, 1, '[{\"id\":\"a1\"}]'");
-    expect(sql).toContain("'2026-05-25T00:00:00.000Z', 'secret', 'totpiv', 'issuer', 'SHA1', 6, 30");
-    expect(sql).toContain("'notes', 'niv', 'passkey', 'pkiv', 'card', 'cardiv'");
-    expect(sql).toContain("'identity', 'identityiv', 'alias', 'aliasiv', 'history', 'historyiv'");
+    expect(sql).toContain('VALUES (?, ?, ?, ?, ?, ?, ?');
+    expect(values).toEqual([
+      'full', 'Full Entry', 'et', 'tiv', 'ada', 'eu', 'uiv',
+      'ep', 'piv', 'Finance', 'ec', 'civ',
+      'https://example.test', 'ew', 'wiv', 'egt', 'gtiv',
+      '["full","entry"]', '2026-05-24T00:00:00.000Z', 'STRONG',
+      '["finance"]', 2, 1, '[{"id":"a1"}]',
+      '2026-05-25T00:00:00.000Z', 'secret', 'totpiv', 'issuer', 'SHA1', 6, 30,
+      'notes', 'niv', 'passkey', 'pkiv', 'card', 'cardiv',
+      'identity', 'identityiv', 'alias', 'aliasiv', 'history', 'historyiv',
+    ]);
+    expect(sqlMock.stmtInstances.at(-1)?.run).toHaveBeenCalled();
+    expect(sqlMock.stmtInstances.at(-1)?.free).toHaveBeenCalled();
   });
 
-  it('uses stable defaults and SQL escaping for password writes and deletes', async () => {
+  it('uses stable defaults with prepared password writes and escaping for deletes', async () => {
     const db = new SQLiteOPFS('unit_vault');
     await db.open();
     const sqlite = sqlMock.dbInstances[0];
@@ -453,10 +486,7 @@ describe('SQLiteOPFS', () => {
     db.putPassword({ id: "id'1" });
     db.deletePassword("id'1");
 
-    expect(sqlite.run).toHaveBeenCalledWith(expect.stringContaining("'id''1'"));
-    expect(sqlite.run).toHaveBeenCalledWith(expect.stringContaining("'Untitled'"));
-    expect(sqlite.run).toHaveBeenCalledWith(expect.stringContaining("'General'"));
-    expect(sqlite.run).toHaveBeenCalledWith(expect.stringContaining("'GOOD'"));
+    expect(sqlMock.stmtInstances.at(-1)?.bind).toHaveBeenCalledWith(expect.arrayContaining(["id'1", 'Untitled', 'General', 'GOOD']));
     expect(sqlite.run).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM passwords WHERE id = \'id\'\'1\''));
   });
 

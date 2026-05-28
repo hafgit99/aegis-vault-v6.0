@@ -3,6 +3,7 @@ import { Copy, Eye, EyeOff, Trash2, Check, CreditCard, FileText, Key, ShieldChec
 import { motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { VaultEntry } from '../types';
+import { writeClipboardSecret } from '../lib/clipboard';
 
 interface VaultItemProps {
   entry: VaultEntry;
@@ -62,7 +63,7 @@ export default function VaultItem({ entry, onDelete, onClick, onToggleFavorite, 
       textToCopy = `${entry.cardNumber} | ${entry.expiryDate} | ${entry.cvv}`;
     }
     
-    navigator.clipboard.writeText(textToCopy);
+    writeClipboardSecret(textToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

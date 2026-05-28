@@ -67,6 +67,18 @@ Run production dependency audit:
 npm run audit:prod
 ```
 
+Run the security regression scan:
+
+```bash
+npm run security:scan
+```
+
+Generate the security evidence bundle:
+
+```bash
+npm run security:evidence
+```
+
 Run unit coverage:
 
 ```bash
@@ -92,6 +104,11 @@ npm run test:mutation:release
 The repository includes GitHub Actions workflows for pull request quality checks, scheduled quality checks, mutation testing, release preflight validation, and manual desktop packaging with unsigned or signed modes. Desktop packaging for Windows, macOS, and Linux uses the documented Tauri-first release path.
 
 See [docs/RELEASE.md](docs/RELEASE.md) for the release flow and packaging roadmap.
+See [docs/SECURITY_MODEL.md](docs/SECURITY_MODEL.md) for the current cryptographic and storage architecture.
+See [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) for security assumptions, covered threats, and out-of-scope risks.
+See [docs/RELEASE_HARDENING.md](docs/RELEASE_HARDENING.md) for the release hardening checklist.
+See [docs/AUDIT_EVIDENCE.md](docs/AUDIT_EVIDENCE.md) for the audit evidence matrix.
+See [docs/OWASP_COMPLIANCE_MATRIX.md](docs/OWASP_COMPLIANCE_MATRIX.md) for OWASP Top 10, ASVS, MASVS, and DSOVS readiness mapping.
 See [docs/MUTATION_POLICY.md](docs/MUTATION_POLICY.md) for mutation profile scope and triage rules.
 See [docs/DESKTOP_PACKAGING.md](docs/DESKTOP_PACKAGING.md) for the desktop runtime decision and signing plan.
 See [docs/GITHUB_SETUP.md](docs/GITHUB_SETUP.md) for repository settings, secrets, and first-release steps.

@@ -323,7 +323,6 @@ describe('App integration shell', () => {
       entry({ id: 'deleted-entry', title: 'Deleted Login', isDeleted: true }),
     ];
     vi.clearAllMocks();
-    localStorage.setItem('aegis_master_password', 'StrongMasterPassword123!');
   });
 
   it('unlocks the vault, loads entries, searches, and opens the detail panel', async () => {

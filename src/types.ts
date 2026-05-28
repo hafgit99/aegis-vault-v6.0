@@ -15,6 +15,11 @@ export interface VaultEntry {
   password?: string;
   url?: string;
   notes?: string;
+  totpSecret?: string;
+  totpIssuer?: string;
+  totpAlgorithm?: 'SHA-1' | 'SHA-256' | 'SHA-512';
+  totpDigits?: number;
+  totpPeriod?: number;
   strength: 'EXCELLENT' | 'GOOD' | 'IMMUTABLE';
   themeColor: 'tertiary' | 'secondary' | 'primary';
   type: EntryType;
@@ -32,6 +37,10 @@ export interface VaultEntry {
   passkeyCredentialId?: string;
   passkeyPublicKey?: string;
   passkeyAAGUID?: string;
+  passkeyPublicKeyAlgorithm?: number;
+  passkeyAuthenticatorData?: string;
+  passkeyClientDataJSON?: string;
+  passkeyTransports?: string[];
 
   // Identity card fields
   idFullName?: string;

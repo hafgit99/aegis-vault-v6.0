@@ -12,6 +12,7 @@ Before publishing or attaching artifacts to a GitHub release, run:
 npm ci
 npm run release:verify-version
 npm run lint
+npm run security:scan
 npm run audit:all
 npm run test:coverage
 npm run build

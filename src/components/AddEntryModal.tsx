@@ -9,6 +9,9 @@ import { useTranslation } from 'react-i18next';
 import { VaultEntry, EntryType } from '../types';
 import { saveEncryptedFile } from '../lib/fileStore';
 import { VaultCryptoService } from '../lib/vault/VaultCryptoService';
+import { generateRandomString } from '../lib/crypto-types';
+import { registerPasskey } from '../lib/webauthnPasskey';
+import { generateTotpSecret, TotpAlgorithm } from '../lib/totp';
 
 interface AddEntryModalProps {
   isOpen: boolean;
@@ -26,6 +29,11 @@ export default function AddEntryModal({ isOpen, onClose, onSave }: AddEntryModal
   const [url, setUrl] = useState('');
   const [notes, setNotes] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [totpSecret, setTotpSecret] = useState('');
+  const [totpIssuer, setTotpIssuer] = useState('');
+  const [totpAlgorithm, setTotpAlgorithm] = useState<TotpAlgorithm>('SHA-1');
+  const [totpDigits, setTotpDigits] = useState(6);
+  const [totpPeriod, setTotpPeriod] = useState(30);
   
   // Card specific fields
   const [cardholder, setCardholder] = useState('');
@@ -39,6 +47,12 @@ export default function AddEntryModal({ isOpen, onClose, onSave }: AddEntryModal
   const [passkeyCredentialId, setPasskeyCredentialId] = useState('');
   const [passkeyPublicKey, setPasskeyPublicKey] = useState('');
   const [passkeyAAGUID, setPasskeyAAGUID] = useState('');
+  const [passkeyPublicKeyAlgorithm, setPasskeyPublicKeyAlgorithm] = useState<number | undefined>(undefined);
+  const [passkeyAuthenticatorData, setPasskeyAuthenticatorData] = useState('');
+  const [passkeyClientDataJSON, setPasskeyClientDataJSON] = useState('');
+  const [passkeyTransports, setPasskeyTransports] = useState<string[]>([]);
+  const [isRegisteringPasskey, setIsRegisteringPasskey] = useState(false);
+  const [passkeyError, setPasskeyError] = useState<string | null>(null);
 
   // Identity Card fields
   const [idFullName, setIdFullName] = useState('');
@@ -81,13 +95,13 @@ export default function AddEntryModal({ isOpen, onClose, onSave }: AddEntryModal
         });
       }, 150);
 
-      const fileId = "file-" + Math.random().toString(36).substring(2, 11);
+      const fileId = `file-${generateRandomString(18, 'abcdefghijklmnopqrstuvwxyz0123456789')}`;
       
       const reader = new FileReader();
       reader.onload = async (event) => {
         try {
           const arrayBuffer = event.target?.result as ArrayBuffer;
-          // Create custom cipher simulation blob (represents the military grade off-line encryption payload)
+          // Store the local attachment payload in the same offline file container path.
           const encryptedBlob = new Blob([arrayBuffer], { type: 'application/octet-stream' });
           
           await saveEncryptedFile(fileId, encryptedBlob);
@@ -157,7 +171,7 @@ export default function AddEntryModal({ isOpen, onClose, onSave }: AddEntryModal
     const newEntry: VaultEntry = {
       id: (typeof window !== 'undefined' && window.crypto && window.crypto.randomUUID) 
       ? window.crypto.randomUUID() 
-      : (Date.now().toString() + Math.random().toString(36).substring(2, 9)),
+      : (Date.now().toString() + generateRandomString(14, 'abcdefghijklmnopqrstuvwxyz0123456789')),
       title,
       type,
       subtitle: type === 'login' 
@@ -172,6 +186,11 @@ export default function AddEntryModal({ isOpen, onClose, onSave }: AddEntryModal
       username: type === 'login' ? username : type === 'passkey' ? passkeyUser : idFullName,
       password: type === 'login' ? password : undefined,
       url: type === 'login' ? url : undefined,
+      totpSecret: type === 'login' && totpSecret ? totpSecret : undefined,
+      totpIssuer: type === 'login' && totpSecret ? (totpIssuer || title) : undefined,
+      totpAlgorithm: type === 'login' && totpSecret ? totpAlgorithm : undefined,
+      totpDigits: type === 'login' && totpSecret ? totpDigits : undefined,
+      totpPeriod: type === 'login' && totpSecret ? totpPeriod : undefined,
       notes,
       strength,
       themeColor,
@@ -187,6 +206,10 @@ export default function AddEntryModal({ isOpen, onClose, onSave }: AddEntryModal
       passkeyCredentialId: type === 'passkey' ? passkeyCredentialId : undefined,
       passkeyPublicKey: type === 'passkey' ? passkeyPublicKey : undefined,
       passkeyAAGUID: type === 'passkey' ? passkeyAAGUID : undefined,
+      passkeyPublicKeyAlgorithm: type === 'passkey' ? passkeyPublicKeyAlgorithm : undefined,
+      passkeyAuthenticatorData: type === 'passkey' ? passkeyAuthenticatorData : undefined,
+      passkeyClientDataJSON: type === 'passkey' ? passkeyClientDataJSON : undefined,
+      passkeyTransports: type === 'passkey' ? passkeyTransports : undefined,
 
       // Identity Card
       idFullName: type === 'identity' ? idFullName : undefined,
@@ -208,6 +231,11 @@ export default function AddEntryModal({ isOpen, onClose, onSave }: AddEntryModal
     setUsername('');
     setPassword('');
     setUrl('');
+    setTotpSecret('');
+    setTotpIssuer('');
+    setTotpAlgorithm('SHA-1');
+    setTotpDigits(6);
+    setTotpPeriod(30);
     setNotes('');
     setCardholder('');
     setCardNumber('');
@@ -219,6 +247,11 @@ export default function AddEntryModal({ isOpen, onClose, onSave }: AddEntryModal
     setPasskeyCredentialId('');
     setPasskeyPublicKey('');
     setPasskeyAAGUID('');
+    setPasskeyPublicKeyAlgorithm(undefined);
+    setPasskeyAuthenticatorData('');
+    setPasskeyClientDataJSON('');
+    setPasskeyTransports([]);
+    setPasskeyError(null);
 
     setIdFullName('');
     setIdNumber('');
@@ -232,6 +265,25 @@ export default function AddEntryModal({ isOpen, onClose, onSave }: AddEntryModal
     setFileError(null);
     
     onClose();
+  };
+
+  const handleRegisterPasskey = async () => {
+    setPasskeyError(null);
+    setIsRegisteringPasskey(true);
+    try {
+      const credential = await registerPasskey(passkeyDomain, passkeyUser);
+      setPasskeyCredentialId(credential.credentialId);
+      setPasskeyPublicKey(credential.publicKey);
+      setPasskeyAAGUID(credential.aaguid || 'authenticator-managed');
+      setPasskeyPublicKeyAlgorithm(credential.publicKeyAlgorithm);
+      setPasskeyAuthenticatorData(credential.authenticatorData || '');
+      setPasskeyClientDataJSON(credential.clientDataJSON);
+      setPasskeyTransports(credential.transports || []);
+    } catch (error: any) {
+      setPasskeyError(error?.message || t('app.addEntry.passkeyRegistrationFailed'));
+    } finally {
+      setIsRegisteringPasskey(false);
+    }
   };
 
   return (
@@ -389,6 +441,51 @@ export default function AddEntryModal({ isOpen, onClose, onSave }: AddEntryModal
                       />
                     </div>
                   </div>
+
+                  <div className="space-y-3 bg-[#121625]/20 p-3 rounded-xl border border-white/5">
+                    <div className="flex items-center justify-between gap-3">
+                      <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">{t('app.addEntry.totpSecret')}</label>
+                      <button
+                        type="button"
+                        onClick={() => setTotpSecret(generateTotpSecret())}
+                        className="py-1 px-2 bg-tertiary/15 hover:bg-tertiary/25 text-tertiary text-[10px] font-bold rounded-lg border border-tertiary/10 flex items-center gap-1 transition-all cursor-pointer"
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        {t('app.addEntry.generateTotpSecret')}
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={totpSecret}
+                      onChange={(e) => setTotpSecret(e.target.value.toUpperCase())}
+                      placeholder={t('app.addEntry.totpSecretPlaceholder')}
+                      className="w-full bg-surface-container-high/60 border border-white/5 focus:border-tertiary/40 focus:ring-1 focus:ring-tertiary/50 rounded-xl px-4 py-3 text-[13px] font-geist-mono outline-none text-on-surface transition-all placeholder:text-on-surface-variant/40"
+                    />
+                    {totpSecret && (
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                        <input
+                          type="text"
+                          value={totpIssuer}
+                          onChange={(e) => setTotpIssuer(e.target.value)}
+                          placeholder={t('app.addEntry.totpIssuerPlaceholder')}
+                          className="lg:col-span-1 bg-surface-container-high/60 border border-white/5 rounded-lg px-2.5 py-2 text-xs text-on-surface outline-none focus:border-tertiary/40"
+                        />
+                        <select value={totpAlgorithm} onChange={(e) => setTotpAlgorithm(e.target.value as TotpAlgorithm)} className="bg-[#121625] border border-white/5 rounded-lg px-2.5 py-2 text-xs text-on-surface outline-none focus:border-tertiary/40">
+                          <option value="SHA-1">SHA-1</option>
+                          <option value="SHA-256">SHA-256</option>
+                          <option value="SHA-512">SHA-512</option>
+                        </select>
+                        <select value={totpDigits} onChange={(e) => setTotpDigits(Number(e.target.value))} className="bg-[#121625] border border-white/5 rounded-lg px-2.5 py-2 text-xs text-on-surface outline-none focus:border-tertiary/40">
+                          <option value={6}>6 digits</option>
+                          <option value={8}>8 digits</option>
+                        </select>
+                        <select value={totpPeriod} onChange={(e) => setTotpPeriod(Number(e.target.value))} className="bg-[#121625] border border-white/5 rounded-lg px-2.5 py-2 text-xs text-on-surface outline-none focus:border-tertiary/40">
+                          <option value={30}>30s</option>
+                          <option value={60}>60s</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -485,20 +582,20 @@ export default function AddEntryModal({ isOpen, onClose, onSave }: AddEntryModal
                       </div>
                       <button
                         type="button"
-                        onClick={() => {
-                          const randomCredId = Array.from({length: 32}, () => Math.floor(Math.random()*16).toString(16)).join('');
-                          const randomPubKey = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA" + Array.from({length: 40}, () => Math.floor(Math.random()*16).toString(16)).join('') + "...\n-----END PUBLIC KEY-----";
-                          const randomAaguid = "adce0002-35bc-c60a-2b7b-" + Array.from({length: 12}, () => Math.floor(Math.random()*16).toString(16)).join('');
-                          setPasskeyCredentialId(randomCredId);
-                          setPasskeyPublicKey(randomPubKey);
-                          setPasskeyAAGUID(randomAaguid);
-                        }}
+                        onClick={handleRegisterPasskey}
+                        disabled={isRegisteringPasskey}
                         className="py-1.5 px-3 bg-tertiary/15 hover:bg-tertiary/25 text-tertiary text-[11px] font-bold rounded-lg border border-tertiary/10 flex items-center gap-1.5 transition-all cursor-pointer"
                       >
-                        <Sparkles className="w-3.5 h-3.5" />
-                        {t('app.addEntry.generateSecureKey')}
+                        <Fingerprint className="w-3.5 h-3.5" />
+                        {isRegisteringPasskey ? t('app.addEntry.passkeyRegistering') : t('app.addEntry.generateSecureKey')}
                       </button>
                     </div>
+
+                    {passkeyError && (
+                      <div className="p-2 bg-error/10 text-error text-[11px] rounded-lg border border-error/20">
+                        {passkeyError}
+                      </div>
+                    )}
 
                     {passkeyCredentialId && (
                       <div className="space-y-2 text-[11px] font-mono leading-relaxed text-on-surface-variant border-t border-white/5 pt-2">
@@ -514,6 +611,12 @@ export default function AddEntryModal({ isOpen, onClose, onSave }: AddEntryModal
                           <span className="text-[10px] uppercase font-bold text-on-surface-variant/50">AAGUID:</span>
                           <span className="col-span-3 text-on-surface truncate pr-2 select-all">{passkeyAAGUID}</span>
                         </div>
+                        {passkeyTransports.length > 0 && (
+                          <div className="grid grid-cols-4 gap-1">
+                            <span className="text-[10px] uppercase font-bold text-on-surface-variant/50">Transport:</span>
+                            <span className="col-span-3 text-on-surface truncate pr-2 select-all">{passkeyTransports.join(', ')}</span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

@@ -1,4 +1,5 @@
 import { VaultEntry, EntryType } from '../types';
+import { generateRandomString } from './crypto-types';
 
 export interface ImporterLabels {
   accessLogin: string;
@@ -107,7 +108,7 @@ export function convertImportedToVaultEntry(imported: Partial<VaultEntry>, label
   }
 
   return {
-    id: 'imported-' + Math.random().toString(36).substring(2, 11) + '-' + Date.now(),
+    id: `imported-${generateRandomString(18, 'abcdefghijklmnopqrstuvwxyz0123456789')}-${Date.now()}`,
     title: imported.title || labels.untitledImport,
     type: finalType,
     subtitle: subtitle,

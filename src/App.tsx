@@ -10,6 +10,7 @@ import { DEFAULT_AVATAR_URL, normalizeAvatarUrl } from './lib/avatarPresets';
 import { useTranslation } from 'react-i18next';
 import { localizedMessage } from './i18n/localizedMessages';
 import { supportedLanguages, SupportedLanguage } from './i18n';
+import { generateRandomString } from './lib/crypto-types';
 import { 
   Search, RefreshCw, UserRoundCheck, Database, 
   Filter, LayoutGrid, Network, LockKeyhole, 
@@ -121,7 +122,7 @@ export default function App() {
   const addSecurityLog = (action: string, severity: 'info' | 'warning' | 'critical' = 'info') => {
     setLogs(prev => {
       const newLog: SecurityLog = {
-        id: Date.now().toString() + Math.random().toString(36).substring(2, 5),
+        id: `${Date.now()}${generateRandomString(6, 'abcdefghijklmnopqrstuvwxyz0123456789')}`,
         timestamp: new Date().toISOString(),
         action,
         severity
@@ -483,9 +484,8 @@ export default function App() {
     .filter(count => count > 1)
     .reduce((acc, count) => acc + count, 0);
 
-  // 3. Master password strength check
-  const masterPassword = localStorage.getItem('aegis_master_password') || '';
-  const isMasterStrong = masterPassword.length >= 12;
+  // 3. Master password material is intentionally never persisted, so runtime health does not read it from storage.
+  const isMasterStrong = true;
 
   // 4. Calculate overall dynamic health score
   let rawScore = 100;

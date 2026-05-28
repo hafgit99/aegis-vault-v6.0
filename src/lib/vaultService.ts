@@ -3,6 +3,7 @@ import { VaultCryptoService } from './vault/VaultCryptoService';
 import { VaultAuthService, StoredCredential } from './vault/VaultAuthService';
 import { VaultEntry } from '../types';
 import { localizedMessage } from '../i18n/localizedMessages';
+import { getStoredSecretKey } from './secureSecretStore';
 
 export class VaultService {
   public aesKey: CryptoKey | null = null;
@@ -10,6 +11,7 @@ export class VaultService {
   public sqliteDb: SQLiteOPFS | null = null;
   public isConnected = false;
   private dbName = 'aegis_vault';
+  private activeSecretKey: string | null = null;
 
   public isUnlocked(): boolean {
     return this.aesKey !== null;
@@ -78,6 +80,7 @@ export class VaultService {
       }
 
       this.isConnected = true;
+      this.activeSecretKey = secretKey;
       console.log('[VaultService] SQLite DB initialized and unlocked successfully.');
     } catch (error) {
       await this.lock();
@@ -98,6 +101,22 @@ export class VaultService {
 
     for (const row of rows) {
       try {
+        const decryptedTitle = row.encrypted_title && row.title_iv
+          ? await VaultCryptoService.decryptTextField(this.aesKey, row.encrypted_title, row.title_iv, this.rawKey)
+          : null;
+
+        const decryptedUsername = row.encrypted_username && row.username_iv
+          ? await VaultCryptoService.decryptTextField(this.aesKey, row.encrypted_username, row.username_iv, this.rawKey)
+          : null;
+
+        const decryptedWebsite = row.encrypted_website && row.website_iv
+          ? await VaultCryptoService.decryptTextField(this.aesKey, row.encrypted_website, row.website_iv, this.rawKey)
+          : null;
+
+        const decryptedCategory = row.encrypted_category && row.category_iv
+          ? await VaultCryptoService.decryptTextField(this.aesKey, row.encrypted_category, row.category_iv, this.rawKey)
+          : null;
+
         // Decrypt basic fields
         const decryptedPassword = row.encrypted_password && row.iv
           ? await VaultCryptoService.decryptTextField(this.aesKey, row.encrypted_password, row.iv, this.rawKey)
@@ -105,6 +124,10 @@ export class VaultService {
 
         const decryptedNotes = row.encrypted_notes && row.notes_iv
           ? await VaultCryptoService.decryptTextField(this.aesKey, row.encrypted_notes, row.notes_iv, this.rawKey)
+          : undefined;
+
+        const decryptedTotpSecret = row.totp_secret && row.totp_iv
+          ? await VaultCryptoService.decryptTextField(this.aesKey, row.totp_secret, row.totp_iv, this.rawKey)
           : undefined;
 
         // Decrypt objects
@@ -122,15 +145,20 @@ export class VaultService {
 
         entries.push({
           id: String(row.id),
-          title: String(row.title),
-          subtitle: row.username ? String(row.username) : '',
-          username: row.username ? String(row.username) : '',
+          title: decryptedTitle || String(row.title),
+          subtitle: decryptedUsername || (row.username ? String(row.username) : ''),
+          username: decryptedUsername || (row.username ? String(row.username) : ''),
           password: decryptedPassword || undefined,
           notes: decryptedNotes || undefined,
-          url: row.website ? String(row.website) : '',
+          totpSecret: decryptedTotpSecret || undefined,
+          totpIssuer: row.totp_issuer || undefined,
+          totpAlgorithm: row.totp_algorithm || undefined,
+          totpDigits: row.totp_digits ? Number(row.totp_digits) : undefined,
+          totpPeriod: row.totp_period ? Number(row.totp_period) : undefined,
+          url: decryptedWebsite || (row.website ? String(row.website) : ''),
           strength: row.strength || 'GOOD',
           themeColor: row.strength === 'IMMUTABLE' ? 'tertiary' : row.strength === 'EXCELLENT' ? 'primary' : 'secondary',
-          type: row.category ? row.category : 'login',
+          type: decryptedCategory || (row.category && row.category !== 'encrypted' ? row.category : 'login'),
           createdAt: row.updated_at || new Date().toISOString(),
           deletedAt: row.deletedAt || undefined,
           isDeleted: !!row.deletedAt,
@@ -147,6 +175,10 @@ export class VaultService {
           passkeyCredentialId: passkeyMeta?.passkeyCredentialId || undefined,
           passkeyPublicKey: passkeyMeta?.passkeyPublicKey || undefined,
           passkeyAAGUID: passkeyMeta?.passkeyAAGUID || undefined,
+          passkeyPublicKeyAlgorithm: passkeyMeta?.passkeyPublicKeyAlgorithm || undefined,
+          passkeyAuthenticatorData: passkeyMeta?.passkeyAuthenticatorData || undefined,
+          passkeyClientDataJSON: passkeyMeta?.passkeyClientDataJSON || undefined,
+          passkeyTransports: passkeyMeta?.passkeyTransports || undefined,
 
           // Identity Card mapping
           idFullName: identityDetails?.idFullName || undefined,
@@ -187,6 +219,23 @@ export class VaultService {
       ? await VaultCryptoService.encryptTextField(this.aesKey, entry.notes, this.rawKey)
       : null;
 
+    const encryptedTotpSecret = entry.totpSecret
+      ? await VaultCryptoService.encryptTextField(this.aesKey, entry.totpSecret, this.rawKey)
+      : null;
+
+    const metadataTitle = await VaultCryptoService.encryptTextField(this.aesKey, entry.title || 'Untitled', this.rawKey);
+    const metadataUsername = await VaultCryptoService.encryptTextField(
+      this.aesKey,
+      entry.username || entry.idFullName || entry.passkeyUser || '',
+      this.rawKey
+    );
+    const metadataCategory = await VaultCryptoService.encryptTextField(this.aesKey, entry.type || 'login', this.rawKey);
+    const metadataWebsite = await VaultCryptoService.encryptTextField(
+      this.aesKey,
+      entry.url || entry.passkeyDomain || '',
+      this.rawKey
+    );
+
     // 2. Encrypt complex JSON fields based on type
     let encryptedCard = null;
     if (entry.type === 'card') {
@@ -221,6 +270,10 @@ export class VaultService {
         passkeyCredentialId: entry.passkeyCredentialId,
         passkeyPublicKey: entry.passkeyPublicKey,
         passkeyAAGUID: entry.passkeyAAGUID,
+        passkeyPublicKeyAlgorithm: entry.passkeyPublicKeyAlgorithm,
+        passkeyAuthenticatorData: entry.passkeyAuthenticatorData,
+        passkeyClientDataJSON: entry.passkeyClientDataJSON,
+        passkeyTransports: entry.passkeyTransports,
       };
       encryptedPasskey = await VaultCryptoService.encryptJSON(this.aesKey, passkeyObj, this.rawKey);
     }
@@ -241,10 +294,10 @@ export class VaultService {
 
     const row: Record<string, any> = {
       id: entry.id,
-      title: entry.title,
-      username: entry.username || entry.idFullName || entry.passkeyUser || '',
-      category: entry.type,
-      website: entry.url || entry.passkeyDomain || '',
+      title: '[encrypted]',
+      username: '',
+      category: 'encrypted',
+      website: '',
       strength: calculatedStrength,
       tags: [],
       pwned_count: 0,
@@ -253,8 +306,22 @@ export class VaultService {
       deleted_at: entry.deletedAt || null,
       deletedAt: entry.deletedAt || null,
       updated_at: new Date().toISOString(),
+      totp_secret: encryptedTotpSecret?.encrypted || null,
+      totp_iv: encryptedTotpSecret?.iv || null,
+      totp_issuer: entry.totpIssuer || null,
+      totp_algorithm: entry.totpAlgorithm || null,
+      totp_digits: entry.totpDigits || null,
+      totp_period: entry.totpPeriod || null,
 
       // Encrypted fields mapping
+      encrypted_title: metadataTitle.encrypted,
+      title_iv: metadataTitle.iv,
+      encrypted_username: metadataUsername.encrypted,
+      username_iv: metadataUsername.iv,
+      encrypted_category: metadataCategory.encrypted,
+      category_iv: metadataCategory.iv,
+      encrypted_website: metadataWebsite.encrypted,
+      website_iv: metadataWebsite.iv,
       encrypted_password: encryptedPassword?.encrypted || null,
       iv: encryptedPassword?.iv || null,
       encrypted_notes: encryptedNotes?.encrypted || null,
@@ -314,7 +381,10 @@ export class VaultService {
     const newSalt = window.crypto.getRandomValues(new Uint8Array(16));
     const newSaltB64 = btoa(String.fromCharCode(...newSalt));
 
-    const secretKey = localStorage.getItem('aegis_secret_key') || 'A3-DEMOKEY-2026-AEGIS-SECURE';
+    const secretKey = this.activeSecretKey || await getStoredSecretKey();
+    if (!secretKey) {
+      throw new Error(localizedMessage('dbAuthMissing'));
+    }
     const newDerived = await VaultAuthService.deriveMasterKey({
       password: newPassword,
       secretKey,
@@ -342,9 +412,6 @@ export class VaultService {
       // Flush to disk
       await this.sqliteDb.flushToOPFS();
 
-      // 6. Update local master password persistence if applicable
-      localStorage.setItem('aegis_master_password', newPassword);
-
       console.log('[VaultService] Master Password changed and database re-keyed successfully.');
     } catch (err) {
       // Rollback on failure
@@ -370,6 +437,7 @@ export class VaultService {
   async lock(): Promise<void> {
     this.aesKey = null;
     this.rawKey = null;
+    this.activeSecretKey = null;
     if (this.sqliteDb) {
       await this.sqliteDb.close();
       this.sqliteDb = null;

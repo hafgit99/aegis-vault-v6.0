@@ -16,6 +16,7 @@
     "desktop:dev": "tauri dev",
     "desktop:build": "tauri build",
     "desktop:checksums": "node scripts/generate-artifact-checksums.mjs",
+    "brand:icon:source": "node scripts/render-icon-source.mjs",
     "release:verify-version": "node scripts/verify-release-version.mjs",
     "build": "vite build",
     "build:budget": "node scripts/check-build-budget.mjs",
@@ -24,6 +25,8 @@
     "lint": "tsc --noEmit",
     "audit:prod": "npm audit --omit=dev --audit-level=high",
     "audit:all": "npm audit --audit-level=high",
+    "security:scan": "node scripts/security-regression-scan.mjs",
+    "security:evidence": "node scripts/generate-security-evidence.mjs",
     "test": "vitest",
     "test:unit": "vitest run",
     "test:coverage": "vitest run --coverage",
@@ -41,7 +44,7 @@
     "test:mutation:ui": "stryker run stryker.ui.config.json",
     "test:mutation:sqlite": "stryker run stryker.sqlite-opfs.config.json",
     "test:mutation:release": "npm run test:mutation && npm run test:mutation:sqlite && npm run test:mutation:settings && npm run test:mutation:database",
-    "test:all": "npm run lint && npm run audit:prod && npm run test:coverage && npm run build && npm run build:budget && npm run test:e2e:release"
+    "test:all": "npm run lint && npm run security:scan && npm run audit:prod && npm run test:coverage && npm run build && npm run build:budget && npm run test:e2e:release"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",

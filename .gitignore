@@ -5,6 +5,7 @@ coverage/
 playwright-report/
 test-results/
 reports/
+security-evidence/
 .stryker-tmp/
 src-tauri/target/
 src-tauri/gen/

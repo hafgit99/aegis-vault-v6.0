@@ -43,6 +43,19 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Security regression scan
+        run: npm run security:scan
+
+      - name: Generate security evidence bundle
+        run: npm run security:evidence
+
+      - name: Upload security evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-evidence
+          path: security-evidence/
+          retention-days: 14
+
       - name: Unit coverage
         run: npm run test:coverage
 

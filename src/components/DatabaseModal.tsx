@@ -131,6 +131,7 @@ export default function DatabaseModal({
           encrypted: true,
           version: "1.1.0",
           timestamp: new Date().toISOString(),
+          kdf: encrypted.kdf,
           salt: encrypted.salt,
           iv: encrypted.iv,
           data: encrypted.data
@@ -166,6 +167,7 @@ export default function DatabaseModal({
   "app": "AegisVault",
   "encrypted": true,
   "timestamp": "${backupObject.timestamp}",
+  "kdf": "${backupObject.kdf?.algorithm || 'argon2id'}",
   "salt": "${backupObject.salt.substring(0, 12)}...",
   "iv": "${backupObject.iv}",
   "data": "${backupObject.data.substring(0, 36)}..."
@@ -236,7 +238,7 @@ export default function DatabaseModal({
           throw new Error(t('app.database.errors.importPasswordRequired'));
         }
 
-        const decryptedText = await decryptData(payload.data, payload.salt, payload.iv, actualPassword);
+        const decryptedText = await decryptData(payload.data, payload.salt, payload.iv, actualPassword, payload.kdf);
         rawItems = JSON.parse(decryptedText);
 
       } else if (importSource === 'aegis_plain') {

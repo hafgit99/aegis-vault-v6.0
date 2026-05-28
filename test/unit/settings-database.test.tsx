@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+﻿import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { act } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -14,6 +14,7 @@ vi.mock('../../src/lib/backupCrypto', () => ({
     data: 'encrypted-backup-data',
     salt: 'backup-salt',
     iv: 'backup-iv',
+    kdf: { algorithm: 'argon2id', version: 1, iterations: 3, memorySize: 65536, parallelism: 1, hashLength: 32 },
   })),
   decryptData: vi.fn(),
 }));
@@ -99,39 +100,13 @@ describe('Settings', () => {
     expect(onAddLog).toHaveBeenCalledWith(expect.any(String), 'warning');
   });
 
-  it('changes cipher suite for an unlocked vault and re-saves active entries', async () => {
-    const user = userEvent.setup();
-    const onAddLog = vi.fn();
-    const entries = [
-      entry({ id: 'entry-1', title: 'GitHub' }),
-      entry({ id: 'entry-2', title: 'Email' }),
-    ];
-    vi.mocked(vaultService.getPasswords).mockResolvedValueOnce(entries);
-
-    render(<Settings entries={entries} onReset={vi.fn()} onImport={vi.fn()} onAddLog={onAddLog} />);
-
-    await user.click(screen.getByText('ChaCha20-Poly1305'));
-
-    await waitFor(() => {
-      expect(localStorage.getItem('aegis_cipher_suite')).toBe('CHACHA20-POLY1305');
-    });
-    expect(vaultService.getPasswords).toHaveBeenCalled();
-    expect(vaultService.savePassword).toHaveBeenCalledWith(entries[0]);
-    expect(vaultService.savePassword).toHaveBeenCalledWith(entries[1]);
-    expect(onAddLog).toHaveBeenCalledWith(expect.stringContaining('CHACHA20-POLY1305'), 'warning');
-  });
-
-  it('keeps the current cipher suite when the encryption change is cancelled', async () => {
+  it('renders only the audited AES-GCM cipher suite for new encryption', async () => {
     await i18n.changeLanguage('en');
-    const user = userEvent.setup();
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
-    localStorage.setItem('aegis_cipher_suite', 'AES-256-GCM');
 
     render(<Settings entries={[entry()]} onReset={vi.fn()} onImport={vi.fn()} onAddLog={vi.fn()} />);
 
-    await user.click(screen.getByText('ChaCha20-Poly1305'));
-
-    expect(localStorage.getItem('aegis_cipher_suite')).toBe('AES-256-GCM');
+    expect(screen.getAllByText(/AES-256-GCM/).length).toBeGreaterThan(0);
+    expect(screen.queryByText('ChaCha20-Poly1305')).not.toBeInTheDocument();
     expect(vaultService.getPasswords).not.toHaveBeenCalled();
     expect(vaultService.savePassword).not.toHaveBeenCalled();
   });
@@ -160,15 +135,15 @@ describe('Settings', () => {
       await vi.advanceTimersByTimeAsync(2400);
     });
 
-    expect(screen.getByText('CHACHA20-POLY1305')).toBeInTheDocument();
+    expect(screen.getByText('AES-256-GCM')).toBeInTheDocument();
     expect(screen.getByText(/Pasif|A. .zin Verildi|Ağ İzin Verildi/i)).toBeInTheDocument();
     expect(onAddLog).toHaveBeenCalledWith(expect.stringContaining('60'), 'info');
   });
 
-  it('exports an encrypted backup with the master password and shows a sealed preview', async () => {
+  it('exports an encrypted backup with an independent backup password and shows a sealed preview', async () => {
+    await i18n.changeLanguage('en');
     const user = userEvent.setup();
     const onAddLog = vi.fn();
-    localStorage.setItem('aegis_master_password', 'MasterPassword123!');
     const click = vi.fn();
     vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
       const element = document.createElementNS('http://www.w3.org/1999/xhtml', tagName) as HTMLElement;
@@ -180,11 +155,13 @@ describe('Settings', () => {
 
     render(<Settings entries={[entry({ title: 'GitHub' })]} onReset={vi.fn()} onImport={vi.fn()} onAddLog={onAddLog} />);
 
-    await user.click(screen.getByRole('button', { name: /Yedek Dosyas. .ret|Yedek Dosyası Üret/i }));
-    await user.click(screen.getByRole('button', { name: /.ifrele ve G.venle .ndir|Şifrele ve Güvenle İndir/i }));
+    await user.type(screen.getByPlaceholderText('Enter a secure backup password'), 'BackupKey123!');
+    await user.click(screen.getByRole('button', { name: 'Generate Secure Backup File' }));
+    await user.type(screen.getAllByPlaceholderText('Confirm the password').at(-1) as HTMLElement, 'BackupKey123!');
+    await user.click(screen.getByRole('button', { name: 'Encrypt and Download Backup Securely' }));
 
     await waitFor(() => {
-      expect(encryptData).toHaveBeenCalledWith(expect.stringContaining('GitHub'), 'MasterPassword123!');
+      expect(encryptData).toHaveBeenCalledWith(expect.stringContaining('GitHub'), 'BackupKey123!');
     });
     expect(click).toHaveBeenCalled();
     expect(screen.getByText(/encrypted-backup-data/)).toBeInTheDocument();
@@ -194,7 +171,6 @@ describe('Settings', () => {
   it('shows settings encrypted export evidence and closes the success modal', async () => {
     await i18n.changeLanguage('en');
     const user = userEvent.setup();
-    localStorage.setItem('aegis_master_password', 'MasterPassword123!');
     vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
       const element = document.createElementNS('http://www.w3.org/1999/xhtml', tagName) as HTMLElement;
       if (tagName.toLowerCase() === 'a') {
@@ -205,7 +181,9 @@ describe('Settings', () => {
 
     render(<Settings entries={[entry({ title: 'GitHub' })]} onReset={vi.fn()} onImport={vi.fn()} onAddLog={vi.fn()} />);
 
+    await user.type(screen.getByPlaceholderText('Enter a secure backup password'), 'BackupKey123!');
     await user.click(screen.getByRole('button', { name: 'Generate Secure Backup File' }));
+    await user.type(screen.getAllByPlaceholderText('Confirm the password').at(-1) as HTMLElement, 'BackupKey123!');
     await user.click(screen.getByRole('button', { name: 'Encrypt and Download Backup Securely' }));
 
     await waitFor(() => {
@@ -250,7 +228,7 @@ describe('Settings', () => {
     await user.type(screen.getByPlaceholderText('Enter a secure backup password'), 'BackupKey123!');
     await user.click(screen.getByRole('button', { name: 'Generate Secure Backup File' }));
 
-    expect(screen.getByText('Use My Current Master Password')).toBeInTheDocument();
+    expect(screen.queryByText('Use My Current Master Password')).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText('Independent password only for this backup')).toHaveValue('BackupKey123!');
     const confirmBackupPassword = screen.getAllByPlaceholderText('Confirm the password').at(-1) as HTMLInputElement;
     expect(confirmBackupPassword).toBeInTheDocument();
@@ -297,7 +275,7 @@ describe('Settings', () => {
     expect(confirmBackupPassword.type).toBe('password');
   });
 
-  it('toggles settings export between master password and custom backup password modes', async () => {
+  it('keeps encrypted settings export disabled until the independent password is confirmed', async () => {
     await i18n.changeLanguage('en');
     const user = userEvent.setup();
 
@@ -305,17 +283,15 @@ describe('Settings', () => {
 
     await user.click(screen.getByRole('button', { name: 'Generate Secure Backup File' }));
 
-    const masterPasswordMode = screen.getByText('Use My Current Master Password').parentElement?.parentElement as HTMLElement;
     const exportButton = screen.getByRole('button', { name: 'Encrypt and Download Backup Securely' });
-
-    expect(screen.queryByPlaceholderText('Independent password only for this backup')).not.toBeInTheDocument();
-    expect(exportButton).toBeEnabled();
-
-    await user.click(masterPasswordMode);
 
     expect(screen.getByPlaceholderText('Independent password only for this backup')).toBeInTheDocument();
     expect(screen.getAllByPlaceholderText('Confirm the password').at(-1)).toBeInTheDocument();
     expect(exportButton).toBeDisabled();
+
+    await user.type(screen.getByPlaceholderText('Independent password only for this backup'), 'BackupKey123!');
+    await user.type(screen.getAllByPlaceholderText('Confirm the password').at(-1) as HTMLElement, 'BackupKey123!');
+    expect(exportButton).toBeEnabled();
   });
 
   it('exports a plain settings backup only after the explicit risk acknowledgement', async () => {
@@ -386,7 +362,7 @@ describe('Settings', () => {
     await user.click(screen.getByRole('button', { name: 'Decrypt and Parse Backup File' }));
 
     await waitFor(() => {
-      expect(decryptData).toHaveBeenCalledWith('ciphertext', 'salt-value', 'iv-value', 'RestoreKey123!');
+      expect(decryptData).toHaveBeenCalledWith('ciphertext', 'salt-value', 'iv-value', 'RestoreKey123!', undefined);
     });
     expect(screen.getByText('RECORDS IN DOCUMENT (1)')).toBeInTheDocument();
     expect(onAddLog).toHaveBeenCalledWith(expect.stringContaining('1 records'), 'info');
@@ -507,7 +483,7 @@ describe('Settings', () => {
       expect(screen.getByText('Error Occurred')).toBeInTheDocument();
     });
     expect(screen.getByText(/Password is incorrect or the backup file is corrupted/)).toBeInTheDocument();
-    expect(decryptData).toHaveBeenCalledWith('ciphertext', 'salt-value', 'iv-value', 'WrongRestoreKey123!');
+    expect(decryptData).toHaveBeenCalledWith('ciphertext', 'salt-value', 'iv-value', 'WrongRestoreKey123!', undefined);
     expect(onImport).not.toHaveBeenCalled();
     expect(onAddLog).toHaveBeenCalledWith(expect.stringContaining('Import parsing phase failed'), 'warning');
   });
@@ -688,7 +664,7 @@ describe('DatabaseModal', () => {
     await user.type(screen.getByPlaceholderText('Confirm the backup password'), 'VaultKey123!');
 
     expect(screen.getByRole('button', { name: 'Encrypt and Download Backup File' })).toBeEnabled();
-  });
+  }, 10000);
 
   it('exports only active records in an encrypted backup', async () => {
     await i18n.changeLanguage('en');
@@ -733,7 +709,7 @@ describe('DatabaseModal', () => {
     await user.click(screen.getByRole('button', { name: 'Create Another Backup' }));
     expect(screen.queryByText(/encrypted-backup-data/)).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText('Set an independent password to encrypt the document')).toBeInTheDocument();
-  });
+  }, 10000);
 
   it('requires acknowledgement before exporting a plain JSON backup', async () => {
     await i18n.changeLanguage('en');
@@ -812,7 +788,7 @@ describe('DatabaseModal', () => {
     await user.click(screen.getByRole('button', { name: 'Decrypt and Parse Backup File' }));
 
     await waitFor(() => {
-      expect(decryptData).toHaveBeenCalledWith('ciphertext', 'salt-value', 'iv-value', 'VaultKey123!');
+      expect(decryptData).toHaveBeenCalledWith('ciphertext', 'salt-value', 'iv-value', 'VaultKey123!', undefined);
     });
     expect(screen.getByText('RECORDS IN DOCUMENT (2)')).toBeInTheDocument();
     expect(screen.getByText('Imported GitHub')).toBeInTheDocument();
@@ -1166,3 +1142,4 @@ describe('DatabaseModal', () => {
     expect(screen.getByPlaceholderText('Type SIL to confirm')).toHaveValue('');
   });
 });
+

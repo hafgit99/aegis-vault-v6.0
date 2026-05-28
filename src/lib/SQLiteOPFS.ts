@@ -282,11 +282,68 @@ export class SQLiteOPFS {
     const tags = JSON.stringify(entry.tags || []);
     const attachments = JSON.stringify(entry.attachments || []);
 
-    const sql = `INSERT OR REPLACE INTO passwords 
-       (id, title, encrypted_title, title_iv, username, encrypted_username, username_iv, encrypted_password, iv, category, encrypted_category, category_iv, website, encrypted_website, website_iv, encrypted_tags, tags_iv, search_index, updated_at, strength, tags, pwned_count, favorite, attachments, deleted_at, totp_secret, totp_iv, totp_issuer, totp_algorithm, totp_digits, totp_period, encrypted_notes, notes_iv, encrypted_passkey_meta, passkey_meta_iv, encrypted_card_details, card_details_iv, encrypted_identity_details, identity_details_iv, encrypted_alias_details, alias_details_iv, encrypted_history, history_iv)
-       VALUES (${this.sqlVal(entry.id)}, ${this.sqlVal(entry.title || 'Untitled')}, ${this.sqlVal(entry.encrypted_title || null)}, ${this.sqlVal(entry.title_iv || null)}, ${this.sqlVal(entry.username || '')}, ${this.sqlVal(entry.encrypted_username || null)}, ${this.sqlVal(entry.username_iv || null)}, ${this.sqlVal(entry.encrypted_password || null)}, ${this.sqlVal(entry.iv || null)}, ${this.sqlVal(entry.category || 'General')}, ${this.sqlVal(entry.encrypted_category || null)}, ${this.sqlVal(entry.category_iv || null)}, ${this.sqlVal(entry.website || '')}, ${this.sqlVal(entry.encrypted_website || null)}, ${this.sqlVal(entry.website_iv || null)}, ${this.sqlVal(entry.encrypted_tags || null)}, ${this.sqlVal(entry.tags_iv || null)}, ${this.sqlVal(JSON.stringify(entry.search_index || []))}, ${this.sqlVal(entry.updated_at || new Date().toISOString())}, ${this.sqlVal(entry.strength || 'GOOD')}, ${this.sqlVal(tags)}, ${this.sqlVal(entry.pwned_count || 0)}, ${this.sqlVal(entry.favorite ? 1 : 0)}, ${this.sqlVal(attachments)}, ${this.sqlVal(entry.deletedAt || entry.deleted_at || null)}, ${this.sqlVal(entry.totp_secret || null)}, ${this.sqlVal(entry.totp_iv || null)}, ${this.sqlVal(entry.totp_issuer || null)}, ${this.sqlVal(entry.totp_algorithm || null)}, ${this.sqlVal(entry.totp_digits || null)}, ${this.sqlVal(entry.totp_period || null)}, ${this.sqlVal(entry.encrypted_notes || null)}, ${this.sqlVal(entry.notes_iv || null)}, ${this.sqlVal(entry.encrypted_passkey_meta || null)}, ${this.sqlVal(entry.passkey_meta_iv || null)}, ${this.sqlVal(entry.encrypted_card_details || null)}, ${this.sqlVal(entry.card_details_iv || null)}, ${this.sqlVal(entry.encrypted_identity_details || null)}, ${this.sqlVal(entry.identity_details_iv || null)}, ${this.sqlVal(entry.encrypted_alias_details || null)}, ${this.sqlVal(entry.alias_details_iv || null)}, ${this.sqlVal(entry.encrypted_history || null)}, ${this.sqlVal(entry.history_iv || null)})`;
-    
-    this.db.run(sql);
+    const columns = [
+      'id', 'title', 'encrypted_title', 'title_iv', 'username', 'encrypted_username', 'username_iv',
+      'encrypted_password', 'iv', 'category', 'encrypted_category', 'category_iv', 'website',
+      'encrypted_website', 'website_iv', 'encrypted_tags', 'tags_iv', 'search_index', 'updated_at',
+      'strength', 'tags', 'pwned_count', 'favorite', 'attachments', 'deleted_at', 'totp_secret',
+      'totp_iv', 'totp_issuer', 'totp_algorithm', 'totp_digits', 'totp_period', 'encrypted_notes',
+      'notes_iv', 'encrypted_passkey_meta', 'passkey_meta_iv', 'encrypted_card_details',
+      'card_details_iv', 'encrypted_identity_details', 'identity_details_iv', 'encrypted_alias_details',
+      'alias_details_iv', 'encrypted_history', 'history_iv',
+    ];
+    const values = [
+      entry.id,
+      entry.title || 'Untitled',
+      entry.encrypted_title || null,
+      entry.title_iv || null,
+      entry.username || '',
+      entry.encrypted_username || null,
+      entry.username_iv || null,
+      entry.encrypted_password || null,
+      entry.iv || null,
+      entry.category || 'General',
+      entry.encrypted_category || null,
+      entry.category_iv || null,
+      entry.website || '',
+      entry.encrypted_website || null,
+      entry.website_iv || null,
+      entry.encrypted_tags || null,
+      entry.tags_iv || null,
+      JSON.stringify(entry.search_index || []),
+      entry.updated_at || new Date().toISOString(),
+      entry.strength || 'GOOD',
+      tags,
+      entry.pwned_count || 0,
+      entry.favorite ? 1 : 0,
+      attachments,
+      entry.deletedAt || entry.deleted_at || null,
+      entry.totp_secret || null,
+      entry.totp_iv || null,
+      entry.totp_issuer || null,
+      entry.totp_algorithm || null,
+      entry.totp_digits || null,
+      entry.totp_period || null,
+      entry.encrypted_notes || null,
+      entry.notes_iv || null,
+      entry.encrypted_passkey_meta || null,
+      entry.passkey_meta_iv || null,
+      entry.encrypted_card_details || null,
+      entry.card_details_iv || null,
+      entry.encrypted_identity_details || null,
+      entry.identity_details_iv || null,
+      entry.encrypted_alias_details || null,
+      entry.alias_details_iv || null,
+      entry.encrypted_history || null,
+      entry.history_iv || null,
+    ];
+    const stmt = this.db.prepare(`INSERT OR REPLACE INTO passwords (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`);
+    try {
+      stmt.bind(values);
+      stmt.run();
+    } finally {
+      stmt.free();
+    }
     this.schedulePersist();
   }
 
