@@ -53,7 +53,7 @@ jobs:
 
       - name: Upload web build
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: scheduled-web-dist
           path: dist/
@@ -61,7 +61,7 @@ jobs:
 
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: scheduled-coverage-report
           path: coverage/
@@ -69,7 +69,7 @@ jobs:
 
       - name: Upload Playwright report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: scheduled-playwright-report
           path: playwright-report/
