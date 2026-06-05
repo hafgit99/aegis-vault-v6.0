@@ -145,12 +145,15 @@ jobs:
           - platform: macos-latest
             artifact-name: aegisvault-macos
             rust-targets: "aarch64-apple-darwin,x86_64-apple-darwin"
+            bundle-path: src-tauri/target/universal-apple-darwin/release/bundle
           - platform: ubuntu-24.04
             artifact-name: aegisvault-linux
             rust-targets: ""
+            bundle-path: src-tauri/target/release/bundle
           - platform: windows-latest
             artifact-name: aegisvault-windows
             rust-targets: ""
+            bundle-path: src-tauri/target/release/bundle
     runs-on: ${{ matrix.platform }}
     timeout-minutes: 45
     env:
@@ -313,21 +316,17 @@ jobs:
           done
 
       - name: Generate artifact checksums
-        run: npm run desktop:checksums
+        run: npm run desktop:checksums -- ${{ matrix.bundle-path }}
 
       - name: Attest desktop artifact provenance
         uses: actions/attest@v4
         with:
-          subject-path: |
-            src-tauri/target/release/bundle/**/*
-            src-tauri/target/universal-apple-darwin/release/bundle/**/*
+          subject-path: ${{ matrix.bundle-path }}/**/*
 
       - name: Attest desktop SBOM
         uses: actions/attest@v4
         with:
-          subject-path: |
-            src-tauri/target/release/bundle/**/*
-            src-tauri/target/universal-apple-darwin/release/bundle/**/*
+          subject-path: ${{ matrix.bundle-path }}/**/*
           sbom-path: sbom/aegisvault.cdx.json
 
       - name: Upload desktop SBOM
@@ -341,7 +340,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact-name }}
-          path: |
-            src-tauri/target/release/bundle/
-            src-tauri/target/universal-apple-darwin/release/bundle/
+          path: ${{ matrix.bundle-path }}/
           retention-days: 30
