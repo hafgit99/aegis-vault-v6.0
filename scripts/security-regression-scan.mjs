@@ -7,7 +7,7 @@ const sourceRoot = join(root, 'src');
 const rules = [
   {
     name: 'No persisted master password key',
-    pattern: /aegis_master_password/g,
+    pattern: /aegis_master_password(?!_audit)/g,
   },
   {
     name: 'No demo unlock fallback',

@@ -1,50 +1,51 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   ShieldCheck, ShieldAlert, AlertTriangle, CheckCircle2, ChevronRight, 
   Server, Key, Lock, Fingerprint, RefreshCw, Eye, EyeOff, AlertCircle,
-  ChevronDown, ChevronUp
+  ChevronDown, ChevronUp, Copy
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { VaultEntry } from '../types';
+import { calculateVaultHealth } from '../lib/vaultHealth';
+import { scanVaultPasswordsForBreaches, type PwnedVaultEntryResult } from '../lib/hibpPwnedPasswords';
+import { writeClipboardSecret } from '../lib/clipboard';
+import {
+  buildPasswordRotationRecommendation,
+  type PasswordRotationRecommendation,
+} from '../lib/passwordRotationRecommendations';
 
 interface SecurityAuditProps {
   entries: VaultEntry[];
+  onApplyPwnedResults?: (results: PwnedVaultEntryResult[]) => Promise<void>;
+  onAddLog?: (action: string, severity?: 'info' | 'warning' | 'critical') => void;
 }
 
-export default function SecurityAudit({ entries }: SecurityAuditProps) {
+export default function SecurityAudit({ entries, onApplyPwnedResults, onAddLog }: SecurityAuditProps) {
   const { t } = useTranslation();
   const [showPasswordMap, setShowPasswordMap] = useState<Record<string, boolean>>({});
   const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>({ 0: true }); // Start with the first group expanded
+  const [isPwnedScanRunning, setIsPwnedScanRunning] = useState(false);
+  const [pwnedScanError, setPwnedScanError] = useState<string | null>(null);
+  const [lastPwnedScanSummary, setLastPwnedScanSummary] = useState<{ checked: number; breached: number } | null>(null);
+  const [rotationRecommendation, setRotationRecommendation] = useState<PasswordRotationRecommendation>(() => (
+    buildPasswordRotationRecommendation(entries)
+  ));
+  const [copiedRecommendation, setCopiedRecommendation] = useState<'random' | 'diceware' | null>(null);
 
-  // 1. Filter only active (non-deleted) entries
-  const activeEntries = entries.filter(e => !e.isDeleted);
-  const totalCount = activeEntries.length;
+  const vaultHealth = calculateVaultHealth(entries);
+  const totalCount = vaultHealth.totalCount;
+  const weakEntries = vaultHealth.weakEntries;
+  const weakCount = vaultHealth.weakCount;
+  const duplicateGroups = vaultHealth.duplicateGroups;
+  const totalDuplicates = vaultHealth.duplicateEntryCount;
+  const pwnedEntries = vaultHealth.activeEntries.filter((entry) => Number(entry.pwned_count || 0) > 0);
+  const pwnedEntryCount = vaultHealth.pwnedEntryCount;
 
-  // 2. Weak passwords audit (strength === 'GOOD' or length <= 12)
-  // Ignored when password is empty or whitespace-only
-  const weakEntries = activeEntries.filter(e => 
-    e.type === 'login' && 
-    e.password && 
-    e.password.trim().length > 0 && 
-    (e.password.length <= 12 || e.strength === 'GOOD')
-  );
-  const weakCount = weakEntries.length;
-
-  // 3. Duplicate/Reused password analysis
-  const passwordGroups: Record<string, VaultEntry[]> = {};
-  activeEntries.forEach(entry => {
-    if (entry.password && entry.password.trim()) {
-      const pw = entry.password.trim();
-      if (!passwordGroups[pw]) {
-        passwordGroups[pw] = [];
-      }
-      passwordGroups[pw].push(entry);
-    }
-  });
-
-  const duplicateGroups = Object.values(passwordGroups).filter(group => group.length > 1);
-  const totalDuplicates = duplicateGroups.reduce((acc, g) => acc + g.length, 0);
+  useEffect(() => {
+    setRotationRecommendation(buildPasswordRotationRecommendation(entries));
+    setCopiedRecommendation(null);
+  }, [entries]);
 
   // Accordion helper functions
   const toggleGroupExpanded = (idx: number) => {
@@ -68,21 +69,9 @@ export default function SecurityAudit({ entries }: SecurityAuditProps) {
 
   const areAllExpanded = duplicateGroups.length > 0 && duplicateGroups.every((_, idx) => expandedGroups[idx]);
 
-  // 4. Master password material is intentionally never persisted.
-  const isMasterStrong = true;
-  const masterLen = 12;
-
-  // 5. Calculate Dynamic Security Health Score (0 - 100)
-  let rawScore = 100;
-  if (totalCount > 0) {
-    const weakDeduction = Math.min(40, weakCount * 15);
-    const duplicateDeduction = Math.min(35, totalDuplicates * 10);
-    const masterDeduction = isMasterStrong ? 0 : 15;
-    
-    rawScore = 100 - weakDeduction - duplicateDeduction - masterDeduction;
-    if (rawScore < 10) rawScore = 10; // keep floor at 10%
-  }
-  const overallScore = Math.round(rawScore);
+  const isMasterStrong = vaultHealth.masterPasswordStrong;
+  const masterLen = vaultHealth.masterPasswordLength;
+  const overallScore = vaultHealth.overallScore;
 
   const getScoreColor = (s: number) => {
     if (s >= 90) return 'text-tertiary border-tertiary/20 bg-tertiary/5';
@@ -101,6 +90,42 @@ export default function SecurityAudit({ entries }: SecurityAuditProps) {
       ...prev,
       [pw]: !prev[pw]
     }));
+  };
+
+  const handlePwnedScan = async () => {
+    if (isPwnedScanRunning) return;
+    setIsPwnedScanRunning(true);
+    setPwnedScanError(null);
+    onAddLog?.(t('app.audit.pwnedScanStarted'), 'info');
+    try {
+      const scan = await scanVaultPasswordsForBreaches(entries);
+      await onApplyPwnedResults?.(scan.results);
+      setLastPwnedScanSummary({ checked: scan.checkedCount, breached: scan.breachedCount });
+      onAddLog?.(t('app.audit.pwnedScanCompletedLog', {
+        checked: scan.checkedCount,
+        breached: scan.breachedCount,
+      }), scan.breachedCount > 0 ? 'critical' : 'info');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setPwnedScanError(message);
+      onAddLog?.(t('app.audit.pwnedScanFailedLog', { message }), 'warning');
+    } finally {
+      setIsPwnedScanRunning(false);
+    }
+  };
+
+  const refreshRotationRecommendation = () => {
+    setRotationRecommendation(buildPasswordRotationRecommendation(entries));
+    setCopiedRecommendation(null);
+  };
+
+  const copyRotationRecommendation = (kind: 'random' | 'diceware') => {
+    const value = kind === 'random'
+      ? rotationRecommendation.generatedPassword
+      : rotationRecommendation.dicewarePassphrase;
+    writeClipboardSecret(value);
+    setCopiedRecommendation(kind);
+    setTimeout(() => setCopiedRecommendation(null), 2000);
   };
 
   return (
@@ -407,7 +432,214 @@ export default function SecurityAudit({ entries }: SecurityAuditProps) {
           )}
         </div>
 
-        {/* Segment D: Sandbox Integrity Check */}
+        {/* Segment D: Rotation Recommendations */}
+        <div className="glass-panel rounded-2xl border border-white/5 overflow-hidden text-left">
+          <div className="p-6 border-b border-white/5 bg-white/[0.01]">
+            <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className="p-2.5 bg-primary/10 border border-primary/20 rounded-xl text-primary">
+                  <Key className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-outfit text-md text-on-surface font-semibold">{t('app.audit.rotationTitle')}</h4>
+                  <p className="text-xs text-on-surface-variant/70 mt-0.5 max-w-2xl">{t('app.audit.rotationDescription')}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={refreshRotationRecommendation}
+                className="px-4 py-2.5 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-bold transition-all flex items-center justify-center gap-2 border border-white/10 cursor-pointer"
+              >
+                <RefreshCw className="w-4 h-4" />
+                {t('app.audit.rotationRefresh')}
+              </button>
+            </div>
+          </div>
+
+          <div className="p-5 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="rounded-xl border border-white/5 bg-[#0e111d]/45 p-3">
+                <span className="block text-[9px] font-bold uppercase tracking-wider text-on-surface-variant/55">{t('app.audit.rotationAffected')}</span>
+                <span className={`mt-1 block text-xl font-geist-mono font-extrabold ${rotationRecommendation.affectedCount > 0 ? 'text-secondary' : 'text-tertiary'}`}>
+                  {rotationRecommendation.affectedCount}
+                </span>
+              </div>
+              <div className="rounded-xl border border-white/5 bg-[#0e111d]/45 p-3">
+                <span className="block text-[9px] font-bold uppercase tracking-wider text-on-surface-variant/55">{t('app.audit.rotationWeakSignal')}</span>
+                <span className={`mt-1 block text-xl font-geist-mono font-extrabold ${rotationRecommendation.weakCount > 0 ? 'text-error' : 'text-tertiary'}`}>
+                  {rotationRecommendation.weakCount}
+                </span>
+              </div>
+              <div className="rounded-xl border border-white/5 bg-[#0e111d]/45 p-3">
+                <span className="block text-[9px] font-bold uppercase tracking-wider text-on-surface-variant/55">{t('app.audit.rotationReuseSignal')}</span>
+                <span className={`mt-1 block text-xl font-geist-mono font-extrabold ${rotationRecommendation.reusedCount > 0 ? 'text-primary' : 'text-tertiary'}`}>
+                  {rotationRecommendation.reusedCount}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+              <div className="rounded-xl border border-white/5 bg-surface-container-high/25 p-4 space-y-3">
+                <div>
+                  <span className="text-[10px] text-on-surface-variant/50 uppercase tracking-widest font-bold">{t('app.audit.rotationRandomLabel')}</span>
+                  <div className="mt-1 text-sm font-geist-mono text-on-surface break-all select-all">
+                    {rotationRecommendation.generatedPassword}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => copyRotationRecommendation('random')}
+                  className="w-full px-3 py-2 rounded-xl bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <Copy className="w-4 h-4" />
+                  {copiedRecommendation === 'random' ? t('app.audit.rotationCopied') : t('app.audit.rotationCopyRandom')}
+                </button>
+              </div>
+
+              <div className="rounded-xl border border-white/5 bg-surface-container-high/25 p-4 space-y-3">
+                <div>
+                  <span className="text-[10px] text-on-surface-variant/50 uppercase tracking-widest font-bold">{t('app.audit.rotationDicewareLabel')}</span>
+                  <div className="mt-1 text-sm font-geist-mono text-on-surface break-all select-all">
+                    {rotationRecommendation.dicewarePassphrase}
+                  </div>
+                  <span className="mt-2 block text-[10px] text-tertiary font-bold uppercase tracking-wider">
+                    {t('app.audit.rotationDicewareEntropy', { bits: rotationRecommendation.dicewareEntropyBits.toFixed(1) })}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => copyRotationRecommendation('diceware')}
+                  className="w-full px-3 py-2 rounded-xl bg-secondary hover:bg-secondary/90 text-on-secondary text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <Copy className="w-4 h-4" />
+                  {copiedRecommendation === 'diceware' ? t('app.audit.rotationCopied') : t('app.audit.rotationCopyDiceware')}
+                </button>
+              </div>
+            </div>
+
+            {rotationRecommendation.affectedEntries.length > 0 ? (
+              <div className="rounded-xl border border-secondary/15 bg-secondary/5 p-4">
+                <span className="text-[10px] text-on-surface-variant/50 uppercase tracking-widest font-bold">{t('app.audit.rotationAffectedRecords')}</span>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {rotationRecommendation.affectedEntries.slice(0, 8).map((entry) => (
+                    <span key={entry.id} className="px-2.5 py-1 rounded-lg bg-[#0e111d]/70 border border-white/5 text-[10px] font-bold text-on-surface">
+                      {entry.title}
+                    </span>
+                  ))}
+                  {rotationRecommendation.affectedEntries.length > 8 && (
+                    <span className="px-2.5 py-1 rounded-lg bg-[#0e111d]/70 border border-white/5 text-[10px] font-bold text-on-surface-variant">
+                      {t('app.audit.rotationMoreRecords', { count: rotationRecommendation.affectedEntries.length - 8 })}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-tertiary/20 bg-tertiary/5 p-4 flex gap-3 text-xs leading-relaxed text-on-surface-variant">
+                <CheckCircle2 className="w-5 h-5 text-tertiary shrink-0 mt-0.5" />
+                <span>{t('app.audit.rotationNoAction')}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Segment E: HIBP k-Anonymity Breach Scan */}
+        <div className={`glass-panel rounded-2xl border overflow-hidden text-left ${
+          pwnedEntryCount > 0 ? 'border-error/25 bg-error-container/10' : 'border-white/5'
+        }`}>
+          <div className="p-6 border-b border-white/5 bg-white/[0.01]">
+            <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className={`p-2.5 rounded-xl border ${
+                  pwnedEntryCount > 0
+                    ? 'bg-error/10 border-error/20 text-error'
+                    : 'bg-tertiary/10 border-tertiary/20 text-tertiary'
+                }`}>
+                  <ShieldAlert className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-outfit text-md text-on-surface font-semibold">{t('app.audit.pwnedTitle')}</h4>
+                  <p className="text-xs text-on-surface-variant/70 mt-0.5 max-w-2xl">{t('app.audit.pwnedDescription')}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handlePwnedScan}
+                disabled={isPwnedScanRunning}
+                className="px-4 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {isPwnedScanRunning ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    {t('app.audit.pwnedScanning')}
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="w-4 h-4" />
+                    {t('app.audit.pwnedScanAction')}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          <div className="p-5 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="rounded-xl border border-white/5 bg-[#0e111d]/45 p-3">
+                <span className="block text-[9px] font-bold uppercase tracking-wider text-on-surface-variant/55">{t('app.audit.pwnedStoredFindings')}</span>
+                <span className={`mt-1 block text-xl font-geist-mono font-extrabold ${pwnedEntryCount > 0 ? 'text-error' : 'text-tertiary'}`}>{pwnedEntryCount}</span>
+              </div>
+              <div className="rounded-xl border border-white/5 bg-[#0e111d]/45 p-3">
+                <span className="block text-[9px] font-bold uppercase tracking-wider text-on-surface-variant/55">{t('app.audit.pwnedLastChecked')}</span>
+                <span className="mt-1 block text-xl font-geist-mono font-extrabold text-on-surface">
+                  {lastPwnedScanSummary?.checked ?? 0}
+                </span>
+              </div>
+              <div className="rounded-xl border border-white/5 bg-[#0e111d]/45 p-3">
+                <span className="block text-[9px] font-bold uppercase tracking-wider text-on-surface-variant/55">{t('app.audit.pwnedLastBreached')}</span>
+                <span className={`mt-1 block text-xl font-geist-mono font-extrabold ${(lastPwnedScanSummary?.breached || 0) > 0 ? 'text-error' : 'text-tertiary'}`}>
+                  {lastPwnedScanSummary?.breached ?? 0}
+                </span>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-primary/15 bg-primary/5 p-4 flex gap-3 text-xs leading-relaxed text-on-surface-variant">
+              <Key className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+              <span>{t('app.audit.pwnedPrivacyNote')}</span>
+            </div>
+
+            {pwnedScanError && (
+              <div className="rounded-xl border border-error/25 bg-error-container/15 p-3 text-xs text-error">
+                {t('app.audit.pwnedScanError', { message: pwnedScanError })}
+              </div>
+            )}
+
+            {pwnedEntries.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {pwnedEntries.map((entry) => (
+                  <div key={entry.id} className="p-3.5 bg-error-container/10 border border-error/20 rounded-xl flex justify-between items-center gap-3">
+                    <div className="min-w-0">
+                      <span className="text-xs text-on-surface font-extrabold truncate block">{entry.title}</span>
+                      <span className="text-[10px] text-on-surface-variant/60 truncate block mt-0.5">{entry.username || entry.url || t('app.audit.noUsername')}</span>
+                    </div>
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider font-geist-mono border bg-error/10 border-error/20 text-error shrink-0">
+                      {t('app.audit.pwnedSeenCount', { count: Number(entry.pwned_count || 0) })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-6 text-center text-on-surface-variant/50 text-xs space-y-2">
+                <CheckCircle2 className="w-8 h-8 text-tertiary mx-auto opacity-70" />
+                <div>
+                  <p className="font-bold text-on-surface">{t('app.audit.pwnedNoFindingsTitle')}</p>
+                  <p className="mt-0.5 text-[11px] text-on-surface-variant/60">{t('app.audit.pwnedNoFindingsDescription')}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Segment F: Sandbox Integrity Check */}
         <div className="glass-panel p-6 rounded-2xl border border-white/5 text-left">
           <div className="flex items-start gap-4 mb-4 border-b border-white/5 pb-4">
             <div className="p-2.5 bg-tertiary/10 border border-tertiary/20 rounded-xl text-tertiary">

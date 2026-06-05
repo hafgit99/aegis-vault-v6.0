@@ -1,16 +1,19 @@
-import React, { Suspense, lazy, useState, useEffect, useRef } from 'react';
+import React, { Suspense, lazy, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import Sidebar from './components/Sidebar';
 import VaultItem from './components/VaultItem';
-import type { SecurityLog } from './components/SecurityLogsModal';
 import { VaultEntry, EntryType } from './types';
 import LockScreen from './components/LockScreen';
 import { vaultService } from './lib/vaultService';
-import { DEFAULT_AVATAR_URL, normalizeAvatarUrl } from './lib/avatarPresets';
+import { normalizeAvatarUrl } from './lib/avatarPresets';
 import { useTranslation } from 'react-i18next';
-import { localizedMessage } from './i18n/localizedMessages';
 import { supportedLanguages, SupportedLanguage } from './i18n';
-import { generateRandomString } from './lib/crypto-types';
+import { calculateVaultHealth } from './lib/vaultHealth';
+import { AppStateProvider, useAppState } from './context/AppStateContext';
+import { useAppNotifications } from './hooks/useAppNotifications';
+import { useAutoLock } from './hooks/useAutoLock';
+import { useSecurityLogs } from './hooks/useSecurityLogs';
+import { useVaultEntries } from './hooks/useVaultEntries';
 import { 
   Search, RefreshCw, UserRoundCheck, Database, 
   Filter, LayoutGrid, Network, LockKeyhole, 
@@ -65,48 +68,75 @@ const INITIAL_ENTRIES: VaultEntry[] = [
 ];
 
 export default function App() {
+  const { t } = useTranslation();
+
+  return (
+    <AppStateProvider defaultUserName={t('app.logs.defaultUserName')}>
+      <AppWorkspace />
+    </AppStateProvider>
+  );
+}
+
+function AppWorkspace() {
   const { t, i18n } = useTranslation();
-  const [isLocked, setIsLocked] = useState(true);
-  const [activeTab, setActiveTab] = useState('vault');
-  const [entries, setEntries] = useState<VaultEntry[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterType, setFilterType] = useState<string>('all');
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [selectedEntry, setSelectedEntry] = useState<VaultEntry | null>(null);
-
-  // New States for Header Controls
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [isDatabaseModalOpen, setIsDatabaseModalOpen] = useState(false);
-  const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
-  const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
-  
-  const [userName, setUserName] = useState(() => {
-    try {
-      return localStorage.getItem('aegis_user_name') || t('app.logs.defaultUserName');
-    } catch (e) {
-      return t('app.logs.defaultUserName');
-    }
+  const {
+    state: {
+      isLocked,
+      activeTab,
+      entries,
+      searchQuery,
+      filterType,
+      isAddModalOpen,
+      selectedEntry,
+      isProfileModalOpen,
+      isDatabaseModalOpen,
+      isLogsModalOpen,
+      isLanguageMenuOpen,
+      userName,
+      avatarUrl,
+      isSyncing,
+      logs,
+      toastMessage,
+      visibleCount,
+    },
+    actions: {
+      setIsLocked,
+      setActiveTab,
+      setSearchQuery,
+      setFilterType,
+      setIsAddModalOpen,
+      setSelectedEntry,
+      setIsProfileModalOpen,
+      setIsDatabaseModalOpen,
+      setIsLogsModalOpen,
+      setIsLanguageMenuOpen,
+      setUserName,
+      setAvatarUrl,
+      setIsSyncing,
+      setVisibleCount,
+    },
+  } = useAppState();
+  const { addSecurityLog, clearLogs } = useSecurityLogs();
+  const { showToast } = useAppNotifications(addSecurityLog);
+  const {
+    handleAddEntry,
+    handleDeleteEntry,
+    handleUpdateEntry,
+    handleToggleFavorite,
+    handleRestoreEntry,
+    handlePermanentDelete,
+    handleClearTrash,
+    handleResetEntries,
+    handleImportBackup,
+    handleClearStorage,
+    handleUpdatePwnedCounts,
+  } = useVaultEntries({
+    initialEntries: INITIAL_ENTRIES,
+    showToast,
+    addSecurityLog,
   });
-  const [avatarUrl, setAvatarUrl] = useState(() => {
-    try {
-      const savedAvatarUrl = localStorage.getItem('aegis_user_avatar');
-      const normalizedAvatarUrl = normalizeAvatarUrl(savedAvatarUrl);
-
-      if (savedAvatarUrl && savedAvatarUrl !== normalizedAvatarUrl) {
-        localStorage.setItem('aegis_user_avatar', normalizedAvatarUrl);
-      }
-
-      return normalizedAvatarUrl;
-    } catch (e) {
-      return DEFAULT_AVATAR_URL;
-    }
-  });
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [logs, setLogs] = useState<SecurityLog[]>([]);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Lazy Loading / Infinite Scroll Logic for Large Datasets
-  const [visibleCount, setVisibleCount] = useState(50);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Reset visible items and close detail panel whenever the user filters or searches
@@ -119,76 +149,6 @@ export default function App() {
     setSelectedEntry(null);
   }, [activeTab]);
 
-  const addSecurityLog = (action: string, severity: 'info' | 'warning' | 'critical' = 'info') => {
-    setLogs(prev => {
-      const newLog: SecurityLog = {
-        id: `${Date.now()}${generateRandomString(6, 'abcdefghijklmnopqrstuvwxyz0123456789')}`,
-        timestamp: new Date().toISOString(),
-        action,
-        severity
-      };
-      const updated = [...prev, newLog];
-      try {
-        localStorage.setItem('aegis_security_logs', JSON.stringify(updated));
-      } catch (e) {}
-      return updated;
-    });
-  };
-
-  const showToast = (message: string) => {
-    setToastMessage(message);
-  };
-
-  // Auto-clear toast trigger
-  useEffect(() => {
-    if (toastMessage) {
-      const timer = setTimeout(() => {
-        setToastMessage(null);
-      }, 3500);
-      return () => clearTimeout(timer);
-    }
-  }, [toastMessage]);
-
-  // Load entries when vault is unlocked
-  useEffect(() => {
-    if (!isLocked) {
-      vaultService.getPasswords().then(loaded => {
-        // Fallback to INITIAL_ENTRIES if DB is empty on first setup
-        if (loaded.length === 0) {
-          Promise.all(INITIAL_ENTRIES.map(e => vaultService.savePassword(e)))
-            .then(() => vaultService.getPasswords())
-            .then(newLoaded => setEntries(newLoaded))
-            .catch(console.error);
-        } else {
-          setEntries(loaded);
-        }
-      }).catch(err => {
-        console.error("Failed to load entries from SQLite:", err);
-      });
-    } else {
-      setEntries([]);
-    }
-  }, [isLocked]);
-
-  // Load security logs
-  useEffect(() => {
-    const savedLogs = localStorage.getItem('aegis_security_logs');
-    if (savedLogs) {
-      try {
-        setLogs(JSON.parse(savedLogs));
-      } catch (err) {
-        setLogs([{ id: 'default', timestamp: new Date().toISOString(), action: t('app.logs.securityLogCreated'), severity: 'info' }]);
-      }
-    } else {
-      const initialLogs: SecurityLog[] = [
-        { id: '1', timestamp: new Date().toISOString(), action: t('app.logs.securityEngineStarted'), severity: 'info' },
-        { id: '2', timestamp: new Date().toISOString(), action: t('app.logs.offlineSandboxVerified'), severity: 'info' }
-      ];
-      setLogs(initialLogs);
-      localStorage.setItem('aegis_security_logs', JSON.stringify(initialLogs));
-    }
-  }, []);
-
   const handleLock = async () => {
     await vaultService.lock();
     setIsLocked(true);
@@ -196,52 +156,7 @@ export default function App() {
     showToast(t('app.logs.vaultLockedToast'));
   };
 
-  // Auto Lock Inactivity Idle Timer
-  useEffect(() => {
-    if (isLocked) return;
-
-    let timeoutId: number;
-
-    const resetTimer = () => {
-      if (timeoutId) clearTimeout(timeoutId);
-
-      const autoLockVal = localStorage.getItem('aegis_auto_lock') || '15';
-      if (autoLockVal === 'never') return;
-
-      const minutes = parseInt(autoLockVal, 10) || 15;
-      const ms = minutes * 60 * 1000;
-
-      timeoutId = window.setTimeout(() => {
-        handleLock();
-        addSecurityLog(t('app.logs.autoLockTriggered', { minutes }), 'warning');
-      }, ms);
-    };
-
-    // User interaction events
-    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-    
-    // Throttle helper to avoid performance overhead on mousemove/scroll
-    let lastActivityTime = 0;
-    const handleActivity = () => {
-      const now = Date.now();
-      if (now - lastActivityTime > 1000) { // Throttle resets to once per second
-        lastActivityTime = now;
-        resetTimer();
-      }
-    };
-
-    // Initialize timer
-    resetTimer();
-
-    // Attach listeners
-    events.forEach(evt => window.addEventListener(evt, handleActivity, { passive: true }));
-
-    // Cleanup
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      events.forEach(evt => window.removeEventListener(evt, handleActivity));
-    };
-  }, [isLocked]);
+  useAutoLock({ isLocked, onLock: handleLock, addSecurityLog });
 
   const handleUpdateUserName = (newName: string) => {
     setUserName(newName);
@@ -265,187 +180,8 @@ export default function App() {
 
   const currentLanguage = supportedLanguages.find(language => language.code === i18n.language) ?? supportedLanguages[0];
 
-  const handleAddEntry = async (entry: VaultEntry) => {
-    try {
-      await vaultService.savePassword(entry);
-      const loaded = await vaultService.getPasswords();
-      setEntries(loaded);
-      addSecurityLog(t('app.logs.entryCreated', { title: entry.title }), 'info');
-      showToast(t('app.logs.entryAdded', { title: entry.title }));
-    } catch (err) {
-      console.error(err);
-      showToast(t('app.logs.entryAddError'));
-    }
-  };
-
-  const handleDeleteEntry = async (id: string) => {
-    try {
-      const entryToDelete = entries.find(e => e.id === id);
-      if (!entryToDelete) return;
-      const title = entryToDelete.title;
-      const updatedEntry = { ...entryToDelete, isDeleted: true, deletedAt: new Date().toISOString() };
-      await vaultService.savePassword(updatedEntry);
-      const loaded = await vaultService.getPasswords();
-      setEntries(loaded);
-      addSecurityLog(t('app.logs.entryMovedToTrashLog', { title }), 'warning');
-      showToast(t('app.logs.entryMovedToTrash', { title }));
-    } catch (err) {
-      console.error(err);
-      showToast(t('app.logs.entryTrashError'));
-    }
-  };
-
-  const handleUpdateEntry = async (updatedEntry: VaultEntry) => {
-    try {
-      await vaultService.savePassword(updatedEntry);
-      const loaded = await vaultService.getPasswords();
-      setEntries(loaded);
-      setSelectedEntry(updatedEntry);
-      addSecurityLog(t('app.logs.entryUpdatedLog', { title: updatedEntry.title }), 'info');
-      showToast(t('app.logs.entryUpdated', { title: updatedEntry.title }));
-    } catch (err) {
-      console.error(err);
-      showToast(t('app.logs.entryUpdateError'));
-    }
-  };
-
-  const handleToggleFavorite = async (id: string) => {
-    try {
-      const entryToToggle = entries.find(e => e.id === id);
-      if (!entryToToggle) return;
-      const updated = { ...entryToToggle, favorite: !entryToToggle.favorite };
-      await vaultService.savePassword(updated);
-      const loaded = await vaultService.getPasswords();
-      setEntries(loaded);
-      
-      // If active details panel belongs to this entry, update its in-memory panel too
-      if (selectedEntry?.id === id) {
-        setSelectedEntry(updated);
-      }
-      
-      if (updated.favorite) {
-        addSecurityLog(t('app.logs.favoriteAddedLog', { title: updated.title }), 'info');
-        showToast(t('app.logs.favoriteAdded', { title: updated.title }));
-      } else {
-        addSecurityLog(t('app.logs.favoriteRemovedLog', { title: updated.title }), 'info');
-        showToast(t('app.logs.favoriteRemoved', { title: updated.title }));
-      }
-    } catch (err) {
-      console.error(err);
-      showToast(t('app.logs.favoriteError'));
-    }
-  };
-
-  const handleRestoreEntry = async (id: string) => {
-    try {
-      const entryToRestore = entries.find(e => e.id === id);
-      if (!entryToRestore) return;
-      const title = entryToRestore.title;
-      const updatedEntry = { ...entryToRestore, isDeleted: false, deletedAt: undefined };
-      await vaultService.savePassword(updatedEntry);
-      const loaded = await vaultService.getPasswords();
-      setEntries(loaded);
-      addSecurityLog(t('app.logs.entryRestoredLog', { title }), 'info');
-      showToast(t('app.logs.entryRestored', { title }));
-    } catch (err) {
-      console.error(err);
-      showToast(t('app.logs.entryRestoreError'));
-    }
-  };
-
-  const handlePermanentDelete = async (id: string) => {
-    try {
-      const entryToDelete = entries.find(e => e.id === id);
-      const title = entryToDelete ? entryToDelete.title : t('app.logs.unknownItem');
-      await vaultService.deletePassword(id);
-      const loaded = await vaultService.getPasswords();
-      setEntries(loaded);
-      addSecurityLog(t('app.logs.entryDeletedLog', { title }), 'critical');
-      showToast(t('app.logs.entryDeleted', { title }));
-    } catch (err) {
-      console.error(err);
-      showToast(t('app.logs.entryDeleteError'));
-    }
-  };
-
-  const handleClearTrash = async () => {
-    try {
-      const deletedEntries = entries.filter(e => e.isDeleted);
-      const count = deletedEntries.length;
-      for (const entry of deletedEntries) {
-        await vaultService.deletePassword(entry.id);
-      }
-      const loaded = await vaultService.getPasswords();
-      setEntries(loaded);
-      addSecurityLog(t('app.logs.trashClearedLog', { count }), 'warning');
-      showToast(t('app.logs.trashCleared'));
-    } catch (err) {
-      console.error(err);
-      showToast(t('app.logs.trashClearError'));
-    }
-  };
-
-  const handleResetEntries = async () => {
-    try {
-      if (vaultService.sqliteDb) {
-        vaultService.sqliteDb.clearPasswords();
-        await vaultService.sqliteDb.flushToOPFS();
-      }
-      for (const entry of INITIAL_ENTRIES) {
-        await vaultService.savePassword(entry);
-      }
-      const loaded = await vaultService.getPasswords();
-      setEntries(loaded);
-      addSecurityLog(t('app.logs.vaultFactoryReset'), 'warning');
-      showToast(t('app.logs.vaultSamplesLoaded'));
-    } catch (err) {
-      console.error(err);
-      showToast(t('app.logs.vaultResetError'));
-    }
-  };
-
-  const handleImportBackup = async (importedEntries: VaultEntry[], overwrite: boolean = false) => {
-    try {
-      if (overwrite) {
-        if (vaultService.sqliteDb) {
-          vaultService.sqliteDb.clearPasswords();
-        }
-      }
-      for (const entry of importedEntries) {
-        await vaultService.savePassword(entry, false);
-      }
-      if (vaultService.sqliteDb) {
-        await vaultService.sqliteDb.flushToOPFS();
-      }
-      const loaded = await vaultService.getPasswords();
-      setEntries(loaded);
-      showToast(t('app.logs.importSuccess', { count: importedEntries.length }));
-    } catch (err: any) {
-      console.error(localizedMessage('backupImportError'), err);
-      showToast(t('app.logs.importError', { message: err?.message || err }));
-    }
-  };
-
-  const handleClearStorage = async () => {
-    try {
-      await vaultService.wipeAllData();
-      setEntries([]);
-      setIsLocked(true);
-      addSecurityLog(t('app.logs.databaseWipedLog'), 'critical');
-      showToast(t('app.logs.databaseWiped'));
-    } catch (err) {
-      console.error(err);
-      showToast(t('app.logs.dataDeleteError'));
-    }
-  };
-
   const handleClearLogs = () => {
-    const freshLogs: SecurityLog[] = [
-      { id: Date.now().toString(), timestamp: new Date().toISOString(), action: t('app.logs.logsClearedRecord'), severity: 'warning' }
-    ];
-    setLogs(freshLogs);
-    localStorage.setItem('aegis_security_logs', JSON.stringify(freshLogs));
-    showToast(t('app.logs.logsCleared'));
+    clearLogs(showToast);
   };
 
   const handleHeaderSync = () => {
@@ -460,44 +196,13 @@ export default function App() {
     }, 1000);
   };
 
-  // Calculate dynamic statistics based on actual active (non-deleted) passwords
-  const activeEntries = entries.filter(e => !e.isDeleted);
-  const totalCount = activeEntries.length;
-
-  // 1. Weak passwords count (consistent with SecurityAudit.tsx)
-  const weakCount = activeEntries.filter(e => 
-    e.type === 'login' && 
-    e.password && 
-    e.password.trim().length > 0 && 
-    (e.password.length <= 12 || e.strength === 'GOOD')
-  ).length;
-
-  // 2. Reused duplicate passwords count (consistent with SecurityAudit.tsx)
-  const passwordGroups: Record<string, number> = {};
-  activeEntries.forEach(entry => {
-    if (entry.password && entry.password.trim()) {
-      const pw = entry.password.trim();
-      passwordGroups[pw] = (passwordGroups[pw] || 0) + 1;
-    }
-  });
-  const totalDuplicates = Object.values(passwordGroups)
-    .filter(count => count > 1)
-    .reduce((acc, count) => acc + count, 0);
-
-  // 3. Master password material is intentionally never persisted, so runtime health does not read it from storage.
-  const isMasterStrong = true;
-
-  // 4. Calculate overall dynamic health score
-  let rawScore = 100;
-  if (totalCount > 0) {
-    const weakDeduction = Math.min(40, weakCount * 15);
-    const duplicateDeduction = Math.min(35, totalDuplicates * 10);
-    const masterDeduction = isMasterStrong ? 0 : 15;
-    
-    rawScore = 100 - weakDeduction - duplicateDeduction - masterDeduction;
-    if (rawScore < 10) rawScore = 10; // keep floor at 10%
-  }
-  const healthPercent = Math.round(rawScore);
+  const vaultHealth = calculateVaultHealth(entries);
+  const activeEntries = vaultHealth.activeEntries;
+  const totalCount = vaultHealth.totalCount;
+  const weakCount = vaultHealth.weakCount;
+  const totalDuplicates = vaultHealth.duplicateEntryCount;
+  const isMasterStrong = vaultHealth.masterPasswordStrong;
+  const healthPercent = vaultHealth.overallScore;
 
   // Filter ONLY active entries based on search query and category filters
   const filteredEntries = activeEntries.filter((entry) => {
@@ -528,7 +233,13 @@ export default function App() {
   const renderTabContent = () => {
     switch(activeTab) {
       case 'audit':
-        return <SecurityAudit entries={entries} />;
+        return (
+          <SecurityAudit
+            entries={entries}
+            onApplyPwnedResults={handleUpdatePwnedCounts}
+            onAddLog={addSecurityLog}
+          />
+        );
       case 'generator':
         return <Generator />;
       case 'settings':

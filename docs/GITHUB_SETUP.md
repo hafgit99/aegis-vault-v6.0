@@ -9,10 +9,11 @@ Enable these settings before the first public release:
 - GitHub Actions enabled for the repository.
 - Dependabot enabled for npm, Cargo, and GitHub Actions updates.
 - Private vulnerability reporting enabled.
-- Branch protection enabled for `main` or `master`.
+- Branch protection enabled for `main` according to [BRANCH_PROTECTION_POLICY.md](BRANCH_PROTECTION_POLICY.md).
 - Required status checks:
-  - `Quality Gate`
-  - `Release Preflight`
+  - `Quality Gate / Lint, unit coverage, build, and e2e`
+  - `CodeQL / Analyze JavaScript, TypeScript, and Rust`
+  - `Release Preflight / Validate release candidate` before tagging.
   - `Desktop Packaging` for release branches or tags when desktop artifacts are expected.
 
 ## Required Secrets

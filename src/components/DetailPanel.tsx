@@ -13,6 +13,7 @@ import { generateRandomString } from '../lib/crypto-types';
 import { writeClipboardSecret } from '../lib/clipboard';
 import { authenticatePasskey, registerPasskey } from '../lib/webauthnPasskey';
 import { generateTOTP, generateTotpSecret, getTotpRemainingSeconds, TotpAlgorithm } from '../lib/totp';
+import { createSecureShareBundle } from '../lib/secureShareBundle';
 
 interface DetailPanelProps {
   entry: VaultEntry | null;
@@ -26,6 +27,12 @@ export default function DetailPanel({ entry, onClose, onDelete, onUpdate }: Deta
   const [isEditing, setIsEditing] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [sharePassword, setSharePassword] = useState('');
+  const [shareConfirmPassword, setShareConfirmPassword] = useState('');
+  const [shareExpiryDays, setShareExpiryDays] = useState<'1' | '7' | '30' | 'never'>('7');
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
 
   // Edit states
   const [editTitle, setEditTitle] = useState('');
@@ -165,6 +172,50 @@ export default function DetailPanel({ entry, onClose, onDelete, onUpdate }: Deta
     writeClipboardSecret(text);
     setCopiedField(fieldName);
     setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const resetShareState = () => {
+    setShowShareModal(false);
+    setSharePassword('');
+    setShareConfirmPassword('');
+    setShareExpiryDays('7');
+    setShareError(null);
+    setIsSharing(false);
+  };
+
+  const handleCreateSecureShare = async () => {
+    const password = sharePassword.trim();
+    const confirmPassword = shareConfirmPassword.trim();
+    if (!password || password.length < 4) {
+      setShareError(t('app.detail.secureShare.passwordRequired'));
+      return;
+    }
+    if (password !== confirmPassword) {
+      setShareError(t('app.detail.secureShare.passwordMismatch'));
+      return;
+    }
+
+    setIsSharing(true);
+    setShareError(null);
+    try {
+      const expiresAt = shareExpiryDays === 'never'
+        ? undefined
+        : new Date(Date.now() + Number(shareExpiryDays) * 24 * 60 * 60 * 1000).toISOString();
+      const bundle = await createSecureShareBundle([entry], password, expiresAt);
+      const fileData = JSON.stringify(bundle, null, 2);
+      const blob = new Blob([fileData], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const safeTitle = (entry.title || 'record').replace(/[^a-z0-9_-]+/gi, '_').replace(/^_+|_+$/g, '').slice(0, 48) || 'record';
+      link.href = url;
+      link.download = `AegisVault_Secure_Share_${safeTitle}_${new Date().toISOString().split('T')[0]}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      resetShareState();
+    } catch (error: any) {
+      setShareError(error?.message || t('app.detail.secureShare.failed'));
+      setIsSharing(false);
+    }
   };
 
   const normalizeGender = (value?: string) => {
@@ -361,12 +412,20 @@ export default function DetailPanel({ entry, onClose, onDelete, onUpdate }: Deta
       </div>
       <div className="flex items-center gap-1.5 shrink-0">
         {isPassword && (
-          <button onClick={() => setShowPassword(!showPassword)} className="p-2 hover:bg-white/5 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer">
+          <button
+            onClick={() => setShowPassword(!showPassword)}
+            aria-label={showPassword ? t('app.detail.fields.hidePassword') : t('app.detail.fields.showPassword')}
+            className="p-2 hover:bg-white/5 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+          >
             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
         )}
         {value && (
-          <button onClick={() => handleCopy(value, fieldKey)} className="p-2 hover:bg-white/5 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer">
+          <button
+            onClick={() => handleCopy(value, fieldKey)}
+            aria-label={t('app.generator.copy')}
+            className="p-2 hover:bg-white/5 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+          >
             {copiedField === fieldKey ? <Check className="w-4 h-4 text-tertiary" /> : <Copy className="w-4 h-4" />}
           </button>
         )}
@@ -380,7 +439,7 @@ export default function DetailPanel({ entry, onClose, onDelete, onUpdate }: Deta
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 40 }}
       transition={{ type: 'spring', duration: 0.4, bounce: 0.15 }}
-      className="h-full flex flex-col bg-surface-container-lowest border-l border-outline-variant/20"
+      className="relative h-full flex flex-col bg-surface-container-lowest border-l border-outline-variant/20"
     >
       {/* Panel Header */}
       <div className="p-6 border-b border-white/5 bg-surface-container/30 shrink-0">
@@ -412,6 +471,7 @@ export default function DetailPanel({ entry, onClose, onDelete, onUpdate }: Deta
               onClick={() => {
                 onUpdate({ ...entry, favorite: !entry.favorite });
               }}
+              aria-label={entry.favorite ? t('app.detail.removeFavorite') : t('app.detail.addFavorite')}
               className={`p-2 hover:bg-white/5 rounded-lg transition-all active:scale-[0.85] cursor-pointer shrink-0 ml-2 ${
                 entry.favorite 
                   ? 'text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.4)]' 
@@ -425,6 +485,7 @@ export default function DetailPanel({ entry, onClose, onDelete, onUpdate }: Deta
 
           <button 
             onClick={onClose} 
+            aria-label={t('app.profile.close')}
             className="p-2 hover:bg-white/5 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer shrink-0 ml-2"
           >
             <X className="w-5 h-5" />
@@ -443,6 +504,14 @@ export default function DetailPanel({ entry, onClose, onDelete, onUpdate }: Deta
                 {t('app.detail.edit')}
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => setShowShareModal(true)}
+              className="flex-1 py-2.5 px-4 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary rounded-xl font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] text-sm cursor-pointer select-none"
+            >
+              <Download className="w-4 h-4" />
+              {t('app.detail.secureShare.action')}
+            </button>
             <button 
               onClick={() => {
                 if (confirm(t('app.detail.moveToTrashConfirm', { title: entry.title }))) {
@@ -458,6 +527,102 @@ export default function DetailPanel({ entry, onClose, onDelete, onUpdate }: Deta
           </div>
         )}
       </div>
+
+      <AnimatePresence>
+        {showShareModal && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-neutral-950/80 backdrop-blur-sm p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 12 }}
+              className="w-full max-w-sm rounded-2xl border border-white/10 bg-surface-container-high shadow-2xl p-5 space-y-4"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h4 className="text-sm font-bold text-on-surface font-outfit">{t('app.detail.secureShare.title')}</h4>
+                  <p className="text-[11px] text-on-surface-variant/75 leading-relaxed mt-1">
+                    {t('app.detail.secureShare.description', { title: entry.title })}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={resetShareState}
+                  aria-label={t('app.profile.close')}
+                  className="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-white/5"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">{t('app.detail.secureShare.password')}</label>
+                  <input
+                    type="password"
+                    value={sharePassword}
+                    onChange={(event) => setSharePassword(event.target.value)}
+                    placeholder={t('app.detail.secureShare.placeholder')}
+                    className="w-full bg-surface-container-highest/70 border border-white/10 focus:border-primary/40 rounded-xl px-3 py-2.5 text-xs outline-none text-on-surface"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">{t('app.detail.secureShare.confirmPassword')}</label>
+                  <input
+                    type="password"
+                    value={shareConfirmPassword}
+                    onChange={(event) => setShareConfirmPassword(event.target.value)}
+                    placeholder={t('app.detail.secureShare.confirmPlaceholder')}
+                    className="w-full bg-surface-container-highest/70 border border-white/10 focus:border-primary/40 rounded-xl px-3 py-2.5 text-xs outline-none text-on-surface"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">{t('app.detail.secureShare.expires')}</label>
+                  <select
+                    value={shareExpiryDays}
+                    onChange={(event) => setShareExpiryDays(event.target.value as typeof shareExpiryDays)}
+                    className="w-full bg-surface-container-highest/70 border border-white/10 focus:border-primary/40 rounded-xl px-3 py-2.5 text-xs outline-none text-on-surface"
+                  >
+                    <option value="1">{t('app.detail.secureShare.expireOneDay')}</option>
+                    <option value="7">{t('app.detail.secureShare.expireSevenDays')}</option>
+                    <option value="30">{t('app.detail.secureShare.expireThirtyDays')}</option>
+                    <option value="never">{t('app.detail.secureShare.expireNever')}</option>
+                  </select>
+                  <p className="text-[10px] text-on-surface-variant/60">{t('app.detail.secureShare.expiresHint')}</p>
+                </div>
+              </div>
+
+              {shareError && (
+                <div className="rounded-xl border border-error/20 bg-error/10 p-3 text-[11px] text-error">
+                  {shareError}
+                </div>
+              )}
+
+              <div className="rounded-xl border border-primary/15 bg-primary/5 p-3 text-[11px] leading-relaxed text-on-surface-variant/80">
+                {t('app.detail.secureShare.warning')}
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={resetShareState}
+                  className="flex-1 py-2.5 rounded-xl border border-white/10 text-xs font-bold text-on-surface-variant hover:text-on-surface hover:bg-white/5"
+                >
+                  {t('app.detail.cancel')}
+                </button>
+                <button
+                  type="button"
+                  disabled={isSharing}
+                  onClick={handleCreateSecureShare}
+                  className="flex-1 py-2.5 rounded-xl bg-primary text-[#02050A] text-xs font-bold disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  {isSharing ? t('app.detail.secureShare.creating') : t('app.detail.secureShare.create')}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto vault-scroll p-6 space-y-4">
@@ -491,7 +656,11 @@ export default function DetailPanel({ entry, onClose, onDelete, onUpdate }: Deta
                   </span>
                 </div>
                 {totpCode && (
-                  <button onClick={() => handleCopy(totpCode, 'totp')} className="p-2 hover:bg-white/5 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer">
+                  <button
+                    onClick={() => handleCopy(totpCode, 'totp')}
+                    aria-label={t('app.generator.copy')}
+                    className="p-2 hover:bg-white/5 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+                  >
                     {copiedField === 'totp' ? <Check className="w-4 h-4 text-tertiary" /> : <Copy className="w-4 h-4" />}
                   </button>
                 )}

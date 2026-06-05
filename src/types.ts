@@ -60,4 +60,7 @@ export interface VaultEntry {
 
   // Favorites support
   favorite?: boolean;
+
+  // Breach audit support
+  pwned_count?: number;
 }

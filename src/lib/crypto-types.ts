@@ -40,12 +40,17 @@ export function generateRandomString(length: number, charset: string): string {
     throw new RangeError('Charset must not be empty');
   }
 
-  const randomValues = new Uint32Array(length);
-  crypto.getRandomValues(randomValues);
-
+  const randomRange = 0x100000000;
+  const maxUnbiasedValue = Math.floor(randomRange / charset.length) * charset.length;
+  const randomValues = new Uint32Array(Math.max(16, length * 2));
   let value = '';
-  for (let i = 0; i < length; i++) {
-    value += charset[randomValues[i] % charset.length];
+  while (value.length < length) {
+    crypto.getRandomValues(randomValues);
+    for (let i = 0; i < randomValues.length && value.length < length; i++) {
+      const randomValue = randomValues[i];
+      if (randomValue >= maxUnbiasedValue) continue;
+      value += charset[randomValue % charset.length];
+    }
   }
   return value;
 }

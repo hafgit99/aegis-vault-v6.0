@@ -34,7 +34,7 @@ export class VaultAuthService {
 
       if (Number.isFinite(deviceMemory) && deviceMemory > 0) {
         if (deviceMemory <= 2) {
-          memorySize = 32768;
+          memorySize = 46080;
           iterations = 3;
         } else if (deviceMemory <= 4) {
           memorySize = 65536;

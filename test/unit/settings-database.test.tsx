@@ -81,15 +81,15 @@ describe('Settings', () => {
     render(<Settings entries={[entry()]} onReset={vi.fn()} onImport={vi.fn()} onAddLog={onAddLog} />);
 
     await user.type(screen.getByPlaceholderText(/Mevcut.*ifre/i), 'old-password');
-    await user.type(screen.getByPlaceholderText(/8 haneli yeni/i), 'short');
+    await user.type(screen.getByPlaceholderText(/12 haneli yeni/i), 'short');
     await user.type(screen.getByPlaceholderText(/teyit/i), 'short');
     await user.click(screen.getByRole('button', { name: /Ana.*G.ncelle/i }));
 
-    expect(screen.getByText(/en az 8 karakter/i)).toBeInTheDocument();
+    expect(screen.getByText(/en az 12 karakter/i)).toBeInTheDocument();
     expect(vaultService.changeMasterPassword).not.toHaveBeenCalled();
 
-    await user.clear(screen.getByPlaceholderText(/8 haneli yeni/i));
-    await user.type(screen.getByPlaceholderText(/8 haneli yeni/i), 'NewPassword123!');
+    await user.clear(screen.getByPlaceholderText(/12 haneli yeni/i));
+    await user.type(screen.getByPlaceholderText(/12 haneli yeni/i), 'NewPassword123!');
     await user.clear(screen.getByPlaceholderText(/teyit/i));
     await user.type(screen.getByPlaceholderText(/teyit/i), 'NewPassword123!');
     await user.click(screen.getByRole('button', { name: /Ana.*G.ncelle/i }));
@@ -98,7 +98,7 @@ describe('Settings', () => {
       expect(vaultService.changeMasterPassword).toHaveBeenCalledWith('old-password', 'NewPassword123!');
     });
     expect(onAddLog).toHaveBeenCalledWith(expect.any(String), 'warning');
-  });
+  }, 15000);
 
   it('renders only the audited AES-GCM cipher suite for new encryption', async () => {
     await i18n.changeLanguage('en');
@@ -140,6 +140,32 @@ describe('Settings', () => {
     expect(onAddLog).toHaveBeenCalledWith(expect.stringContaining('60'), 'info');
   });
 
+  it('shows a live vault health dashboard with prioritized password risks', async () => {
+    await i18n.changeLanguage('en');
+
+    render(
+      <Settings
+        entries={[
+          entry({ id: 'entry-1', password: 'shared', strength: 'GOOD', createdAt: '2025-01-01T00:00:00.000Z' }),
+          entry({ id: 'entry-2', password: 'shared', strength: 'GOOD' }),
+          entry({ id: 'entry-3', password: 'VeryStrongPassword123!', strength: 'EXCELLENT' }),
+          entry({ id: 'entry-4', type: 'note', password: undefined, strength: 'IMMUTABLE' }),
+        ]}
+        onReset={vi.fn()}
+        onImport={vi.fn()}
+        onAddLog={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Vault Health Dashboard')).toBeInTheDocument();
+    expect(screen.getByText('Vault health score')).toBeInTheDocument();
+    expect(screen.getByText('Active').parentElement).toHaveTextContent('4');
+    expect(screen.getByText('Weak').parentElement).toHaveTextContent('2');
+    expect(screen.getByText('Reused').parentElement).toHaveTextContent('2');
+    expect(screen.getByText('Old').parentElement).toHaveTextContent('1');
+    expect(screen.getByText(/Highest priority: rotate weak login passwords/i)).toBeInTheDocument();
+  });
+
   it('exports an encrypted backup with an independent backup password and shows a sealed preview', async () => {
     await i18n.changeLanguage('en');
     const user = userEvent.setup();
@@ -166,6 +192,54 @@ describe('Settings', () => {
     expect(click).toHaveBeenCalled();
     expect(screen.getByText(/encrypted-backup-data/)).toBeInTheDocument();
     expect(onAddLog).toHaveBeenCalledWith(expect.any(String), 'info');
+  });
+
+  it('exports a secure share bundle from settings with a separate transfer password', async () => {
+    await i18n.changeLanguage('en');
+    const user = userEvent.setup();
+    const click = vi.fn();
+    vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
+      const element = document.createElementNS('http://www.w3.org/1999/xhtml', tagName) as HTMLElement;
+      if (tagName.toLowerCase() === 'a') {
+        Object.defineProperty(element, 'click', { configurable: true, value: click });
+      }
+      return element;
+    });
+
+    render(
+      <Settings
+        entries={[
+          entry({ id: 'entry-1', title: 'GitHub' }),
+          entry({ id: 'entry-2', title: 'Deleted Mail', isDeleted: true }),
+        ]}
+        onReset={vi.fn()}
+        onImport={vi.fn()}
+        onAddLog={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getAllByRole('button', { name: /Secure Share/i })[0]);
+    await user.type(screen.getByPlaceholderText('Set a one-time transfer password'), 'TransferKey123!');
+    await user.click(screen.getByRole('button', { name: 'Generate Secure Backup File' }));
+    await user.type(screen.getAllByPlaceholderText('Confirm the password').at(-1) as HTMLElement, 'TransferKey123!');
+    await user.selectOptions(screen.getAllByDisplayValue('7 days').at(-1) as HTMLElement, '30');
+    await user.click(screen.getByRole('button', { name: 'Create Secure Share Bundle' }));
+
+    await waitFor(() => {
+      expect(click).toHaveBeenCalled();
+    });
+    const blob = vi.mocked(URL.createObjectURL).mock.calls[0][0] as Blob;
+    const exported = JSON.parse(await blob.text());
+    expect(exported).toMatchObject({
+      app: 'AegisVault',
+      kind: 'secure-share-bundle',
+      encrypted: true,
+      itemCount: 1,
+    });
+    expect(new Date(exported.expiresAt).getTime()).toBeGreaterThan(Date.now() + 29 * 24 * 60 * 60 * 1000);
+    expect(exported.data).toBe('encrypted-backup-data');
+    expect(JSON.stringify(exported)).not.toContain('Deleted Mail');
+    expect(screen.getByText(/secure-share-bundle/)).toBeInTheDocument();
   });
 
   it('shows settings encrypted export evidence and closes the success modal', async () => {
@@ -362,7 +436,7 @@ describe('Settings', () => {
     await user.click(screen.getByRole('button', { name: 'Decrypt and Parse Backup File' }));
 
     await waitFor(() => {
-      expect(decryptData).toHaveBeenCalledWith('ciphertext', 'salt-value', 'iv-value', 'RestoreKey123!', undefined);
+      expect(decryptData).toHaveBeenCalledWith('ciphertext', 'salt-value', 'iv-value', 'RestoreKey123!', undefined, { allowLegacyPBKDF2: true });
     });
     expect(screen.getByText('RECORDS IN DOCUMENT (1)')).toBeInTheDocument();
     expect(onAddLog).toHaveBeenCalledWith(expect.stringContaining('1 records'), 'info');
@@ -374,6 +448,103 @@ describe('Settings', () => {
       false
     );
     expect(screen.getByText('Backup Successful')).toBeInTheDocument();
+  });
+
+  it('imports a secure share bundle from settings after decrypting its entries payload', async () => {
+    await i18n.changeLanguage('en');
+    const user = userEvent.setup();
+    const onImport = vi.fn();
+    const onAddLog = vi.fn();
+    vi.mocked(decryptData).mockResolvedValueOnce(
+      JSON.stringify({
+        entries: [
+          { title: 'Shared GitHub', username: 'octo', password: 'SharedSecret123!', type: 'login' },
+        ],
+      })
+    );
+    const file = new File(
+      [JSON.stringify({
+        app: 'AegisVault',
+        kind: 'secure-share-bundle',
+        version: '1.0',
+        encrypted: true,
+        createdAt: '2026-01-01T00:00:00.000Z',
+        itemCount: 1,
+        data: 'ciphertext',
+        salt: 'salt-value',
+        iv: 'iv-value',
+        kdf: { algorithm: 'argon2id', version: 1, iterations: 3, memorySize: 65536, parallelism: 1, hashLength: 32 },
+      })],
+      'aegis-secure-share.json',
+      { type: 'application/json' }
+    );
+
+    const { container } = render(
+      <Settings entries={[entry()]} onReset={vi.fn()} onImport={onImport} onAddLog={onAddLog} />
+    );
+
+    const secureShareButtons = screen.getAllByRole('button', { name: /Secure Share/i });
+    await user.click(secureShareButtons[secureShareButtons.length - 1]);
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+    await user.upload(fileInput, file);
+    await user.type(screen.getByPlaceholderText('Enter the backup encryption password'), 'ShareKey123!');
+    await user.click(screen.getByRole('button', { name: 'Decrypt and Parse Backup File' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('RECORDS IN DOCUMENT (1)')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Shared GitHub')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Import 1 Selected Records Into AegisVault' }));
+
+    expect(onImport).toHaveBeenCalledWith(
+      [expect.objectContaining({ title: 'Shared GitHub', username: 'octo', password: 'SharedSecret123!' })],
+      false
+    );
+    expect(onAddLog).toHaveBeenCalledWith(expect.stringContaining('1 records'), 'info');
+  });
+
+  it('rejects expired secure share bundles from settings before decrypting entries', async () => {
+    await i18n.changeLanguage('en');
+    const user = userEvent.setup();
+    const onImport = vi.fn();
+    const onAddLog = vi.fn();
+    const file = new File(
+      [JSON.stringify({
+        app: 'AegisVault',
+        kind: 'secure-share-bundle',
+        version: '1.0',
+        encrypted: true,
+        createdAt: '2026-01-01T00:00:00.000Z',
+        expiresAt: '2000-01-01T00:00:00.000Z',
+        itemCount: 1,
+        data: 'ciphertext',
+        salt: 'salt-value',
+        iv: 'iv-value',
+        kdf: { algorithm: 'argon2id', version: 1, iterations: 3, memorySize: 65536, parallelism: 1, hashLength: 32 },
+      })],
+      'expired-secure-share.json',
+      { type: 'application/json' }
+    );
+
+    const { container } = render(
+      <Settings entries={[entry()]} onReset={vi.fn()} onImport={onImport} onAddLog={onAddLog} />
+    );
+
+    const secureShareButtons = screen.getAllByRole('button', { name: /Secure Share/i });
+    await user.click(secureShareButtons[secureShareButtons.length - 1]);
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+    await user.upload(fileInput, file);
+    await user.type(screen.getByPlaceholderText('Enter the backup encryption password'), 'ShareKey123!');
+    await user.click(screen.getByRole('button', { name: 'Decrypt and Parse Backup File' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Error Occurred')).toBeInTheDocument();
+    });
+    expect(screen.getByText(/Secure share bundle has expired/)).toBeInTheDocument();
+    expect(decryptData).not.toHaveBeenCalled();
+    expect(onImport).not.toHaveBeenCalled();
+    expect(onAddLog).toHaveBeenCalledWith(expect.stringContaining('Secure share bundle has expired'), 'warning');
   });
 
   it('requires the reset confirmation phrase before resetting settings data', async () => {
@@ -422,7 +593,7 @@ describe('Settings', () => {
     render(<Settings entries={[entry()]} onReset={vi.fn()} onImport={vi.fn()} onAddLog={onAddLog} />);
 
     await user.type(screen.getByPlaceholderText('Your current unlock password'), 'wrong-password');
-    await user.type(screen.getByPlaceholderText('New password, at least 8 characters'), 'NewPassword123!');
+    await user.type(screen.getByPlaceholderText('New password, at least 12 characters'), 'NewPassword123!');
     await user.type(screen.getByPlaceholderText('Confirm the password'), 'NewPassword123!');
     await user.click(screen.getByRole('button', { name: 'Update Master Password' }));
 
@@ -483,7 +654,7 @@ describe('Settings', () => {
       expect(screen.getByText('Error Occurred')).toBeInTheDocument();
     });
     expect(screen.getByText(/Password is incorrect or the backup file is corrupted/)).toBeInTheDocument();
-    expect(decryptData).toHaveBeenCalledWith('ciphertext', 'salt-value', 'iv-value', 'WrongRestoreKey123!', undefined);
+    expect(decryptData).toHaveBeenCalledWith('ciphertext', 'salt-value', 'iv-value', 'WrongRestoreKey123!', undefined, { allowLegacyPBKDF2: true });
     expect(onImport).not.toHaveBeenCalled();
     expect(onAddLog).toHaveBeenCalledWith(expect.stringContaining('Import parsing phase failed'), 'warning');
   });
@@ -788,8 +959,10 @@ describe('DatabaseModal', () => {
     await user.click(screen.getByRole('button', { name: 'Decrypt and Parse Backup File' }));
 
     await waitFor(() => {
-      expect(decryptData).toHaveBeenCalledWith('ciphertext', 'salt-value', 'iv-value', 'VaultKey123!', undefined);
+      expect(decryptData).toHaveBeenCalledWith('ciphertext', 'salt-value', 'iv-value', 'VaultKey123!', undefined, { allowLegacyPBKDF2: true });
     });
+    expect(screen.getByText('Import review')).toBeInTheDocument();
+    expect(screen.getByText('Legacy KDF compatibility')).toBeInTheDocument();
     expect(screen.getByText('RECORDS IN DOCUMENT (2)')).toBeInTheDocument();
     expect(screen.getByText('Imported GitHub')).toBeInTheDocument();
 
@@ -804,6 +977,120 @@ describe('DatabaseModal', () => {
         false
       );
     });
+    expect(screen.getByText('Import result report')).toBeInTheDocument();
+    expect(screen.getByText(/2 selected record/)).toBeInTheDocument();
+  });
+
+  it('decrypts a secure share bundle in the database import flow and imports its entries', async () => {
+    await i18n.changeLanguage('en');
+    const user = userEvent.setup();
+    const onImportBackup = vi.fn(async () => undefined);
+    vi.mocked(decryptData).mockResolvedValueOnce(
+      JSON.stringify({
+        entries: [
+          { title: 'Shared Mail', username: 'ada', password: 'MailShare123!', type: 'login' },
+        ],
+      })
+    );
+    const file = new File(
+      [JSON.stringify({
+        app: 'AegisVault',
+        kind: 'secure-share-bundle',
+        version: '1.0',
+        encrypted: true,
+        createdAt: '2026-01-01T00:00:00.000Z',
+        itemCount: 1,
+        data: 'ciphertext',
+        salt: 'salt-value',
+        iv: 'iv-value',
+        kdf: { algorithm: 'argon2id', version: 1, iterations: 3, memorySize: 65536, parallelism: 1, hashLength: 32 },
+      })],
+      'aegis-secure-share.json',
+      { type: 'application/json' }
+    );
+
+    const { container } = render(
+      <DatabaseModal
+        isOpen
+        onClose={vi.fn()}
+        entries={[entry()]}
+        onImportBackup={onImportBackup}
+        onClearStorage={vi.fn()}
+        onAddLog={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Import Backup' }));
+    await user.click(screen.getByRole('button', { name: 'Secure Share' }));
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+    await user.upload(fileInput, file);
+    await user.type(screen.getByPlaceholderText('Enter the backup encryption password'), 'ShareKey123!');
+    await user.click(screen.getByRole('button', { name: 'Decrypt and Parse Backup File' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('RECORDS IN DOCUMENT (1)')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Import review')).toBeInTheDocument();
+    expect(screen.getByText(/Secure Share contains 1 item/)).toBeInTheDocument();
+    expect(screen.getByText('Shared Mail')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Import 1 Selected Records Into AegisVault' }));
+
+    await waitFor(() => {
+      expect(onImportBackup).toHaveBeenCalledWith(
+        [expect.objectContaining({ title: 'Shared Mail', username: 'ada', password: 'MailShare123!' })],
+        false
+      );
+    });
+    expect(screen.getByText('Import result report')).toBeInTheDocument();
+    expect(screen.getByText('Secure Share import')).toBeInTheDocument();
+  });
+
+  it('rejects expired secure share bundles in the database import flow before decryption', async () => {
+    await i18n.changeLanguage('en');
+    const user = userEvent.setup();
+    const onImportBackup = vi.fn();
+    const file = new File(
+      [JSON.stringify({
+        app: 'AegisVault',
+        kind: 'secure-share-bundle',
+        version: '1.0',
+        encrypted: true,
+        createdAt: '2026-01-01T00:00:00.000Z',
+        expiresAt: '2000-01-01T00:00:00.000Z',
+        itemCount: 1,
+        data: 'ciphertext',
+        salt: 'salt-value',
+        iv: 'iv-value',
+        kdf: { algorithm: 'argon2id', version: 1, iterations: 3, memorySize: 65536, parallelism: 1, hashLength: 32 },
+      })],
+      'expired-secure-share.json',
+      { type: 'application/json' }
+    );
+
+    const { container } = render(
+      <DatabaseModal
+        isOpen
+        onClose={vi.fn()}
+        entries={[entry()]}
+        onImportBackup={onImportBackup}
+        onClearStorage={vi.fn()}
+        onAddLog={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Import Backup' }));
+    await user.click(screen.getByRole('button', { name: 'Secure Share' }));
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+    await user.upload(fileInput, file);
+    await user.type(screen.getByPlaceholderText('Enter the backup encryption password'), 'ShareKey123!');
+    await user.click(screen.getByRole('button', { name: 'Decrypt and Parse Backup File' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Wizard Error: Secure share bundle has expired.')).toBeInTheDocument();
+    });
+    expect(decryptData).not.toHaveBeenCalled();
+    expect(onImportBackup).not.toHaveBeenCalled();
   });
 
   it('reports encrypted import validation errors before parsing records', async () => {

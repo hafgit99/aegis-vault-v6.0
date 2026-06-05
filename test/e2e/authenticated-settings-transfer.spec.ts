@@ -74,7 +74,7 @@ test.describe('authenticated settings transfer coverage', () => {
     await expect(page.getByText('RECORDS IN DOCUMENT (1)')).toBeVisible();
     await expect(page.getByText('E2E Imported Admin')).toBeVisible();
     await expect(page.getByText('e2e@example.com')).toBeVisible();
-    await expect(page.getByText('Merge With Current Vault')).toBeVisible();
+    await expect(page.getByText('Merge With Current Vault').first()).toBeVisible();
 
     await page.getByRole('button', { name: 'Import 1 Selected Records Into AegisVault' }).click();
     await expect(page.getByText('Backup Successful')).toBeVisible();
@@ -86,5 +86,52 @@ test.describe('authenticated settings transfer coverage', () => {
     await expect(page.getByRole('heading', { name: 'E2E Imported Admin' })).toBeVisible();
     await expect(page.getByText('e2e@example.com')).toBeVisible();
     await expect(page.getByText('Chase Private Client')).not.toBeVisible();
+  });
+
+  test('imports a v1.1 secure share bundle and shows manifest evidence', async ({ page }) => {
+    const bundle = await page.evaluate(async () => {
+      const secureShareModuleUrl = '/src/lib/secureShareBundle.ts';
+      const { createSecureShareBundle } = await import(/* @vite-ignore */ secureShareModuleUrl);
+      return createSecureShareBundle([{
+        id: 'secure-share-e2e',
+        title: 'Secure Share E2E Login',
+        subtitle: 'share@example.com',
+        username: 'share@example.com',
+        password: 'SharedSecret123!',
+        url: 'https://share.example',
+        notes: 'Imported through secure share e2e',
+        strength: 'EXCELLENT',
+        themeColor: 'tertiary',
+        type: 'login',
+        createdAt: new Date('2026-05-29T00:00:00.000Z').toISOString(),
+      }], 'TransferPass123!');
+    });
+
+    await expect(page.getByRole('heading', { name: 'Universal Import Wizard' })).toBeVisible();
+    await page.getByRole('button', { name: 'Secure Share', exact: true }).click();
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'aegis-secure-share-e2e.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(JSON.stringify(bundle)),
+    });
+
+    await expect(page.getByText('aegis-secure-share-e2e.json')).toBeVisible();
+    await page.getByPlaceholder('Enter the backup encryption password').fill('TransferPass123!');
+    await page.getByRole('button', { name: 'Decrypt and Parse Backup File' }).click();
+
+    await expect(page.getByText('Secure Share contains 1 item(s)')).toBeVisible();
+    await expect(page.getByText(/Manifest v1\.1 verified, checksum/i)).toBeVisible();
+    await expect(page.getByText('Secure Share E2E Login')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Import 1 Selected Records Into AegisVault' }).click();
+    await expect(page.getByText('Secure Share import')).toBeVisible();
+    await expect(page.getByText('Skipped')).toBeVisible();
+    await expect(page.getByText(/Manifest v1\.1 verified, checksum/i)).toBeVisible();
+
+    await page.locator('nav').getByText('Vault', { exact: true }).click();
+    await page.getByPlaceholder('Search your secure vault...').fill('secure share e2e');
+
+    await expect(page.getByRole('heading', { name: 'Secure Share E2E Login' })).toBeVisible();
+    await expect(page.getByText('share@example.com')).toBeVisible();
   });
 });

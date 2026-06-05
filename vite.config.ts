@@ -3,9 +3,14 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
 
-export default defineConfig(() => {
+export default defineConfig(({ mode }) => {
   return {
     plugins: [react(), tailwindcss()],
+    esbuild: mode === 'production'
+      ? {
+          pure: ['console.log', 'console.debug', 'console.info'],
+        }
+      : undefined,
     build: {
       rollupOptions: {
         output: {
@@ -26,6 +31,9 @@ export default defineConfig(() => {
             }
             if (id.includes('sql.js') || id.includes('hash-wasm')) {
               return 'vendor-crypto-storage';
+            }
+            if (id.includes('zxcvbn')) {
+              return 'vendor-zxcvbn';
             }
           },
         },

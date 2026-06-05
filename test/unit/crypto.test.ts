@@ -1,7 +1,28 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { decryptData, encryptData } from '../../src/lib/backupCrypto';
-import { writeClipboardSecret } from '../../src/lib/clipboard';
+import { invoke } from '@tauri-apps/api/core';
+import {
+  CLIPBOARD_CLEAR_FAILED_EVENT,
+  CLIPBOARD_SENSITIVE_FLAG_FAILED_EVENT,
+  writeClipboardSecret,
+} from '../../src/lib/clipboard';
+import { validateMasterPasswordPolicy } from '../../src/lib/passwordPolicy';
 import { VaultCryptoService } from '../../src/lib/vault/VaultCryptoService';
+
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: vi.fn(),
+}));
+
+beforeEach(() => {
+  vi.useRealTimers();
+  vi.resetAllMocks();
+  delete (window as typeof window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+  delete (window as typeof window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
+});
 
 async function createAesKey() {
   return window.crypto.subtle.generateKey(
@@ -56,8 +77,18 @@ describe('backup crypto', () => {
       .map(byte => byte.toString(16).padStart(2, '0'))
       .join('');
 
-    await expect(decryptData(toHex(ciphertext), toHex(salt), toHex(iv), password))
+    await expect(decryptData(toHex(ciphertext), toHex(salt), toHex(iv), password, undefined, { allowLegacyPBKDF2: true }))
       .resolves.toBe('legacy backup');
+  });
+
+  it('rejects legacy PBKDF2 backup payloads until explicitly allowed', async () => {
+    localStorage.setItem('aegis_language', 'en');
+
+    await expect(decryptData('00', '00'.repeat(16), '00'.repeat(12), 'legacy-password', {
+      algorithm: 'pbkdf2-sha256',
+      iterations: 100000,
+      hashLength: 32,
+    })).rejects.toThrow('Password is incorrect or the backup file is corrupted.');
   });
 
   it('returns localized encryption errors when encryption fails', async () => {
@@ -82,25 +113,88 @@ describe('clipboard security', () => {
     expect(writeText).toHaveBeenCalledWith('');
     vi.useRealTimers();
   });
+
+  it('uses desktop sensitive clipboard flags when Tauri is available', async () => {
+    Object.defineProperty(window, '__TAURI_INTERNALS__', {
+      configurable: true,
+      value: {},
+    });
+    vi.mocked(invoke).mockResolvedValueOnce(undefined).mockResolvedValueOnce(undefined);
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined);
+
+    await writeClipboardSecret('SensitiveSecret123!');
+
+    expect(invoke).toHaveBeenCalledWith('write_sensitive_clipboard', { value: 'SensitiveSecret123!' });
+    expect(writeText).not.toHaveBeenCalledWith('SensitiveSecret123!');
+    delete (window as typeof window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
+  });
+
+  it('falls back and emits an event when desktop sensitive clipboard flags fail', async () => {
+    Object.defineProperty(window, '__TAURI_INTERNALS__', {
+      configurable: true,
+      value: {},
+    });
+    vi.mocked(invoke).mockRejectedValueOnce(new Error('native clipboard unavailable'));
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined);
+    const onFailure = vi.fn();
+    window.addEventListener(CLIPBOARD_SENSITIVE_FLAG_FAILED_EVENT, onFailure);
+
+    await writeClipboardSecret('SensitiveSecret123!');
+
+    expect(writeText).toHaveBeenCalledWith('SensitiveSecret123!');
+    expect(onFailure).toHaveBeenCalledTimes(1);
+
+    window.removeEventListener(CLIPBOARD_SENSITIVE_FLAG_FAILED_EVENT, onFailure);
+    delete (window as typeof window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
+  });
+
+  it('emits a user-visible failure event when clipboard auto-clear fails', async () => {
+    vi.useFakeTimers();
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText')
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('clipboard denied'));
+    const onFailure = vi.fn();
+    window.addEventListener(CLIPBOARD_CLEAR_FAILED_EVENT, onFailure);
+
+    await writeClipboardSecret('TemporarySecret123!');
+    await vi.advanceTimersByTimeAsync(30_000);
+
+    expect(writeText).toHaveBeenCalledWith('');
+    expect(onFailure).toHaveBeenCalledTimes(1);
+
+    window.removeEventListener(CLIPBOARD_CLEAR_FAILED_EVENT, onFailure);
+    vi.useRealTimers();
+  });
+});
+
+describe('master password policy', () => {
+  it('requires length and all major character classes', () => {
+    expect(validateMasterPasswordPolicy('Short1!').failures).toContain('minLength');
+    expect(validateMasterPasswordPolicy('lowercasepassword1!').failures).toContain('uppercase');
+    expect(validateMasterPasswordPolicy('UPPERCASEPASSWORD1!').failures).toContain('lowercase');
+    expect(validateMasterPasswordPolicy('NoNumbersHere!').failures).toContain('number');
+    expect(validateMasterPasswordPolicy('NoSymbolsHere123').failures).toContain('symbol');
+    expect(validateMasterPasswordPolicy('ValidMaster123!').valid).toBe(true);
+  });
 });
 
 describe('vault crypto service', () => {
   it('scores password strength predictably', () => {
     expect(VaultCryptoService.calculateStrength('')).toBe(0);
     expect(VaultCryptoService.calculateStrength('short')).toBeLessThan(50);
-    expect(VaultCryptoService.calculateStrength('Longer-Password-123')).toBe(100);
+    expect(VaultCryptoService.calculateStrength('Longer-Password-123')).toBeGreaterThanOrEqual(75);
   });
 
   it('scores password strength at length and character-class boundaries', () => {
-    expect(VaultCryptoService.calculateStrength('12345678')).toBe(15);
-    expect(VaultCryptoService.calculateStrength('123456789')).toBe(35);
-    expect(VaultCryptoService.calculateStrength('123456789012')).toBe(35);
-    expect(VaultCryptoService.calculateStrength('1234567890123')).toBe(55);
-    expect(VaultCryptoService.calculateStrength('abcdefghi')).toBe(35);
-    expect(VaultCryptoService.calculateStrength('ABCDEFGHI')).toBe(35);
-    expect(VaultCryptoService.calculateStrength('abcdefghi!')).toBe(50);
-    expect(VaultCryptoService.calculateStrength('Aa1!Aa1!')).toBe(60);
-    expect(VaultCryptoService.calculateStrength('Aa1!Aa1!Z')).toBe(80);
+    expect(VaultCryptoService.calculateStrength('12345678')).toBeLessThan(50);
+    expect(VaultCryptoService.calculateStrength('123456789')).toBeLessThan(50);
+    expect(VaultCryptoService.calculateStrength('123456789012')).toBeLessThan(50);
+    expect(VaultCryptoService.calculateStrength('1234567890123')).toBeLessThan(50);
+    expect(VaultCryptoService.calculateStrength('abcdefghi')).toBeLessThan(50);
+    expect(VaultCryptoService.calculateStrength('ABCDEFGHI')).toBeLessThan(50);
+    expect(VaultCryptoService.calculateStrength('abcdefghi!')).toBeLessThanOrEqual(50);
+    expect(VaultCryptoService.calculateStrength('Aa1!Aa1!')).toBeLessThan(75);
+    expect(VaultCryptoService.calculateStrength('correct horse battery staple')).toBeGreaterThanOrEqual(75);
   });
 
   it('generates passwords using persisted generator settings', () => {

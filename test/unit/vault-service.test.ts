@@ -166,7 +166,7 @@ describe('VaultService', () => {
     await expect(service.getPasswords()).resolves.toEqual([]);
 
     service.sqliteDb = null;
-    service.aesKey = { type: 'secret' } as CryptoKey;
+    (service as any).aesKey = { type: 'secret' } as CryptoKey;
     await expect(service.getPasswords()).resolves.toEqual([]);
   });
 
@@ -241,8 +241,8 @@ describe('VaultService', () => {
       },
     ]);
     service.sqliteDb = db;
-    service.aesKey = { type: 'secret' } as CryptoKey;
-    service.rawKey = new Uint8Array(32);
+    (service as any).aesKey = { type: 'secret' } as CryptoKey;
+    (service as any).rawKey = new Uint8Array(32);
 
     const entries = await service.getPasswords();
 
@@ -259,7 +259,7 @@ describe('VaultService', () => {
         totpDigits: 6,
         totpPeriod: 30,
         url: 'dec:website-cipher',
-        type: 'dec:category-cipher',
+        type: 'login',
         themeColor: 'primary',
         favorite: true,
         attachment: expect.objectContaining({ id: 'file-1' }),
@@ -307,7 +307,7 @@ describe('VaultService', () => {
       },
     ]);
     service.sqliteDb = db;
-    service.aesKey = { type: 'secret' } as CryptoKey;
+    (service as any).aesKey = { type: 'secret' } as CryptoKey;
 
     const entries = await service.getPasswords();
 
@@ -358,7 +358,7 @@ describe('VaultService', () => {
       },
     ]);
     service.sqliteDb = db;
-    service.aesKey = { type: 'secret' } as CryptoKey;
+    (service as any).aesKey = { type: 'secret' } as CryptoKey;
 
     const entries = await service.getPasswords();
 
@@ -371,8 +371,8 @@ describe('VaultService', () => {
     const service = new VaultService();
     const db = sqliteMock.SQLiteOPFS();
     service.sqliteDb = db;
-    service.aesKey = { type: 'secret' } as CryptoKey;
-    service.rawKey = new Uint8Array(32);
+    (service as any).aesKey = { type: 'secret' } as CryptoKey;
+    (service as any).rawKey = new Uint8Array(32);
 
     await service.savePassword(entry({
       type: 'card',
@@ -402,8 +402,8 @@ describe('VaultService', () => {
     const service = new VaultService();
     const db = sqliteMock.SQLiteOPFS();
     service.sqliteDb = db;
-    service.aesKey = { type: 'secret' } as CryptoKey;
-    service.rawKey = new Uint8Array(32);
+    (service as any).aesKey = { type: 'secret' } as CryptoKey;
+    (service as any).rawKey = new Uint8Array(32);
 
     await service.savePassword(entry({
       id: 'login-good',
@@ -492,7 +492,7 @@ describe('VaultService', () => {
     const service = new VaultService();
     const db = sqliteMock.SQLiteOPFS();
     service.sqliteDb = db;
-    service.aesKey = { type: 'secret' } as CryptoKey;
+    (service as any).aesKey = { type: 'secret' } as CryptoKey;
 
     await service.savePassword(entry({ id: 'len-12', password: '123456789012' }), false);
     expect(db.putPassword).toHaveBeenLastCalledWith(expect.objectContaining({
@@ -529,8 +529,8 @@ describe('VaultService', () => {
     const service = new VaultService();
     const db = sqliteMock.SQLiteOPFS();
     service.sqliteDb = db;
-    service.aesKey = { type: 'secret' } as CryptoKey;
-    service.rawKey = new Uint8Array(32);
+    (service as any).aesKey = { type: 'secret' } as CryptoKey;
+    (service as any).rawKey = new Uint8Array(32);
 
     await service.savePassword(entry({
       id: 'identity-1',
@@ -640,6 +640,26 @@ describe('VaultService', () => {
     expect(service.isConnected).toBe(false);
   });
 
+  it('zeroes derived raw key material and clears active secret state on lock', async () => {
+    const service = new VaultService();
+    const db = sqliteMock.SQLiteOPFS();
+    const rawKey = new Uint8Array(32).fill(7);
+    service.sqliteDb = db;
+    (service as any).aesKey = { type: 'secret' } as CryptoKey;
+    (service as any).rawKey = rawKey;
+    (service as any).activeSecretKey = 'A3-SECRET-KEY';
+    service.isConnected = true;
+
+    await service.lock();
+
+    expect([...rawKey]).toEqual(new Array(32).fill(0));
+    expect((service as any).aesKey).toBeNull();
+    expect((service as any).rawKey).toBeNull();
+    expect((service as any).activeSecretKey).toBeNull();
+    expect(db.close).toHaveBeenCalled();
+    expect(service.isConnected).toBe(false);
+  });
+
   it('ignores delete requests when there is no SQLite connection', async () => {
     const service = new VaultService();
 
@@ -654,8 +674,8 @@ describe('VaultService', () => {
     const newKey = { type: 'new-secret' } as unknown as CryptoKey;
     const newRawKey = new Uint8Array(32).fill(2);
     service.sqliteDb = db;
-    service.aesKey = oldKey;
-    service.rawKey = oldRawKey;
+    (service as any).aesKey = oldKey;
+    (service as any).rawKey = oldRawKey;
     sessionStorage.setItem('aegis_session_secret_key', 'A3-SECRET-KEY');
     db.getMetadata.mockReturnValue({ credential: { scheme: 'argon2id-v1', verificationHash: 'hash', salt: 'salt' } });
     vi.spyOn(service, 'getPasswords').mockResolvedValue([entry({ id: 'rekeyed-entry' })]);
@@ -679,8 +699,8 @@ describe('VaultService', () => {
     expect(db.putMetadata).toHaveBeenCalledWith('auth_credential', expect.objectContaining({ id: 'auth_credential' }));
     expect(db.flushToOPFS).toHaveBeenCalled();
     expect(localStorage.getItem('aegis_master_password')).toBeNull();
-    expect(service.aesKey).toBe(newKey);
-    expect(service.rawKey).toBe(newRawKey);
+    expect((service as any).aesKey).toBe(newKey);
+    expect((service as any).rawKey).toBe(newRawKey);
   });
 
   it('rejects master password changes while locked or with invalid auth state', async () => {
@@ -690,14 +710,14 @@ describe('VaultService', () => {
     const missingAuth = new VaultService();
     const db = sqliteMock.SQLiteOPFS();
     missingAuth.sqliteDb = db;
-    missingAuth.aesKey = { type: 'secret' } as CryptoKey;
+    (missingAuth as any).aesKey = { type: 'secret' } as CryptoKey;
     db.getMetadata.mockReturnValue(undefined);
     await expect(missingAuth.changeMasterPassword('old-password', 'new-password')).rejects.toThrow();
 
     const invalidOldPassword = new VaultService();
     const invalidDb = sqliteMock.SQLiteOPFS();
     invalidOldPassword.sqliteDb = invalidDb;
-    invalidOldPassword.aesKey = { type: 'secret' } as CryptoKey;
+    (invalidOldPassword as any).aesKey = { type: 'secret' } as CryptoKey;
     invalidDb.getMetadata.mockReturnValue({ credential: { scheme: 'argon2id-v1', verificationHash: 'hash', salt: 'salt' } });
     authMock.verifyPassword.mockResolvedValueOnce(false);
     await expect(invalidOldPassword.changeMasterPassword('old-password', 'new-password')).rejects.toThrow();
@@ -709,8 +729,8 @@ describe('VaultService', () => {
     const oldKey = { type: 'old-secret' } as unknown as CryptoKey;
     const oldRawKey = new Uint8Array(32).fill(1);
     service.sqliteDb = db;
-    service.aesKey = oldKey;
-    service.rawKey = oldRawKey;
+    (service as any).aesKey = oldKey;
+    (service as any).rawKey = oldRawKey;
     sessionStorage.setItem('aegis_session_secret_key', 'A3-SECRET-KEY');
     db.getMetadata.mockReturnValue({ credential: { scheme: 'argon2id-v1', verificationHash: 'hash', salt: 'salt' } });
     vi.spyOn(service, 'getPasswords').mockResolvedValue([entry({ id: 'entry-that-fails' })]);
@@ -720,7 +740,8 @@ describe('VaultService', () => {
 
     await expect(service.changeMasterPassword('old-password', 'new-password')).rejects.toThrow('write failed');
 
-    expect(service.aesKey).toBe(oldKey);
-    expect(service.rawKey).toBe(oldRawKey);
+    expect((service as any).aesKey).toBe(oldKey);
+    expect((service as any).rawKey).toBe(oldRawKey);
   });
 });
+

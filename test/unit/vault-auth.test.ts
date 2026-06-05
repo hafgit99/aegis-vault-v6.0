@@ -31,7 +31,7 @@ describe('VaultAuthService', () => {
 
     expect(VaultAuthService.calibrateArgon2Params()).toEqual({
       iterations: 3,
-      memorySize: 32768,
+      memorySize: 46080,
       parallelism: 2,
       hashLength: 32,
     });

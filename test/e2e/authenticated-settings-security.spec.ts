@@ -22,12 +22,12 @@ test.describe('authenticated settings security coverage', () => {
     await expect(page.getByRole('heading', { name: 'Change Master Password' })).toBeVisible();
 
     await page.getByPlaceholder('Your current unlock password').fill(masterPassword);
-    await page.getByPlaceholder('New password, at least 8 characters').fill('short');
+    await page.getByPlaceholder('New password, at least 12 characters').fill('short');
     await page.getByPlaceholder('Confirm the password').fill('short');
     await page.getByRole('button', { name: 'Update Master Password' }).click();
-    await expect(page.getByText('New password must be at least 8 characters.')).toBeVisible();
+    await expect(page.getByText(/New password must be at least 12 characters/i)).toBeVisible();
 
-    await page.getByPlaceholder('New password, at least 8 characters').fill('UpdatedMasterPassword123!');
+    await page.getByPlaceholder('New password, at least 12 characters').fill('UpdatedMasterPassword123!');
     await page.getByPlaceholder('Confirm the password').fill('DifferentMasterPassword123!');
     await page.getByRole('button', { name: 'Update Master Password' }).click();
     await expect(page.getByText('New password confirmation does not match.')).toBeVisible();

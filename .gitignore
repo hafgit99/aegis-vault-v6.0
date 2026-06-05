@@ -6,6 +6,7 @@ playwright-report/
 test-results/
 reports/
 security-evidence/
+sbom/
 .stryker-tmp/
 src-tauri/target/
 src-tauri/gen/

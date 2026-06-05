@@ -18,6 +18,10 @@ export type SQLitePasswordRow = Record<string, any> & {
 };
 
 type SQLiteColumnInfoRow = [number, string, string, number, unknown, number];
+type SQLiteAttachmentRow = {
+  iv?: ArrayLike<number>;
+  encrypted_data?: ArrayLike<number>;
+};
 
 const normalizeSQLiteBoolean = (value: unknown): boolean =>
   value === true || value === 1 || value === '1';
@@ -408,7 +412,13 @@ export class SQLiteOPFS {
 
   deletePassword(id: string): void {
     if (!this.db) throw new Error('Database not open');
-    this.db.run(`DELETE FROM passwords WHERE id = ${this.sqlVal(id)}`);
+    const stmt = this.db.prepare('DELETE FROM passwords WHERE id = ?');
+    try {
+      stmt.bind([id]);
+      stmt.run();
+    } finally {
+      stmt.free();
+    }
     this.schedulePersist();
   }
 
@@ -423,31 +433,46 @@ export class SQLiteOPFS {
   putMetadata<T>(id: string, data: T): void {
     if (!this.db) throw new Error('Database not open');
     const val = data === null ? null : JSON.stringify(data);
-    this.db.run(
-      `INSERT OR REPLACE INTO vault_metadata (id, data) VALUES (${this.sqlVal(id)}, ${this.sqlVal(val)})`
-    );
+    const stmt = this.db.prepare('INSERT OR REPLACE INTO vault_metadata (id, data) VALUES (?, ?)');
+    try {
+      stmt.bind([id, val]);
+      stmt.run();
+    } finally {
+      stmt.free();
+    }
     this.schedulePersist();
   }
 
   getMetadata<T = Record<string, unknown>>(id: string): T | null {
     if (!this.db) return null;
-    const sql = `SELECT data FROM vault_metadata WHERE id = ${this.sqlVal(id)}`;
-    const resultArr = this.db.exec(sql);
-    if (resultArr.length > 0 && resultArr[0].values.length > 0) {
+    const stmt = this.db.prepare('SELECT data FROM vault_metadata WHERE id = ? LIMIT 1');
+    try {
+      stmt.bind([id]);
+      if (!stmt.step()) {
+        return null;
+      }
       try {
-        const val = resultArr[0].values[0][0];
+        const row = stmt.getAsObject() as { data?: unknown };
+        const val = row.data;
         return val ? (JSON.parse(val as string) as T) : null;
       } catch (error) {
         console.error('[SQLiteOPFS] Metadata parse error:', error);
         return null;
       }
+    } finally {
+      stmt.free();
     }
-    return null;
   }
 
   deleteMetadata(id: string): void {
     if (!this.db) return;
-    this.db.run(`DELETE FROM vault_metadata WHERE id = ${this.sqlVal(id)}`);
+    const stmt = this.db.prepare('DELETE FROM vault_metadata WHERE id = ?');
+    try {
+      stmt.bind([id]);
+      stmt.run();
+    } finally {
+      stmt.free();
+    }
     this.schedulePersist();
   }
 
@@ -469,10 +494,10 @@ export class SQLiteOPFS {
     stmt.bind([id]);
     let result: { iv: Uint8Array; encrypted_data: Uint8Array } | null = null;
     if (stmt.step()) {
-      const row = stmt.getAsObject() as any;
+      const row = stmt.getAsObject() as SQLiteAttachmentRow;
       result = {
-        iv: new Uint8Array(row.iv as ArrayLike<number>),
-        encrypted_data: new Uint8Array(row.encrypted_data as ArrayLike<number>),
+        iv: new Uint8Array(row.iv || []),
+        encrypted_data: new Uint8Array(row.encrypted_data || []),
       };
     }
     stmt.free();
@@ -481,7 +506,13 @@ export class SQLiteOPFS {
 
   deleteAttachment(id: string): void {
     if (!this.db) throw new Error('Database not open');
-    this.db.run(`DELETE FROM attachments WHERE id = ${this.sqlVal(id)}`);
+    const stmt = this.db.prepare('DELETE FROM attachments WHERE id = ?');
+    try {
+      stmt.bind([id]);
+      stmt.run();
+    } finally {
+      stmt.free();
+    }
     this.schedulePersist();
   }
 

@@ -36,12 +36,84 @@ fn delete_secret_key() -> Result<(), String> {
     }
 }
 
+#[cfg(windows)]
+fn wide_null(value: &str) -> Vec<u16> {
+    value.encode_utf16().chain(std::iter::once(0)).collect()
+}
+
+#[cfg(windows)]
+unsafe fn set_clipboard_global_data(format: u32, bytes: &[u8]) -> Result<(), String> {
+    use windows::Win32::Foundation::HANDLE;
+    use windows::Win32::System::DataExchange::SetClipboardData;
+    use windows::Win32::System::Memory::{GlobalAlloc, GlobalLock, GlobalUnlock, GMEM_MOVEABLE};
+
+    let handle = GlobalAlloc(GMEM_MOVEABLE, bytes.len())
+        .map_err(|error| format!("Clipboard memory could not be allocated: {error}"))?;
+    let ptr = GlobalLock(handle);
+    if ptr.is_null() {
+        return Err("Clipboard memory could not be locked.".to_string());
+    }
+
+    std::ptr::copy_nonoverlapping(bytes.as_ptr(), ptr.cast::<u8>(), bytes.len());
+    let _ = GlobalUnlock(handle);
+
+    SetClipboardData(format, Some(HANDLE(handle.0)))
+        .map_err(|error| format!("Clipboard data could not be set: {error}"))?;
+    Ok(())
+}
+
+#[cfg(windows)]
+fn write_sensitive_clipboard_platform(value: &str) -> Result<(), String> {
+    use windows::core::PCWSTR;
+    use windows::Win32::System::DataExchange::{
+        CloseClipboard, EmptyClipboard, OpenClipboard, RegisterClipboardFormatW,
+    };
+
+    const CF_UNICODETEXT_FORMAT: u32 = 13;
+
+    unsafe {
+        OpenClipboard(None)
+            .map_err(|error| format!("Clipboard could not be opened: {error}"))?;
+        let result = (|| {
+            EmptyClipboard().map_err(|error| format!("Clipboard could not be emptied: {error}"))?;
+
+            let wide = wide_null(value);
+            let text_bytes = std::slice::from_raw_parts(
+                wide.as_ptr().cast::<u8>(),
+                wide.len() * std::mem::size_of::<u16>(),
+            );
+            set_clipboard_global_data(CF_UNICODETEXT_FORMAT, text_bytes)?;
+
+            let block_history = 0u32.to_le_bytes();
+            let history_format = RegisterClipboardFormatW(PCWSTR(wide_null("CanIncludeInClipboardHistory").as_ptr()));
+            let cloud_format = RegisterClipboardFormatW(PCWSTR(wide_null("CanUploadToCloudClipboard").as_ptr()));
+            set_clipboard_global_data(history_format, &block_history)?;
+            set_clipboard_global_data(cloud_format, &block_history)?;
+            Ok(())
+        })();
+        let _ = CloseClipboard();
+        result
+    }
+}
+
+#[cfg(not(windows))]
+fn write_sensitive_clipboard_platform(_value: &str) -> Result<(), String> {
+    Err("Sensitive clipboard flags are only implemented for Windows desktop builds.".to_string())
+}
+
+#[tauri::command]
+fn write_sensitive_clipboard(value: String) -> Result<(), String> {
+    write_sensitive_clipboard_platform(&value)
+}
+
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_biometry::init())
         .invoke_handler(tauri::generate_handler![
             store_secret_key,
             get_secret_key,
             delete_secret_key,
+            write_sensitive_clipboard,
         ])
         .run(tauri::generate_context!())
         .expect("failed to run AegisVault desktop shell");

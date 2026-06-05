@@ -52,6 +52,16 @@ test.describe('authenticated vault workflows', () => {
 
     await page.getByRole('button', { name: /Copy/i }).click();
     await expect(page.getByRole('button', { name: /Copied/i })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Diceware Words' }).click();
+    await expect(page.getByText('Wordlist Language')).toBeVisible();
+    await expect(page.getByText('Wordlist Mode')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Clean List' })).toBeVisible();
+    await expect(page.getByText(/Estimated Diceware entropy: 7[6-8]\./)).toBeVisible();
+    await page.getByRole('button', { name: 'Full List' }).click();
+    await expect(page.getByText('7776')).toBeVisible();
+    await page.getByRole('button', { name: /Copy/i }).click();
+    await expect(page.getByRole('button', { name: /Copied/i })).toBeVisible();
   });
 
   test('reviews security audit and trash views without losing vault state', async ({ page }) => {

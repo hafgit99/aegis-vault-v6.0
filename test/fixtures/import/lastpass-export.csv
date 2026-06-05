@@ -1,0 +1,3 @@
+url,username,password,extra,name,grouping,fav
+https://lastpass.example.com,jane@example.com,lastpass-secret,"private note",LastPass Login,Personal,0
+http://sn,notes,,,Secure LastPass Note,Secure Notes,0

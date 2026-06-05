@@ -36,6 +36,12 @@ const sqlMock = vi.hoisted(() => {
       prepare: vi.fn((sql: string) => {
         if (sql.includes('SELECT * FROM passwords WHERE id = ?')) return createStatement(db.rows.slice(0, 1).map(row => ({ ...row })));
         if (sql.includes('SELECT * FROM passwords')) return createStatement(db.rows.map(row => ({ ...row })));
+        if (sql.includes('SELECT data FROM vault_metadata')) {
+          const rows = db.metadataResult.flatMap((result: any) =>
+            (result.values || []).map((value: unknown[]) => ({ data: value[0] }))
+          );
+          return createStatement(rows);
+        }
         if (sql.includes('SELECT iv, encrypted_data FROM attachments')) return createStatement(db.attachmentResult);
         return createStatement();
       }),
@@ -478,16 +484,21 @@ describe('SQLiteOPFS', () => {
     expect(sqlMock.stmtInstances.at(-1)?.free).toHaveBeenCalled();
   });
 
-  it('uses stable defaults with prepared password writes and escaping for deletes', async () => {
+  it('uses stable defaults with prepared password writes and deletes', async () => {
     const db = new SQLiteOPFS('unit_vault');
     await db.open();
     const sqlite = sqlMock.dbInstances[0];
 
     db.putPassword({ id: "id'1" });
+    const insertStmt = sqlMock.stmtInstances.at(-1);
     db.deletePassword("id'1");
+    const deleteStmt = sqlMock.stmtInstances.at(-1);
 
-    expect(sqlMock.stmtInstances.at(-1)?.bind).toHaveBeenCalledWith(expect.arrayContaining(["id'1", 'Untitled', 'General', 'GOOD']));
-    expect(sqlite.run).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM passwords WHERE id = \'id\'\'1\''));
+    expect(insertStmt?.bind).toHaveBeenCalledWith(expect.arrayContaining(["id'1", 'Untitled', 'General', 'GOOD']));
+    expect(sqlite.prepare).toHaveBeenCalledWith('DELETE FROM passwords WHERE id = ?');
+    expect(deleteStmt?.bind).toHaveBeenCalledWith(["id'1"]);
+    expect(deleteStmt?.run).toHaveBeenCalled();
+    expect(deleteStmt?.free).toHaveBeenCalled();
   });
 
   it('returns safe values and throws write errors before open', () => {
@@ -516,8 +527,10 @@ describe('SQLiteOPFS', () => {
     expect(db.getMetadata<{ salt: string }>('main_salt')).toEqual({ salt: 'abc' });
     db.deleteMetadata('main_salt');
 
-    expect(sqlite.run).toHaveBeenCalledWith(expect.stringContaining('INSERT OR REPLACE INTO vault_metadata'));
-    expect(sqlite.run).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM vault_metadata'));
+    expect(sqlite.prepare).toHaveBeenCalledWith('INSERT OR REPLACE INTO vault_metadata (id, data) VALUES (?, ?)');
+    expect(sqlite.prepare).toHaveBeenCalledWith('SELECT data FROM vault_metadata WHERE id = ? LIMIT 1');
+    expect(sqlite.prepare).toHaveBeenCalledWith('DELETE FROM vault_metadata WHERE id = ?');
+    expect(sqlMock.stmtInstances.some(stmt => stmt.bind.mock.calls.some((call: unknown[][]) => call[0]?.[0] === 'main_salt'))).toBe(true);
   });
 
   it('handles missing, null, malformed, and quoted metadata values', async () => {
@@ -538,7 +551,7 @@ describe('SQLiteOPFS', () => {
     db.deleteMetadata("quoted'id");
 
     expect(error).toHaveBeenCalledWith('[SQLiteOPFS] Metadata parse error:', expect.any(Error));
-    expect(sqlite.run).toHaveBeenCalledWith(expect.stringContaining("'quoted''id'"));
+    expect(sqlMock.stmtInstances.some(stmt => stmt.bind.mock.calls.some((call: unknown[][]) => call[0]?.[0] === "quoted'id"))).toBe(true);
     error.mockRestore();
   });
 
@@ -568,8 +581,9 @@ describe('SQLiteOPFS', () => {
     db.deleteAttachment("missing'id");
 
     expect(sqlMock.stmtInstances.at(-1)?.bind).toHaveBeenCalledWith(["missing'id"]);
+    expect(sqlMock.stmtInstances.at(-1)?.run).toHaveBeenCalled();
     expect(sqlMock.stmtInstances.at(-1)?.free).toHaveBeenCalled();
-    expect(sqlite.run).toHaveBeenCalledWith("DELETE FROM attachments WHERE id = 'missing''id'");
+    expect(sqlite.prepare).toHaveBeenCalledWith('DELETE FROM attachments WHERE id = ?');
   });
 
   it('debounces scheduled writes and skips flushes when clean', async () => {

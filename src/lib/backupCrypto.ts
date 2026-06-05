@@ -3,6 +3,7 @@
 import { localizedMessage } from '../i18n/localizedMessages';
 import { Argon2WorkerService } from './Argon2WorkerService';
 import { bufferToHex, generateRandomBytes, hexToBuffer, toBufferSource } from './crypto-types';
+import { createSecurityError } from './securityErrors';
 
 const BACKUP_ARGON2 = {
   algorithm: 'argon2id',
@@ -84,7 +85,7 @@ export async function encryptData(plaintext: string, password: string): Promise<
     };
   } catch (err) {
     console.error("Encryption failed:", err);
-    throw new Error(localizedMessage('encryptionFailed'));
+    throw createSecurityError('BACKUP_ENCRYPTION_FAILED', localizedMessage('encryptionFailed'), err);
   }
 }
 
@@ -93,12 +94,17 @@ export async function decryptData(
   saltHex: string,
   ivHex: string,
   password: string,
-  kdf?: BackupKdfMetadata
+  kdf?: BackupKdfMetadata,
+  options: { allowLegacyPBKDF2?: boolean } = {}
 ): Promise<string> {
   try {
     const salt = hexToBuffer(saltHex);
     const iv = hexToBuffer(ivHex);
     const ciphertext = hexToBuffer(ciphertextHex);
+    if (kdf?.algorithm === 'pbkdf2-sha256' && !options.allowLegacyPBKDF2) {
+      throw createSecurityError('BACKUP_DECRYPTION_FAILED', localizedMessage('decryptionFailed'));
+    }
+
     const key = kdf?.algorithm === 'pbkdf2-sha256'
       ? await derivePBKDF2Key(password, salt, kdf.iterations)
       : await deriveArgon2Key(password, salt);
@@ -112,15 +118,19 @@ export async function decryptData(
     return dec.decode(decryptedBuffer);
   } catch (err) {
     if (!kdf) {
+      if (!options.allowLegacyPBKDF2) {
+        console.error("Decryption failed:", err);
+        throw createSecurityError('BACKUP_DECRYPTION_FAILED', localizedMessage('decryptionFailed'), err);
+      }
       try {
         return await decryptData(ciphertextHex, saltHex, ivHex, password, {
           algorithm: 'pbkdf2-sha256',
           iterations: 100000,
           hashLength: 32,
-        });
+        }, options);
       } catch {}
     }
     console.error("Decryption failed:", err);
-    throw new Error(localizedMessage('decryptionFailed'));
+    throw createSecurityError('BACKUP_DECRYPTION_FAILED', localizedMessage('decryptionFailed'), err);
   }
 }

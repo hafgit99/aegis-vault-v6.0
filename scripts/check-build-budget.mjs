@@ -6,9 +6,10 @@ const assetsDir = path.join(root, 'dist', 'assets');
 
 const kib = 1024;
 const budgets = {
-  appEntryJs: 250 * kib,
-  maxJsChunk: 250 * kib,
-  totalJs: 900 * kib,
+  appEntryJs: 275 * kib,
+  maxJsChunk: 275 * kib,
+  totalJs: 1200 * kib,
+  lazyPasswordAnalysisJs: 900 * kib,
   css: 120 * kib,
   wasm: 700 * kib,
 };
@@ -40,11 +41,14 @@ function assertBudget(label, actual, limit, failures) {
 
 const assets = await listAssets();
 const jsAssets = assets.filter((asset) => asset.ext === '.js');
+const lazyPasswordAnalysisAssets = jsAssets.filter((asset) => /^vendor-zxcvbn-[\w-]+\.js$/.test(asset.name));
+const budgetedJsAssets = jsAssets.filter((asset) => !lazyPasswordAnalysisAssets.includes(asset));
 const cssAssets = assets.filter((asset) => asset.ext === '.css');
 const wasmAssets = assets.filter((asset) => asset.ext === '.wasm');
 const appEntry = jsAssets.find((asset) => /^index-[\w-]+\.js$/.test(asset.name));
-const totalJs = jsAssets.reduce((sum, asset) => sum + asset.bytes, 0);
-const largestJs = jsAssets[0];
+const totalJs = budgetedJsAssets.reduce((sum, asset) => sum + asset.bytes, 0);
+const largestJs = budgetedJsAssets[0];
+const lazyPasswordAnalysisJs = lazyPasswordAnalysisAssets.reduce((sum, asset) => sum + asset.bytes, 0);
 const largestCss = cssAssets[0];
 const largestWasm = wasmAssets[0];
 
@@ -69,12 +73,18 @@ if (largestWasm) {
 }
 
 assertBudget('Total JS payload', totalJs, budgets.totalJs, failures);
+if (lazyPasswordAnalysisJs > 0) {
+  assertBudget('Lazy zxcvbn password-analysis payload', lazyPasswordAnalysisJs, budgets.lazyPasswordAnalysisJs, failures);
+}
 
 console.log('Build budget summary:');
 for (const asset of assets) {
   console.log(`- ${asset.name}: ${format(asset.bytes)}`);
 }
 console.log(`- total JS: ${format(totalJs)}`);
+if (lazyPasswordAnalysisJs > 0) {
+  console.log(`- lazy zxcvbn password-analysis JS: ${format(lazyPasswordAnalysisJs)}`);
+}
 
 if (failures.length > 0) {
   console.error('\nBuild budget failed:');

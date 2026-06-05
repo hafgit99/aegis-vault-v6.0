@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import {
   convertImportedToVaultEntry,
   ImporterLabels,
@@ -6,7 +8,10 @@ import {
   parse1PasswordJSON,
   parseBitwardenJSON,
   parseImportedCSV,
+  parseKeePassCSV,
 } from '../../src/lib/importer';
+
+const readImportFixture = (name: string) => readFileSync(join(process.cwd(), 'test', 'fixtures', 'import', name), 'utf8');
 
 const labels: ImporterLabels = {
   accessLogin: 'Access Login',
@@ -116,6 +121,46 @@ describe('importer', () => {
       cardholder: 'Ada Lovelace',
       expiryDate: '11/29',
       cvv: '987',
+    });
+  });
+
+  it('parses KeePass CSV exports with group context and quoted notes', () => {
+    const rows = parseKeePassCSV([
+      'Group,Title,Username,Password,URL,Notes',
+      '"Banking/Primary","Bank, Main",ada,secret,https://bank.example,"Uses ""offline"" recovery"',
+    ].join('\n'), labels);
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        type: 'login',
+        title: 'Bank, Main',
+        username: 'ada',
+        password: 'secret',
+        url: 'https://bank.example',
+        notes: 'Uses "offline" recovery\n\nKeePass group: Banking/Primary',
+      }),
+    ]);
+  });
+
+  it('handles KeePass note-only rows, fallback titles, and blank rows', () => {
+    const rows = parseKeePassCSV([
+      'Group,Title,Username,Password,URL,Notes',
+      ',,,,,',
+      'Archive/Recovery,,,,,offline codes',
+      ',,jane@example.com,,https://example.com/login,',
+    ].join('\n'), labels);
+
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toMatchObject({
+      type: 'note',
+      title: 'Recovery',
+      notes: 'offline codes\n\nKeePass group: Archive/Recovery',
+    });
+    expect(rows[1]).toMatchObject({
+      type: 'login',
+      title: 'example.com',
+      username: 'jane@example.com',
+      url: 'https://example.com/login',
     });
   });
 
@@ -343,5 +388,41 @@ describe('importer', () => {
     expect(rows[0]).toMatchObject({ type: 'login', username: '', password: '', url: '' });
     expect(rows[1]).toMatchObject({ type: 'card', cardholder: '', cardNumber: '', expiryDate: '', cvv: '' });
     expect(rows[2]).toMatchObject({ type: 'note', title: 'Plain note', notes: 'plain text' });
+  });
+
+  it('keeps the competitor import fixture matrix compatible', () => {
+    const bitwarden = parseBitwardenJSON(readImportFixture('bitwarden-export.json'), labels);
+    const onePassword = parse1PasswordJSON(readImportFixture('onepassword-export.json'), labels);
+    const keepass = parseKeePassCSV(readImportFixture('keepass-export.csv'), labels);
+    const lastpass = parseImportedCSV(readImportFixture('lastpass-export.csv'), labels);
+    const chrome = parseImportedCSV(readImportFixture('chrome-passwords.csv'), labels);
+
+    expect(bitwarden).toEqual([
+      expect.objectContaining({ type: 'login', title: 'GitHub', username: 'octo@example.com', password: 'correct-horse', url: 'https://github.com' }),
+      expect.objectContaining({ type: 'note', title: 'Recovery Note', notes: 'Emergency codes' }),
+      expect.objectContaining({ type: 'card', title: 'Travel Card', cardholder: 'Ada Lovelace', cardNumber: '4111111111111111', expiryDate: '12/2030' }),
+    ]);
+
+    expect(onePassword).toEqual([
+      expect.objectContaining({ type: 'login', title: 'Work Login', username: 'ada', password: 'engine-room', url: 'https://work.example.com' }),
+      expect.objectContaining({ type: 'card', title: 'Personal Visa', cardholder: 'Grace Hopper', cardNumber: '5555444433332222' }),
+      expect.objectContaining({ type: 'note', title: 'Server Note', notes: 'Rack access note' }),
+    ]);
+
+    expect(keepass).toEqual([
+      expect.objectContaining({ type: 'login', title: 'GitLab, Primary', username: 'ada@example.com', password: 'runner-secret', notes: expect.stringContaining('KeePass group: Internet/Code') }),
+      expect.objectContaining({ type: 'note', title: 'Recovery', notes: expect.stringContaining('Offline recovery note') }),
+      expect.objectContaining({ type: 'login', title: 'bank.example', username: 'bank-user', password: 'bank-secret' }),
+    ]);
+
+    expect(lastpass).toEqual([
+      expect.objectContaining({ type: 'login', title: 'LastPass Login', username: 'jane@example.com', password: 'lastpass-secret', notes: 'private note' }),
+      expect.objectContaining({ type: 'login', title: 'Secure LastPass Note', username: 'notes' }),
+    ]);
+
+    expect(chrome).toEqual([
+      expect.objectContaining({ type: 'login', title: 'Chrome Login', username: 'chrome-user', password: 'chrome-secret' }),
+      expect.objectContaining({ type: 'login', title: 'Fallback URL', url: 'https://fallback.example.com', password: 'fallback-secret' }),
+    ]);
   });
 });

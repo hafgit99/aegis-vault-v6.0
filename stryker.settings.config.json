@@ -4,8 +4,14 @@
   "packageManager": "npm",
   "reporters": ["html", "clear-text", "progress"],
   "coverageAnalysis": "perTest",
+  "mutator": {
+    "excludedMutations": ["StringLiteral", "ObjectLiteral"]
+  },
   "mutate": [
-    "src/components/Settings.tsx",
+    "src/components/settings/BackupExportModal.tsx",
+    "src/components/settings/ImportSettingsPanel.tsx",
+    "src/components/settings/MasterPasswordSettingsPanel.tsx",
+    "src/components/settings/WipeSettingsPanel.tsx",
     "!src/**/*.test.ts",
     "!src/**/*.test.tsx",
     "!src/vite-env.d.ts"

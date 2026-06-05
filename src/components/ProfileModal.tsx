@@ -181,6 +181,7 @@ export default function ProfileModal({
                       />
                       <button
                         onClick={handleSaveName}
+                        aria-label={t('app.profile.confirm')}
                         className="text-tertiary hover:bg-tertiary/10 p-1 rounded transition-colors"
                       >
                         <Check className="w-4 h-4" />
@@ -191,6 +192,7 @@ export default function ProfileModal({
                       <h4 className="text-on-surface font-outfit font-semibold text-base truncate">{userName}</h4>
                       <button
                         onClick={() => setIsEditingName(true)}
+                        aria-label={t('app.profile.editName')}
                         className="text-on-surface-variant hover:text-primary transition-colors p-1 rounded"
                         title={t('app.profile.editName')}
                       >
@@ -211,6 +213,7 @@ export default function ProfileModal({
                         <button
                           key={i}
                           onClick={() => onUpdateAvatarUrl(url)}
+                          aria-label={t('app.profile.presetAvatar', { number: i + 1 })}
                           className={`relative w-10 h-10 rounded-full overflow-hidden border-2 transition-all cursor-pointer hover:scale-105 active:scale-95 ${
                             avatarUrl === url ? 'border-primary shadow-sm shadow-primary/30' : 'border-transparent opacity-60 hover:opacity-100'
                           }`}
@@ -228,6 +231,7 @@ export default function ProfileModal({
                       {/* Custom Upload Button Icon */}
                       <button
                         onClick={() => fileInputRef.current?.click()}
+                        aria-label={t('app.profile.chooseFromDevice')}
                         className="w-10 h-10 rounded-full border border-dashed border-white/25 hover:border-primary/50 text-on-surface-variant hover:text-primary transition-all flex items-center justify-center bg-white/[0.02] hover:bg-primary/5 cursor-pointer animate-pulse"
                         style={{ animationDuration: '3s' }}
                         title={t('app.profile.chooseFromDevice')}

@@ -6,18 +6,11 @@ import {
   generateRandomBytes,
   generateRandomString,
 } from '../crypto-types';
+import { analyzePasswordStrength } from '../passwordStrength';
 
 export class VaultCryptoService {
   static calculateStrength(password: string): number {
-    if (!password) return 0;
-    let score = 0;
-    if (password.length > 8) score += 20;
-    if (password.length > 12) score += 20;
-    if (/[a-z]/.test(password)) score += 15;
-    if (/[A-Z]/.test(password)) score += 15;
-    if (/[0-9]/.test(password)) score += 15;
-    if (/[^a-zA-Z0-9]/.test(password)) score += 15;
-    return Math.min(score, 100);
+    return analyzePasswordStrength(password).score;
   }
 
   static async encryptTextField(

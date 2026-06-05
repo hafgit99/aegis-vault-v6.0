@@ -1,13 +1,44 @@
 import { SQLiteOPFS } from './SQLiteOPFS';
 import { VaultCryptoService } from './vault/VaultCryptoService';
 import { VaultAuthService, StoredCredential } from './vault/VaultAuthService';
-import { VaultEntry } from '../types';
+import { EntryType, VaultEntry } from '../types';
 import { localizedMessage } from '../i18n/localizedMessages';
 import { getStoredSecretKey } from './secureSecretStore';
+import { createSecurityError } from './securityErrors';
+
+type CardDetails = Pick<VaultEntry, 'cardholder' | 'cardNumber' | 'expiryDate' | 'cvv'>;
+type IdentityDetails = Pick<VaultEntry, 'idFullName' | 'idNumber' | 'idSerial' | 'idExpiry' | 'idNationality' | 'idGender' | 'idBirthDate'>;
+type PasskeyDetails = Pick<
+  VaultEntry,
+  | 'passkeyDomain'
+  | 'passkeyUser'
+  | 'passkeyCredentialId'
+  | 'passkeyPublicKey'
+  | 'passkeyAAGUID'
+  | 'passkeyPublicKeyAlgorithm'
+  | 'passkeyAuthenticatorData'
+  | 'passkeyClientDataJSON'
+  | 'passkeyTransports'
+>;
+
+const ENTRY_TYPES = new Set<EntryType>(['login', 'card', 'note', 'crypto', 'passkey', 'identity']);
+
+const normalizeEntryType = (value: unknown): EntryType => {
+  const candidate = typeof value === 'string' ? value : 'login';
+  return ENTRY_TYPES.has(candidate as EntryType) ? candidate as EntryType : 'login';
+};
+
+const normalizeTotpAlgorithm = (value: unknown): VaultEntry['totpAlgorithm'] => {
+  return value === 'SHA-1' || value === 'SHA-256' || value === 'SHA-512' ? value : undefined;
+};
+
+const normalizeStrength = (value: unknown): VaultEntry['strength'] => {
+  return value === 'EXCELLENT' || value === 'IMMUTABLE' ? value : 'GOOD';
+};
 
 export class VaultService {
-  public aesKey: CryptoKey | null = null;
-  public rawKey: Uint8Array | null = null;
+  private aesKey: CryptoKey | null = null;
+  private rawKey: Uint8Array | null = null;
   public sqliteDb: SQLiteOPFS | null = null;
   public isConnected = false;
   private dbName = 'aegis_vault';
@@ -60,7 +91,7 @@ export class VaultService {
         const authMeta = db.getMetadata<{ credential: StoredCredential }>('auth_credential');
 
         if (!saltMeta || !authMeta) {
-          throw new Error(localizedMessage('dbConfigMissing'));
+          throw createSecurityError('AUTH_CONFIG_MISSING', localizedMessage('dbConfigMissing'));
         }
 
         const derived = await VaultAuthService.deriveMasterKey({
@@ -72,7 +103,7 @@ export class VaultService {
 
         const isValid = await VaultAuthService.verifyPassword(password, authMeta.credential, params);
         if (!isValid) {
-          throw new Error(localizedMessage('invalidMasterPassword'));
+          throw createSecurityError('AUTH_INVALID_CREDENTIALS', localizedMessage('invalidMasterPassword'));
         }
 
         this.aesKey = derived.aesKey;
@@ -132,16 +163,19 @@ export class VaultService {
 
         // Decrypt objects
         const cardDetails = row.encrypted_card_details && row.card_details_iv
-          ? await VaultCryptoService.decryptJSON<any>(this.aesKey, row.encrypted_card_details, row.card_details_iv, this.rawKey)
+          ? await VaultCryptoService.decryptJSON<CardDetails>(this.aesKey, row.encrypted_card_details, row.card_details_iv, this.rawKey)
           : null;
 
         const identityDetails = row.encrypted_identity_details && row.identity_details_iv
-          ? await VaultCryptoService.decryptJSON<any>(this.aesKey, row.encrypted_identity_details, row.identity_details_iv, this.rawKey)
+          ? await VaultCryptoService.decryptJSON<IdentityDetails>(this.aesKey, row.encrypted_identity_details, row.identity_details_iv, this.rawKey)
           : null;
 
         const passkeyMeta = row.encrypted_passkey_meta && row.passkey_meta_iv
-          ? await VaultCryptoService.decryptJSON<any>(this.aesKey, row.encrypted_passkey_meta, row.passkey_meta_iv, this.rawKey)
+          ? await VaultCryptoService.decryptJSON<PasskeyDetails>(this.aesKey, row.encrypted_passkey_meta, row.passkey_meta_iv, this.rawKey)
           : null;
+
+        const category = decryptedCategory || (row.category && row.category !== 'encrypted' ? row.category : 'login');
+        const strength = normalizeStrength(row.strength);
 
         entries.push({
           id: String(row.id),
@@ -152,13 +186,13 @@ export class VaultService {
           notes: decryptedNotes || undefined,
           totpSecret: decryptedTotpSecret || undefined,
           totpIssuer: row.totp_issuer || undefined,
-          totpAlgorithm: row.totp_algorithm || undefined,
+          totpAlgorithm: normalizeTotpAlgorithm(row.totp_algorithm),
           totpDigits: row.totp_digits ? Number(row.totp_digits) : undefined,
           totpPeriod: row.totp_period ? Number(row.totp_period) : undefined,
           url: decryptedWebsite || (row.website ? String(row.website) : ''),
-          strength: row.strength || 'GOOD',
-          themeColor: row.strength === 'IMMUTABLE' ? 'tertiary' : row.strength === 'EXCELLENT' ? 'primary' : 'secondary',
-          type: decryptedCategory || (row.category && row.category !== 'encrypted' ? row.category : 'login'),
+          strength,
+          themeColor: strength === 'IMMUTABLE' ? 'tertiary' : strength === 'EXCELLENT' ? 'primary' : 'secondary',
+          type: normalizeEntryType(category),
           createdAt: row.updated_at || new Date().toISOString(),
           deletedAt: row.deletedAt || undefined,
           isDeleted: !!row.deletedAt,
@@ -193,7 +227,8 @@ export class VaultService {
             ? row.attachments[0]
             : undefined,
           favorite: !!row.favorite,
-        } as any);
+          pwned_count: Number(row.pwned_count || 0),
+        });
       } catch (err) {
         console.error(`Failed to decrypt row ${row.id}:`, err);
       }
@@ -207,7 +242,7 @@ export class VaultService {
    */
   async savePassword(entry: VaultEntry, flush: boolean = true): Promise<void> {
     if (!this.sqliteDb || !this.aesKey) {
-      throw new Error(localizedMessage('dbLocked'));
+      throw createSecurityError('VAULT_LOCKED', localizedMessage('dbLocked'));
     }
 
     // 1. Encrypt sensitive basic fields
@@ -300,7 +335,7 @@ export class VaultService {
       website: '',
       strength: calculatedStrength,
       tags: [],
-      pwned_count: 0,
+      pwned_count: entry.pwned_count || 0,
       favorite: entry.favorite ? 1 : 0,
       attachments,
       deleted_at: entry.deletedAt || null,
@@ -360,18 +395,18 @@ export class VaultService {
    */
   async changeMasterPassword(oldPassword: string, newPassword: string): Promise<void> {
     if (!this.sqliteDb || !this.aesKey) {
-      throw new Error(localizedMessage('dbLocked'));
+      throw createSecurityError('VAULT_LOCKED', localizedMessage('dbLocked'));
     }
 
     // 1. Verify old password
     const authMeta = this.sqliteDb.getMetadata<{ credential: StoredCredential }>('auth_credential');
     if (!authMeta) {
-      throw new Error(localizedMessage('dbAuthMissing'));
+      throw createSecurityError('AUTH_CONFIG_MISSING', localizedMessage('dbAuthMissing'));
     }
     const params = VaultAuthService.calibrateArgon2Params();
     const isValid = await VaultAuthService.verifyPassword(oldPassword, authMeta.credential, params);
     if (!isValid) {
-      throw new Error(localizedMessage('oldMasterInvalid'));
+      throw createSecurityError('AUTH_OLD_PASSWORD_INVALID', localizedMessage('oldMasterInvalid'));
     }
 
     // 2. Load and decrypt all entries with the CURRENT key
@@ -383,7 +418,7 @@ export class VaultService {
 
     const secretKey = this.activeSecretKey || await getStoredSecretKey();
     if (!secretKey) {
-      throw new Error(localizedMessage('dbAuthMissing'));
+      throw createSecurityError('AUTH_CONFIG_MISSING', localizedMessage('dbAuthMissing'));
     }
     const newDerived = await VaultAuthService.deriveMasterKey({
       password: newPassword,
@@ -435,6 +470,9 @@ export class VaultService {
    * Clear memory keys and close SQLite file connections safely
    */
   async lock(): Promise<void> {
+    if (this.rawKey) {
+      this.rawKey.fill(0);
+    }
     this.aesKey = null;
     this.rawKey = null;
     this.activeSecretKey = null;

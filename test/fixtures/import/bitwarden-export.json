@@ -1,0 +1,36 @@
+{
+  "encrypted": false,
+  "items": [
+    {
+      "type": 1,
+      "name": "GitHub",
+      "notes": "Recovery stored offline",
+      "login": {
+        "username": "octo@example.com",
+        "password": "correct-horse",
+        "uris": [
+          {
+            "uri": "https://github.com"
+          }
+        ]
+      }
+    },
+    {
+      "type": 2,
+      "name": "Recovery Note",
+      "notes": "Emergency codes",
+      "secureNote": {}
+    },
+    {
+      "type": 3,
+      "name": "Travel Card",
+      "card": {
+        "cardholderName": "Ada Lovelace",
+        "number": "4111111111111111",
+        "expMonth": "12",
+        "expYear": "2030",
+        "code": "123"
+      }
+    }
+  ]
+}

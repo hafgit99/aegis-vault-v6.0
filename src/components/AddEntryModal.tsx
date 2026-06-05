@@ -320,6 +320,7 @@ export default function AddEntryModal({ isOpen, onClose, onSave }: AddEntryModal
               </div>
               <button 
                 onClick={onClose} 
+                aria-label={t('app.profile.close')}
                 className="p-1.5 hover:bg-white/5 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -411,6 +412,7 @@ export default function AddEntryModal({ isOpen, onClose, onSave }: AddEntryModal
                         <button 
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
+                          aria-label={showPassword ? t('app.lockScreen.hidePassword') : t('app.lockScreen.showPassword')}
                           className="p-1.5 hover:bg-white/5 text-on-surface-variant hover:text-on-surface rounded-lg transition-colors cursor-pointer"
                         >
                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -418,6 +420,7 @@ export default function AddEntryModal({ isOpen, onClose, onSave }: AddEntryModal
                         <button 
                           type="button"
                           onClick={triggerInlineGenerate}
+                          aria-label={t('app.addEntry.generateStrongPassword')}
                           className="p-1.5 hover:bg-white/5 text-tertiary hover:text-tertiary-container rounded-lg transition-colors flex items-center gap-1 text-[11px] font-bold cursor-pointer"
                           title={t('app.addEntry.generateStrongPassword')}
                         >
@@ -789,6 +792,7 @@ export default function AddEntryModal({ isOpen, onClose, onSave }: AddEntryModal
                     <button
                       type="button"
                       onClick={handleRemoveAttachment}
+                      aria-label={t('app.addEntry.removeAttachment')}
                       className="p-1.5 hover:bg-red-500/10 text-on-surface-variant hover:text-red-400 rounded-lg transition-colors cursor-pointer shrink-0"
                       title={t('app.addEntry.removeAttachment')}
                     >

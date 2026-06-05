@@ -39,10 +39,15 @@ The current security design and audit boundary are documented in:
 
 - [Security Model](docs/SECURITY_MODEL.md)
 - [Threat Model](docs/THREAT_MODEL.md)
+- [Vulnerability Disclosure And Advisory Process](docs/VULNERABILITY_DISCLOSURE.md)
 - [Release Hardening Checklist](docs/RELEASE_HARDENING.md)
 - [Audit Evidence Matrix](docs/AUDIT_EVIDENCE.md)
 
 These documents are the source of truth for what AegisVault is designed to protect against, what is out of scope, and which checks must pass before a sensitive release.
+
+## Advisory Process
+
+Confirmed vulnerabilities that affect released users should be handled through the advisory process in [VULNERABILITY_DISCLOSURE.md](docs/VULNERABILITY_DISCLOSURE.md). Public release notes should avoid exploit details until a patched version and verification evidence are available.
 
 ## Release Integrity
 

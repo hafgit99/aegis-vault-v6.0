@@ -7,6 +7,7 @@
   "mutate": [
     "src/lib/backupCrypto.ts",
     "src/lib/crypto-types.ts",
+    "src/lib/importWorkflow.ts",
     "src/lib/importer.ts",
     "src/lib/fileStore.ts",
     "src/lib/vaultService.ts",
@@ -23,6 +24,7 @@
     "test/unit/crypto-types.test.ts",
     "test/unit/file-store.test.ts",
     "test/unit/i18n.test.ts",
+    "test/unit/import-workflow.test.ts",
     "test/unit/importer.test.ts",
     "test/unit/vault-auth.test.ts",
     "test/unit/vault-service.test.ts"

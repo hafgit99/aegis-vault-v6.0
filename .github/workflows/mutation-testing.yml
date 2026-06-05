@@ -10,7 +10,9 @@ on:
         type: choice
         options:
           - core
+          - secure-share
           - sqlite
+          - hooks
           - settings
           - database
           - app
@@ -55,8 +57,14 @@ jobs:
             core)
               npm run test:mutation
               ;;
+            secure-share)
+              npm run test:mutation:secure-share
+              ;;
             sqlite)
               npm run test:mutation:sqlite
+              ;;
+            hooks)
+              npm run test:mutation:hooks
               ;;
             settings)
               npm run test:mutation:settings

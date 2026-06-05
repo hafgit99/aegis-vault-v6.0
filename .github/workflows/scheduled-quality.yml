@@ -39,17 +39,11 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium firefox
 
-      - name: Coverage threshold gate
-        run: npm run test:coverage
+      - name: Verify desktop smoke evidence policy
+        run: npm run security:desktop-smoke
 
-      - name: Build web assets
-        run: npm run build
-
-      - name: Build budget gate
-        run: npm run build:budget
-
-      - name: Release E2E gate
-        run: npm run test:e2e:release
+      - name: Full weekly test:all quality gate
+        run: npm run test:all
 
       - name: Upload web build
         if: always()
@@ -57,6 +51,22 @@ jobs:
         with:
           name: scheduled-web-dist
           path: dist/
+          retention-days: 14
+
+      - name: Upload SBOM
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scheduled-sbom
+          path: sbom/
+          retention-days: 14
+
+      - name: Upload security evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scheduled-security-evidence
+          path: security-evidence/
           retention-days: 14
 
       - name: Upload coverage report

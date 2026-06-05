@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   bufferToHex,
   bufferToBase64Url,
@@ -34,6 +34,20 @@ describe('crypto type utilities', () => {
     expect(() => generateRandomString(0, 'ABC')).toThrow(RangeError);
     expect(() => generateRandomString(2.5, 'ABC')).toThrow(RangeError);
     expect(() => generateRandomString(8, '')).toThrow(RangeError);
+  });
+
+  it('uses rejection sampling for random strings to avoid modulo bias', () => {
+    const getRandomValues = vi.spyOn(crypto, 'getRandomValues');
+    getRandomValues.mockImplementation((array) => {
+      const values = array as Uint32Array;
+      values[0] = 0xffffffff;
+      values[1] = 0;
+      return array;
+    });
+
+    expect(generateRandomString(1, 'ABC')).toBe('A');
+
+    getRandomValues.mockRestore();
   });
 
   it('round-trips hex and rejects invalid input', () => {

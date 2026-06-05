@@ -1,0 +1,44 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "vitest",
+  "packageManager": "npm",
+  "reporters": ["html", "clear-text", "progress"],
+  "coverageAnalysis": "perTest",
+  "mutate": [
+    "src/hooks/useAppNotifications.ts",
+    "src/hooks/useAutoLock.ts",
+    "src/hooks/useMasterPasswordChange.ts",
+    "src/hooks/useSecurityLogs.ts",
+    "src/hooks/useSettingsBackup.ts",
+    "src/hooks/useSettingsImport.ts",
+    "src/hooks/useVaultEntries.ts",
+    "src/hooks/useWipeReset.ts",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx",
+    "!src/vite-env.d.ts"
+  ],
+  "testFiles": [
+    "test/unit/app-hooks.test.tsx",
+    "test/unit/settings-hooks.test.tsx"
+  ],
+  "ignorePatterns": [
+    "/coverage",
+    "/dist",
+    "/playwright-report",
+    "/reports",
+    "/test-results"
+  ],
+  "ignoreStatic": true,
+  "vitest": {
+    "configFile": "vitest.config.ts"
+  },
+  "thresholds": {
+    "high": 70,
+    "low": 60,
+    "break": 55
+  },
+  "dryRunTimeoutMinutes": 90,
+  "timeoutMS": 60000,
+  "concurrency": 2,
+  "cleanTempDir": "always"
+}

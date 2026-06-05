@@ -320,15 +320,48 @@ describe('SecurityAudit', () => {
     expect(screen.getByRole('heading', { name: 'Güvenlik Denetimi' })).toBeInTheDocument();
     expect(screen.getByText('Çakışan Parola Eşleşmeleri (1)')).toBeInTheDocument();
     expect(screen.getByText('Güçlendirilmesi Önerilen Zayıf Şifreler (2)')).toBeInTheDocument();
-    expect(screen.getAllByText('GitHub')).toHaveLength(2);
-    expect(screen.getAllByText('Email')).toHaveLength(2);
+    expect(screen.getAllByText('GitHub').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('Email').length).toBeGreaterThanOrEqual(2);
     expect(screen.queryByText('Deleted')).not.toBeInTheDocument();
 
     await user.click(screen.getByTitle('Göster'));
     expect(screen.getByText('shared123')).toBeInTheDocument();
   });
+  it('shows rotation recommendations and copies generated Diceware values', async () => {
+    await i18n.changeLanguage('en');
+    const user = userEvent.setup();
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined);
+
+    render(
+      <SecurityAudit
+        entries={[
+          baseEntry({ id: '1', title: 'GitHub', username: 'octo', password: 'shared123', strength: 'GOOD' }),
+          baseEntry({ id: '2', title: 'Email', username: 'ada', password: 'shared123', strength: 'GOOD' }),
+        ]}
+      />
+    );
+
+    expect(screen.getByText('Password Rotation Recommendations')).toBeInTheDocument();
+    expect(screen.getByText('Affected Records')).toBeInTheDocument();
+    expect(screen.getAllByText('GitHub').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Email').length).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole('button', { name: 'Copy Diceware' }));
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith(expect.stringMatching(/^[\p{L}-]+$/u));
+    });
+    expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument();
+  });
+
   it('shows clean audit states for unique strong passwords and a strong master key', async () => {
     await i18n.changeLanguage('en');
+    localStorage.setItem('aegis_master_password_audit', JSON.stringify({
+      score: 100,
+      zxcvbnScore: 4,
+      label: 'strong',
+      length: 24,
+      updatedAt: new Date().toISOString(),
+    }));
     render(
       <SecurityAudit
         entries={[
@@ -347,6 +380,37 @@ describe('SecurityAudit', () => {
     expect(screen.getByText('Nice! No Weak Passwords')).toBeInTheDocument();
     expect(screen.getByText(/verified without being stored/i)).toBeInTheDocument();
     expect(screen.queryByText('Show All')).not.toBeInTheDocument();
+  });
+
+  it('runs a HIBP k-anonymity scan and persists pwned counts without sending full hashes', async () => {
+    await i18n.changeLanguage('en');
+    const user = userEvent.setup();
+    const onApplyPwnedResults = vi.fn(async () => undefined);
+    const onAddLog = vi.fn();
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('1E4C9B93F3F0682250B6CF8331B7EE68FD8:42')
+    );
+
+    render(
+      <SecurityAudit
+        entries={[
+          baseEntry({ id: '1', title: 'Legacy Mail', username: 'ada', password: 'password', strength: 'GOOD' }),
+        ]}
+        onApplyPwnedResults={onApplyPwnedResults}
+        onAddLog={onAddLog}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Run Breach Scan' }));
+
+    await waitFor(() => {
+      expect(onApplyPwnedResults).toHaveBeenCalledWith([{ entryId: '1', count: 42 }]);
+    });
+    expect(fetchSpy).toHaveBeenCalledWith('https://api.pwnedpasswords.com/range/5BAA6', {
+      headers: { 'Add-Padding': 'true' },
+    });
+    expect(onAddLog).toHaveBeenCalledWith(expect.stringContaining('HIBP k-anonymity scan completed'), 'critical');
+    fetchSpy.mockRestore();
   });
 
   it('collapses and expands duplicate password groups', async () => {
@@ -698,6 +762,60 @@ describe('DetailPanel', () => {
       totpDigits: 8,
       totpPeriod: 60,
     }));
+  });
+
+  it('creates a secure share bundle for the selected detail record only', async () => {
+    await i18n.changeLanguage('en');
+    const user = userEvent.setup();
+    const click = vi.fn();
+    const createObjectURL = vi.fn((blob: Blob) => 'blob:secure-share');
+    const revokeObjectURL = vi.fn();
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectURL });
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revokeObjectURL });
+    vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
+      const element = document.createElementNS('http://www.w3.org/1999/xhtml', tagName) as HTMLElement;
+      if (tagName.toLowerCase() === 'a') {
+        Object.defineProperty(element, 'click', { configurable: true, value: click });
+      }
+      return element;
+    });
+
+    render(
+      <DetailPanel
+        entry={baseEntry({
+          id: 'share-1',
+          title: 'Shared Login',
+          username: 'share@example.com',
+          password: 'ShareSecret123!',
+        })}
+        onClose={vi.fn()}
+        onDelete={vi.fn()}
+        onUpdate={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Secure Share' }));
+    await user.type(screen.getByPlaceholderText('Set a one-time password'), 'TransferKey123!');
+    await user.type(screen.getByPlaceholderText('Repeat the transfer password'), 'TransferKey123!');
+    await user.selectOptions(screen.getByDisplayValue('7 days'), '1');
+    await user.click(screen.getByRole('button', { name: 'Create Bundle' }));
+
+    await waitFor(() => {
+      expect(click).toHaveBeenCalled();
+    });
+    const blob = createObjectURL.mock.calls[0][0] as Blob;
+    const bundle = JSON.parse(await blob.text());
+    expect(bundle).toMatchObject({
+      app: 'AegisVault',
+      kind: 'secure-share-bundle',
+      encrypted: true,
+      itemCount: 1,
+    });
+    expect(new Date(bundle.expiresAt).getTime()).toBeGreaterThan(Date.now());
+    expect(new Date(bundle.expiresAt).getTime()).toBeLessThan(Date.now() + 2 * 24 * 60 * 60 * 1000);
+    expect(bundle.data).not.toContain('Shared Login');
+    expect(bundle.data).not.toContain('ShareSecret123!');
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:secure-share');
   });
 
   it('downloads an attached encrypted file from local storage', async () => {

@@ -39,6 +39,39 @@ jobs:
       - name: Full dependency audit
         run: npm run audit:all
 
+      - name: Workflow permission audit
+        run: npm run security:workflows
+
+      - name: Dependency policy audit
+        run: npm run security:dependencies
+
+      - name: Validation rules audit
+        run: npm run security:validation
+
+      - name: Privacy notice audit
+        run: npm run security:privacy
+
+      - name: Release signing policy audit
+        run: npm run security:signing
+
+      - name: Branch protection policy audit
+        run: npm run security:branch-protection
+
+      - name: Desktop smoke policy audit
+        run: npm run security:desktop-smoke
+
+      - name: Security logging policy audit
+        run: npm run security:logging
+
+      - name: Error taxonomy audit
+        run: npm run security:errors
+
+      - name: Release notes template audit
+        run: npm run security:release-notes
+
+      - name: Vulnerability disclosure policy audit
+        run: npm run security:disclosure
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium firefox
 
@@ -47,6 +80,17 @@ jobs:
 
       - name: Security regression scan
         run: npm run security:scan
+
+      - name: Generate SBOM
+        run: npm run security:sbom
+
+      - name: Upload SBOM
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom/
+          retention-days: 30
 
       - name: Generate security evidence bundle
         run: npm run security:evidence

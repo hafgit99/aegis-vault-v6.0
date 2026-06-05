@@ -88,6 +88,10 @@ macOS signing and notarization:
 
 Linux packaging usually does not require signing secrets at the first stage, but release checksums should be published with every artifact.
 
+GitHub artifact attestations do not replace code signing. They prove which GitHub Actions workflow produced an artifact and bind that artifact to the repository build context. Windows Authenticode and Apple Developer ID signing are still required for native OS trust prompts.
+
+The release signing contract is maintained in [RELEASE_SIGNING_POLICY.md](RELEASE_SIGNING_POLICY.md).
+
 The `Desktop Packaging` workflow supports four manual signing modes:
 
 - `unsigned`: build unsigned artifacts for every platform.
@@ -103,6 +107,8 @@ Every desktop artifact upload should include:
 
 - `SHA256SUMS.txt`
 - `artifact-manifest.json`
+- GitHub artifact provenance attestation.
+- GitHub SBOM attestation linked to the generated CycloneDX SBOM.
 
 Generate them locally after a desktop build with:
 
@@ -117,6 +123,8 @@ node scripts/generate-artifact-checksums.mjs C:\tmp\aegisvault-tauri-target\debu
 ```
 
 ## Desktop Smoke Test Scope
+
+The desktop smoke evidence contract is maintained in [DESKTOP_SMOKE_EVIDENCE.md](DESKTOP_SMOKE_EVIDENCE.md).
 
 The first packaging workflow should verify:
 

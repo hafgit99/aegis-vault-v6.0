@@ -212,6 +212,67 @@ export function parseImportedCSV(csvText: string, labels: ImporterLabels = defau
   return results;
 }
 
+export function parseKeePassCSV(csvText: string, labels: ImporterLabels = defaultLabels): Partial<VaultEntry>[] {
+  const rows = parseCSV(csvText);
+  if (rows.length < 2) return [];
+
+  const headers = rows[0].map(h => h.toLowerCase().trim());
+  const findHeader = (aliases: string[]): number => headers.findIndex(header => aliases.some(alias => header === alias || header.includes(alias)));
+  const read = (row: string[], index: number): string => (index !== -1 && index < row.length ? row[index].trim() : '');
+
+  const groupIdx = findHeader(['group', 'path', 'folder']);
+  const titleIdx = findHeader(['title', 'name']);
+  const userIdx = findHeader(['username', 'user name', 'user', 'login', 'account']);
+  const passIdx = findHeader(['password', 'pass']);
+  const urlIdx = findHeader(['url', 'website', 'web site', 'address']);
+  const notesIdx = findHeader(['notes', 'note', 'comments', 'comment']);
+
+  const results: Partial<VaultEntry>[] = [];
+
+  for (let r = 1; r < rows.length; r++) {
+    const row = rows[r];
+    const group = read(row, groupIdx);
+    const title = read(row, titleIdx);
+    const username = read(row, userIdx);
+    const password = read(row, passIdx);
+    const url = read(row, urlIdx);
+    const notes = read(row, notesIdx);
+
+    if (![group, title, username, password, url, notes].some(Boolean)) {
+      continue;
+    }
+
+    const entry: Partial<VaultEntry> = {
+      type: username || password || url ? 'login' : 'note',
+      title,
+      username,
+      password,
+      url,
+      notes
+    };
+
+    if (group) {
+      entry.notes = [notes, `KeePass group: ${group}`].filter(Boolean).join('\n\n');
+    }
+
+    if (!entry.title) {
+      if (url) {
+        entry.title = url.replace(/^https?:\/\/(www\.)?/, '').split('/')[0];
+      } else if (username) {
+        entry.title = `${labels.loginTitle} (${username})`;
+      } else if (group) {
+        entry.title = group.split(/[\\/]/).filter(Boolean).pop() || `${labels.recordTitle} #${results.length + 1}`;
+      } else {
+        entry.title = `${labels.recordTitle} #${results.length + 1}`;
+      }
+    }
+
+    results.push(entry);
+  }
+
+  return results;
+}
+
 export function parseBitwardenJSON(jsonText: string, labels: ImporterLabels = defaultLabels): Partial<VaultEntry>[] {
   const data = JSON.parse(jsonText);
   // Support both standard exports and encrypted-unlocked json files

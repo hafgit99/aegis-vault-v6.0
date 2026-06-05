@@ -12,25 +12,25 @@ test('changes the lock screen language without reloading app state', async ({ pa
 
   await page.getByRole('button', { name: 'EN' }).click();
   await expect(page.getByRole('heading', { name: /Configure Your Vault/ })).toBeVisible();
-  await expect(page.getByPlaceholder('Strong password, at least 8 characters')).toBeVisible();
+  await expect(page.getByPlaceholder('Strong password, at least 12 characters')).toBeVisible();
 
   await page.getByRole('button', { name: '中文' }).click();
   await expect(page.getByRole('heading', { name: /配置保险库/ })).toBeVisible();
-  await expect(page.getByPlaceholder('至少 8 位的强密码')).toBeVisible();
+  await expect(page.getByPlaceholder(/12/)).toBeVisible();
 });
 
 test('shows localized setup validation errors', async ({ page }) => {
   await page.getByRole('button', { name: 'EN' }).click();
-  await page.getByPlaceholder('Strong password, at least 8 characters').fill('short');
+  await page.getByPlaceholder('Strong password, at least 12 characters').fill('short');
   await page.getByPlaceholder('Re-enter the password').fill('short');
   await page.getByRole('button', { name: 'Continue' }).click();
 
-  await expect(page.getByText('The master password must be at least 8 characters long.')).toBeVisible();
+  await expect(page.getByText(/The master password must be at least 12 characters/i)).toBeVisible();
 });
 
 test('validates mismatched setup passwords before generating a secret key', async ({ page }) => {
   await page.getByRole('button', { name: 'EN' }).click();
-  await page.getByPlaceholder('Strong password, at least 8 characters').fill('MasterPassword123!');
+  await page.getByPlaceholder('Strong password, at least 12 characters').fill('MasterPassword123!');
   await page.getByPlaceholder('Re-enter the password').fill('DifferentPassword123!');
   await page.getByRole('button', { name: 'Continue' }).click();
 
@@ -40,7 +40,7 @@ test('validates mismatched setup passwords before generating a secret key', asyn
 
 test('generates, copies, and downloads the setup emergency kit', async ({ page }) => {
   await page.getByRole('button', { name: 'EN' }).click();
-  await page.getByPlaceholder('Strong password, at least 8 characters').fill('MasterPassword123!');
+  await page.getByPlaceholder('Strong password, at least 12 characters').fill('MasterPassword123!');
   await page.getByPlaceholder('Re-enter the password').fill('MasterPassword123!');
   await page.getByRole('button', { name: 'Continue' }).click();
 

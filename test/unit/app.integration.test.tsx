@@ -317,6 +317,7 @@ const entry = (overrides: Partial<VaultEntry>): VaultEntry => ({
 
 describe('App integration shell', () => {
   beforeEach(() => {
+    localStorage.clear();
     appState.entries = [
       entry({ id: 'entry-1', title: 'GitHub', favorite: false }),
       entry({ id: 'card-1', title: 'Backup Card', type: 'card', password: undefined, strength: 'IMMUTABLE' }),
@@ -467,6 +468,22 @@ describe('App integration shell', () => {
       ]));
     });
   }, 7000);
+
+  it('keeps only the latest 200 local security logs', async () => {
+    render(<App />);
+
+    const emitButton = screen.getByRole('button', { name: 'emit setup log' });
+
+    for (let index = 0; index < 205; index += 1) {
+      fireEvent.click(emitButton);
+    }
+
+    await waitFor(() => {
+      const logs = JSON.parse(localStorage.getItem('aegis_security_logs') ?? '[]');
+      expect(logs).toHaveLength(200);
+      expect(logs.every((log: { action: string }) => log.action === 'setup log')).toBe(true);
+    });
+  });
 
   it('clears all trash entries and flushes imported backup replacements', async () => {
     const user = userEvent.setup();

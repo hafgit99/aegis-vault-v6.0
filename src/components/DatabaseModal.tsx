@@ -4,17 +4,15 @@ import {
   X, Database, Download, Trash2, 
   AlertTriangle, CheckCircle2, ShieldCheck, PieChart,
   Lock, Key, Eye, EyeOff, Radio, CheckSquare, Square,
-  Sparkles, FileText, FileSpreadsheet, FileJson, Info, Upload, RefreshCw
+  Sparkles, FileText, FileSpreadsheet, FileJson, Info, Upload, RefreshCw, ClipboardCheck
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { VaultEntry } from '../types';
-import { encryptData, decryptData } from '../lib/backupCrypto';
-import { 
-  convertImportedToVaultEntry, 
-  parseImportedCSV, 
-  parseBitwardenJSON, 
-  parse1PasswordJSON 
-} from '../lib/importer';
+import { encryptData } from '../lib/backupCrypto';
+import { convertImportedToVaultEntry } from '../lib/importer';
+import { parseVaultImportFile } from '../lib/importWorkflow';
+import { recordPlaintextExportAudit } from '../lib/vaultHealth';
+import type { ImportConflictMode, ImportParseReport, ImportResultReport, ImportReview, ImportSource } from '../types/import';
 
 interface DatabaseModalProps {
   isOpen: boolean;
@@ -24,8 +22,6 @@ interface DatabaseModalProps {
   onClearStorage: () => void;
   onAddLog: (action: string) => void;
 }
-
-type ImportSource = 'aegis_encrypted' | 'aegis_plain' | 'bitwarden' | 'onepassword' | 'lastpass' | 'chrome' | 'generic_csv';
 
 export default function DatabaseModal({
   isOpen,
@@ -75,7 +71,9 @@ export default function DatabaseModal({
   const [isParsing, setIsParsing] = useState(false);
   const [parsedEntries, setParsedEntries] = useState<Partial<VaultEntry>[]>([]);
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
-  const [importConflictMode, setImportConflictMode] = useState<'merge' | 'replace'>('merge');
+  const [importConflictMode, setImportConflictMode] = useState<ImportConflictMode>('merge');
+  const [importReview, setImportReview] = useState<ImportReview | null>(null);
+  const [importResult, setImportResult] = useState<ImportResultReport | null>(null);
   
   // Wipe Database Confirm States
   const [showWipeConfirm, setShowWipeConfirm] = useState(false);
@@ -86,6 +84,50 @@ export default function DatabaseModal({
   // Approximate database footprint size in bytes
   const serialized = JSON.stringify(entries);
   const dbSizeInBytes = new Blob([serialized]).size;
+  const importSourceOptions = [
+    { id: 'aegis_encrypted', label: t('app.database.import.sourceLabels.aegisEncrypted'), icon: Lock },
+    { id: 'secure_share', label: t('app.database.import.sourceLabels.secureShare'), icon: ShieldCheck },
+    { id: 'bitwarden', label: 'Bitwarden', icon: FileSpreadsheet },
+    { id: 'onepassword', label: '1Password', icon: FileSpreadsheet },
+    { id: 'keepass', label: 'KeePass', icon: FileSpreadsheet },
+    { id: 'lastpass', label: 'LastPass', icon: FileSpreadsheet },
+    { id: 'chrome', label: t('app.database.import.sourceLabels.chrome'), icon: FileSpreadsheet },
+    { id: 'generic_csv', label: t('app.database.import.sourceLabels.genericCsv'), icon: FileText }
+  ] satisfies Array<{ id: ImportSource; label: string; icon: typeof Lock }>;
+  const selectedPercent = importReview && importReview.totalRecords > 0
+    ? Math.round((selectedIndices.size / importReview.totalRecords) * 100)
+    : 0;
+  const typeSummary = importReview
+    ? [
+        { key: 'login', count: importReview.loginCount },
+        { key: 'card', count: importReview.cardCount },
+        { key: 'note', count: importReview.noteCount },
+        { key: 'identity', count: importReview.identityCount },
+        { key: 'passkey', count: importReview.passkeyCount },
+        { key: 'other', count: importReview.otherCount },
+      ].filter((item) => item.count > 0)
+    : [];
+
+  const buildImportReview = (
+    report: ImportParseReport,
+    rawItems: Partial<VaultEntry>[],
+    selectedCount = rawItems.length,
+  ): ImportReview => {
+    const countByType = (type: VaultEntry['type']) => rawItems.filter((entry) => entry.type === type).length;
+    const knownCount = countByType('login') + countByType('card') + countByType('note') + countByType('identity') + countByType('passkey');
+
+    return {
+      ...report,
+      totalRecords: rawItems.length,
+      selectedRecords: selectedCount,
+      loginCount: countByType('login'),
+      cardCount: countByType('card'),
+      noteCount: countByType('note'),
+      identityCount: countByType('identity'),
+      passkeyCount: countByType('passkey'),
+      otherCount: Math.max(0, rawItems.length - knownCount),
+    };
+  };
 
   const showStatus = (text: string, isError: boolean = false) => {
     setStatusMessage({ text, isError });
@@ -156,6 +198,9 @@ export default function DatabaseModal({
       const fileName = `${prefix}_${new Date().toISOString().split('T')[0]}.json`;
       link.download = fileName;
       link.click();
+      if (exportMethod === 'plain') {
+        recordPlaintextExportAudit();
+      }
 
       onAddLog(t('app.database.logs.backupDownloaded', { method: exportMethod === 'encrypted' ? t('app.database.logs.encrypted') : t('app.database.logs.plain') }));
       showStatus(t('app.database.status.exported'));
@@ -207,6 +252,8 @@ export default function DatabaseModal({
     setImportFile(file);
     setParsedEntries([]);
     setSelectedIndices(new Set());
+    setImportReview(null);
+    setImportResult(null);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -215,6 +262,8 @@ export default function DatabaseModal({
     setImportFile(file);
     setParsedEntries([]);
     setSelectedIndices(new Set());
+    setImportReview(null);
+    setImportResult(null);
   };
 
   // Decrypt and Parse uploaded file
@@ -222,62 +271,51 @@ export default function DatabaseModal({
     if (!importFile) return;
     setIsParsing(true);
     setStatusMessage(null);
+    setImportResult(null);
 
     try {
-      const text = await importFile.text();
-      let rawItems: Partial<VaultEntry>[] = [];
-
-      if (importSource === 'aegis_encrypted') {
-        const payload = JSON.parse(text);
-        if (!payload.encrypted || !payload.data) {
-          throw new Error(t('app.database.errors.encryptedFileExpected'));
-        }
-        
-        const actualPassword = importPassword.trim();
-        if (!actualPassword) {
-          throw new Error(t('app.database.errors.importPasswordRequired'));
-        }
-
-        const decryptedText = await decryptData(payload.data, payload.salt, payload.iv, actualPassword, payload.kdf);
-        rawItems = JSON.parse(decryptedText);
-
-      } else if (importSource === 'aegis_plain') {
-        const payload = JSON.parse(text);
-        if (payload.encrypted) {
-          throw new Error(t('app.database.errors.fileIsEncrypted'));
-        }
-        rawItems = payload.vault || (Array.isArray(payload) ? payload : []);
-
-      } else if (importSource === 'bitwarden') {
-        if (importFile.name.endsWith('.json')) {
-          rawItems = parseBitwardenJSON(text, importerLabels);
-        } else {
-          rawItems = parseImportedCSV(text, importerLabels);
-        }
-      } else if (importSource === 'onepassword') {
-        if (importFile.name.endsWith('.json')) {
-          rawItems = parse1PasswordJSON(text, importerLabels);
-        } else {
-          rawItems = parseImportedCSV(text, importerLabels);
-        }
-      } else if (importSource === 'lastpass') {
-        rawItems = parseImportedCSV(text, importerLabels);
-      } else if (importSource === 'chrome') {
-        rawItems = parseImportedCSV(text, importerLabels);
-      } else if (importSource === 'generic_csv') {
-        rawItems = parseImportedCSV(text, importerLabels);
-      }
+      let parseReport: ImportParseReport | null = null;
+      const rawItems = await parseVaultImportFile({
+        file: importFile,
+        source: importSource,
+        password: importPassword,
+        importerLabels,
+        messages: {
+          encryptedExpected: t('app.database.errors.encryptedFileExpected'),
+          secureShareExpected: t('app.database.errors.secureShareExpected'),
+          importPasswordRequired: t('app.database.errors.importPasswordRequired'),
+          legacyKdfConfirm: t('app.database.errors.legacyKdfConfirm'),
+          legacyKdfRejected: t('app.database.errors.legacyKdfRejected'),
+          fileIsEncrypted: t('app.database.errors.fileIsEncrypted'),
+        },
+        onReport: (report) => {
+          parseReport = report;
+        },
+      });
 
       if (rawItems.length === 0) {
         throw new Error(t('app.database.errors.noCompatibleData'));
       }
 
       setParsedEntries(rawItems);
-      // Select all records by default
-      setSelectedIndices(new Set(Array.from({ length: rawItems.length }, (_, i) => i)));
+      const nextSelectedIndices = new Set(Array.from({ length: rawItems.length }, (_, i) => i));
+      setSelectedIndices(nextSelectedIndices);
+      setImportReview(buildImportReview(
+        parseReport || {
+          source: importSource,
+          fileName: importFile.name,
+          fileSizeKb: (importFile.size / 1024).toFixed(1),
+          encrypted: importSource === 'aegis_encrypted' || importSource === 'secure_share',
+          legacyKdf: false,
+          secureShare: importSource === 'secure_share',
+        },
+        rawItems,
+        nextSelectedIndices.size,
+      ));
       showStatus(t('app.database.status.parsed', { count: rawItems.length }));
       
     } catch (err: any) {
+      setImportReview(null);
       showStatus(t('app.database.errors.wizardError', { message: err.message }), true);
     } finally {
       setIsParsing(false);
@@ -300,13 +338,27 @@ export default function DatabaseModal({
 
       onAddLog(t('app.database.logs.imported', { count: selectedIndices.size, strategy: importConflictMode }));
       showStatus(t('app.database.status.imported', { count: convertedEntries.length }));
+      setImportResult(importReview
+        ? {
+            ...importReview,
+            selectedRecords: convertedEntries.length,
+            importedRecords: convertedEntries.length,
+            skippedRecords: Math.max(0, importReview.totalRecords - convertedEntries.length),
+            conflictMode: importConflictMode,
+            completedAt: new Date().toLocaleString(),
+          }
+        : null);
 
       // Reset
       setParsedEntries([]);
       setImportFile(null);
       setImportPassword('');
+      setImportReview((current) => current
+        ? { ...current, selectedRecords: convertedEntries.length }
+        : null);
       if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (err: any) {
+      setImportResult(null);
       showStatus(t('app.database.errors.writeError', { message: err.message }), true);
     }
   };
@@ -319,13 +371,17 @@ export default function DatabaseModal({
       updated.add(idx);
     }
     setSelectedIndices(updated);
+    setImportReview((current) => current ? { ...current, selectedRecords: updated.size } : null);
   };
 
   const toggleSelectAll = () => {
     if (selectedIndices.size === parsedEntries.length) {
       setSelectedIndices(new Set());
+      setImportReview((current) => current ? { ...current, selectedRecords: 0 } : null);
     } else {
-      setSelectedIndices(new Set(Array.from({ length: parsedEntries.length }, (_, i) => i)));
+      const nextSelectedIndices = new Set(Array.from({ length: parsedEntries.length }, (_, i) => i));
+      setSelectedIndices(nextSelectedIndices);
+      setImportReview((current) => current ? { ...current, selectedRecords: nextSelectedIndices.size } : null);
     }
   };
 
@@ -381,18 +437,18 @@ export default function DatabaseModal({
 
             {/* Navigation Tabs */}
             <div className="flex bg-surface-container-highest/60 border-b border-white/5 px-4">
-              {[
+              {([
                 { id: 'export', label: t('app.database.tabs.export'), icon: Download },
                 { id: 'import', label: t('app.database.tabs.import'), icon: Sparkles },
                 { id: 'analytics', label: t('app.database.tabs.analytics'), icon: PieChart },
                 { id: 'wipe', label: t('app.database.tabs.wipe'), icon: Trash2 }
-              ].map((tab) => {
+              ] satisfies Array<{ id: typeof activeSubTab; label: string; icon: typeof Download }>).map((tab) => {
                 const TabIcon = tab.icon;
                 return (
                   <button
                     key={tab.id}
                     onClick={() => {
-                      setActiveSubTab(tab.id as any);
+                      setActiveSubTab(tab.id);
                       setExportSuccessPreview(null);
                     }}
                     className={`flex items-center gap-1.5 py-3 px-3.5 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
@@ -471,6 +527,13 @@ export default function DatabaseModal({
                           {t('app.database.export.sealedDescription')}
                         </p>
                       </div>
+                      <div className="rounded-xl border border-tertiary/15 bg-tertiary/5 p-4 flex gap-3">
+                        <ShieldCheck className="w-5 h-5 text-tertiary shrink-0 mt-0.5" />
+                        <div className="space-y-1">
+                          <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider">{t('app.database.export.guideTitle')}</h4>
+                          <p className="text-[11px] leading-relaxed text-on-surface-variant/80">{t('app.database.export.guideDescription')}</p>
+                        </div>
+                      </div>
 
                       <div className="grid grid-cols-2 gap-3">
                         <button
@@ -521,7 +584,7 @@ export default function DatabaseModal({
                                   type="button"
                                   onClick={() => setShowExportPassword(!showExportPassword)}
                                   className="absolute right-3 top-3.5 text-on-surface-variant/60 hover:text-on-surface"
-                                  aria-label="Toggle password visibility"
+                                  aria-label={showExportPassword ? t('app.lockScreen.hidePassword') : t('app.lockScreen.showPassword')}
                                 >
                                   {showExportPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                 </button>
@@ -612,28 +675,31 @@ export default function DatabaseModal({
                   <p className="text-xs text-on-surface-variant/80 leading-relaxed text-left">
                     {t('app.database.import.description')}
                   </p>
+                  <div className="rounded-xl border border-primary/15 bg-primary/5 p-4 flex gap-3">
+                    <Upload className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider">{t('app.database.import.guideTitle')}</h4>
+                      <p className="text-[11px] leading-relaxed text-on-surface-variant/80">{t('app.database.import.guideDescription')}</p>
+                    </div>
+                  </div>
 
                   {/* Sources Selection */}
                   <div className="space-y-2">
                     <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block text-left">{t('app.database.import.source')}</span>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {[
-                        { id: 'aegis_encrypted', label: t('app.database.import.sourceLabels.aegisEncrypted'), icon: Lock },
-                        { id: 'bitwarden', label: 'Bitwarden', icon: FileSpreadsheet },
-                        { id: 'onepassword', label: '1Password', icon: FileSpreadsheet },
-                        { id: 'lastpass', label: 'LastPass', icon: FileSpreadsheet },
-                        { id: 'chrome', label: t('app.database.import.sourceLabels.chrome'), icon: FileSpreadsheet },
-                        { id: 'generic_csv', label: t('app.database.import.sourceLabels.genericCsv'), icon: FileText }
-                      ].map((src) => {
+                      {importSourceOptions.map((src) => {
                         const IconComponent = src.icon;
                         return (
                           <button
                             key={src.id}
                             type="button"
                             onClick={() => {
-                              setImportSource(src.id as ImportSource);
+                              setImportSource(src.id);
                               setParsedEntries([]);
                               setImportFile(null);
+                              setSelectedIndices(new Set());
+                              setImportReview(null);
+                              setImportResult(null);
                             }}
                             className={`p-2.5 border rounded-xl flex items-center gap-2 text-xs font-semibold text-left transition-all cursor-pointer ${
                               importSource === src.id 
@@ -683,7 +749,7 @@ export default function DatabaseModal({
                   </div>
 
                   {/* Decrypt Password input if AegisVault Encrypted backup */}
-                  {importSource === 'aegis_encrypted' && importFile && (
+                  {(importSource === 'aegis_encrypted' || importSource === 'secure_share') && importFile && (
                     <div className="p-3.5 bg-[#121625]/30 rounded-xl border border-white/5 space-y-1.5 text-left animate-fade-in">
                       <div className="flex justify-between items-center text-[10px]">
                         <label className="font-bold text-on-surface-variant uppercase tracking-wider">{t('app.database.import.decryptKey')}</label>
@@ -699,6 +765,7 @@ export default function DatabaseModal({
                         <button
                           type="button"
                           onClick={() => setShowImportPassword(!showImportPassword)}
+                          aria-label={showImportPassword ? t('app.lockScreen.hidePassword') : t('app.lockScreen.showPassword')}
                           className="absolute right-3 top-3 text-on-surface-variant/60 hover:text-on-surface"
                         >
                           {showImportPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
@@ -719,9 +786,171 @@ export default function DatabaseModal({
                     </button>
                   )}
 
+                  {importResult && (
+                    <div className="rounded-2xl border border-tertiary/25 bg-tertiary/10 p-4 space-y-3 text-left">
+                      <div className="flex items-start gap-3">
+                        <CheckCircle2 className="w-5 h-5 text-tertiary shrink-0 mt-0.5" />
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider">{t('app.settingsPage.importResult.title')}</h4>
+                          <p className="text-[11px] text-on-surface-variant/75 leading-relaxed mt-1">
+                            {t('app.settingsPage.importResult.description', {
+                              count: importResult.importedRecords,
+                              file: importResult.fileName,
+                              mode: importResult.conflictMode === 'replace' ? t('app.database.import.replace') : t('app.database.import.merge'),
+                            })}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="rounded-xl border border-white/5 bg-[#0d111d]/60 p-3">
+                          <span className="text-[9px] text-on-surface-variant/60 uppercase tracking-wider block">{t('app.settingsPage.importResult.imported')}</span>
+                          <strong className="text-lg font-mono text-tertiary">{importResult.importedRecords}</strong>
+                        </div>
+                        <div className="rounded-xl border border-white/5 bg-[#0d111d]/60 p-3">
+                          <span className="text-[9px] text-on-surface-variant/60 uppercase tracking-wider block">{t('app.settingsPage.importResult.skipped')}</span>
+                          <strong className="text-lg font-mono text-on-surface">{importResult.skippedRecords}</strong>
+                        </div>
+                        <div className="rounded-xl border border-white/5 bg-[#0d111d]/60 p-3">
+                          <span className="text-[9px] text-on-surface-variant/60 uppercase tracking-wider block">{t('app.settingsPage.importReview.records')}</span>
+                          <strong className="text-lg font-mono text-on-surface">{importResult.totalRecords}</strong>
+                        </div>
+                        <div className="rounded-xl border border-white/5 bg-[#0d111d]/60 p-3">
+                          <span className="text-[9px] text-on-surface-variant/60 uppercase tracking-wider block">{t('app.settingsPage.importReview.mode')}</span>
+                          <strong className={`text-sm font-bold ${importResult.conflictMode === 'replace' ? 'text-error' : 'text-tertiary'}`}>
+                            {importResult.conflictMode === 'replace' ? t('app.database.import.replace') : t('app.database.import.merge')}
+                          </strong>
+                        </div>
+                        <div className="rounded-xl border border-white/5 bg-[#0d111d]/60 p-3">
+                          <span className="text-[9px] text-on-surface-variant/60 uppercase tracking-wider block">{t('app.settingsPage.importResult.completedAt')}</span>
+                          <strong className="text-[11px] font-mono text-on-surface break-words">{importResult.completedAt}</strong>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-2 text-[11px]">
+                        <div className={`rounded-xl border p-3 ${
+                          importResult.secureShare
+                            ? 'border-tertiary/20 bg-tertiary/5 text-on-surface'
+                            : 'border-white/5 bg-white/5 text-on-surface'
+                        }`}>
+                          <span className="font-bold block">{importResult.secureShare ? t('app.settingsPage.importResult.secureShare') : t('app.settingsPage.importResult.standardImport')}</span>
+                          <span className="text-on-surface-variant/70">{importResult.fileName}</span>
+                          {importResult.secureShare && (
+                            <span className="mt-1 block text-on-surface-variant/70">
+                              {t(
+                                importResult.secureShareManifestVerified
+                                  ? 'app.settingsPage.importReview.manifestVerified'
+                                  : 'app.settingsPage.importReview.legacyManifest',
+                                {
+                                  version: importResult.secureShareVersion || '1.0',
+                                  checksum: importResult.secureShareManifestChecksum?.slice(0, 12) || t('app.settingsPage.importReview.noChecksum'),
+                                },
+                              )}
+                            </span>
+                          )}
+                        </div>
+                        <div className={`rounded-xl border p-3 ${
+                          importResult.legacyKdf
+                            ? 'border-error/25 bg-error-container/15 text-error'
+                            : 'border-tertiary/20 bg-tertiary/5 text-on-surface'
+                        }`}>
+                          <span className="font-bold block">{importResult.legacyKdf ? t('app.settingsPage.importReview.legacyKdf') : t('app.settingsPage.importReview.modernKdf')}</span>
+                          <span className="text-on-surface-variant/70">{importResult.kdfAlgorithm || t('app.settingsPage.importReview.noKdf')}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Checklist and options preview */}
                   {parsedEntries.length > 0 && (
                     <div className="space-y-4 pt-3 border-t border-white/5">
+                      {importReview && (
+                        <div className="rounded-2xl border border-tertiary/20 bg-tertiary/5 p-4 space-y-3 text-left">
+                          <div className="flex items-start gap-3">
+                            <ClipboardCheck className="w-5 h-5 text-tertiary shrink-0 mt-0.5" />
+                            <div className="min-w-0 flex-1">
+                              <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider">{t('app.settingsPage.importReview.title')}</h4>
+                              <p className="text-[11px] text-on-surface-variant/75 leading-relaxed mt-1">
+                                {t('app.settingsPage.importReview.description', {
+                                  file: importReview.fileName,
+                                  source: importSourceOptions.find((source) => source.id === importReview.source)?.label || importReview.source,
+                                })}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="rounded-xl border border-white/5 bg-[#0d111d]/60 p-3">
+                              <span className="text-[9px] text-on-surface-variant/60 uppercase tracking-wider block">{t('app.settingsPage.importReview.records')}</span>
+                              <strong className="text-lg font-mono text-on-surface">{importReview.totalRecords}</strong>
+                            </div>
+                            <div className="rounded-xl border border-white/5 bg-[#0d111d]/60 p-3">
+                              <span className="text-[9px] text-on-surface-variant/60 uppercase tracking-wider block">{t('app.settingsPage.importReview.selected')}</span>
+                              <strong className="text-lg font-mono text-tertiary">{selectedIndices.size}</strong>
+                              <span className="text-[9px] text-on-surface-variant/55 ml-1">{selectedPercent}%</span>
+                            </div>
+                            <div className="rounded-xl border border-white/5 bg-[#0d111d]/60 p-3">
+                              <span className="text-[9px] text-on-surface-variant/60 uppercase tracking-wider block">{t('app.settingsPage.importReview.size')}</span>
+                              <strong className="text-lg font-mono text-on-surface">{importReview.fileSizeKb}</strong>
+                              <span className="text-[9px] text-on-surface-variant/55 ml-1">KB</span>
+                            </div>
+                            <div className="rounded-xl border border-white/5 bg-[#0d111d]/60 p-3">
+                              <span className="text-[9px] text-on-surface-variant/60 uppercase tracking-wider block">{t('app.settingsPage.importReview.mode')}</span>
+                              <strong className={`text-sm font-bold ${importConflictMode === 'replace' ? 'text-error' : 'text-tertiary'}`}>
+                                {importConflictMode === 'replace' ? t('app.database.import.replace') : t('app.database.import.merge')}
+                              </strong>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap gap-2">
+                            {typeSummary.map((item) => (
+                              <span key={item.key} className="rounded-lg border border-white/5 bg-white/5 px-2.5 py-1 text-[10px] font-bold text-on-surface-variant">
+                                {t(`app.settingsPage.importReview.types.${item.key}`)}: <span className="text-on-surface">{item.count}</span>
+                              </span>
+                            ))}
+                          </div>
+
+                          <div className="grid grid-cols-1 gap-2 text-[11px]">
+                            <div className={`rounded-xl border p-3 ${
+                              importReview.encrypted
+                                ? 'border-tertiary/20 bg-tertiary/5 text-on-surface'
+                                : 'border-error/25 bg-error-container/15 text-error'
+                            }`}>
+                              <span className="font-bold block">{importReview.encrypted ? t('app.settingsPage.importReview.encrypted') : t('app.settingsPage.importReview.plaintext')}</span>
+                              <span className="text-on-surface-variant/70">{importReview.kdfAlgorithm || t('app.settingsPage.importReview.noKdf')}</span>
+                            </div>
+                            <div className={`rounded-xl border p-3 ${
+                              importReview.legacyKdf
+                                ? 'border-error/25 bg-error-container/15 text-error'
+                                : 'border-tertiary/20 bg-tertiary/5 text-on-surface'
+                            }`}>
+                              <span className="font-bold block">{importReview.legacyKdf ? t('app.settingsPage.importReview.legacyKdf') : t('app.settingsPage.importReview.modernKdf')}</span>
+                              <span className="text-on-surface-variant/70">
+                                {importReview.secureShare
+                                  ? t('app.settingsPage.importReview.secureShareMeta', {
+                                      count: importReview.secureShareItemCount || importReview.totalRecords,
+                                      expires: importReview.secureShareExpiresAt || t('app.settingsPage.importReview.noExpiry'),
+                                    })
+                                  : t('app.settingsPage.importReview.kdfNote')}
+                              </span>
+                              {importReview.secureShare && (
+                                <span className="mt-1 block text-on-surface-variant/70">
+                                  {t(
+                                    importReview.secureShareManifestVerified
+                                      ? 'app.settingsPage.importReview.manifestVerified'
+                                      : 'app.settingsPage.importReview.legacyManifest',
+                                    {
+                                      version: importReview.secureShareVersion || '1.0',
+                                      checksum: importReview.secureShareManifestChecksum?.slice(0, 12) || t('app.settingsPage.importReview.noChecksum'),
+                                    },
+                                  )}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="flex items-center justify-between">
                         <div>
                           <span className="text-[10px] font-bold text-on-surface-variant uppercase block text-left">{t('app.database.import.documentRecords', { count: parsedEntries.length })}</span>

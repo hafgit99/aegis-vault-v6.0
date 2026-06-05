@@ -5,6 +5,12 @@ import './index.css';
 import './i18n';
 import { localizedMessage } from './i18n/localizedMessages';
 
+const getRequestUrl = (input: RequestInfo | URL): string => {
+  if (typeof input === 'string') return input;
+  if (input instanceof URL) return input.href;
+  return input.url;
+};
+
 // Global Air-Gap Network Blocker
 (function enforceAirGap() {
   if (typeof window === 'undefined') return;
@@ -17,14 +23,7 @@ import { localizedMessage } from './i18n/localizedMessages';
     // 1. Monkeypatch fetch
     const originalFetch = window.fetch;
     window.fetch = function (input, init) {
-      let url = '';
-      if (typeof input === 'string') {
-        url = input;
-      } else if (input instanceof URL) {
-        url = input.href;
-      } else if (input && typeof input === 'object' && 'url' in input) {
-        url = (input as any).url;
-      }
+      const url = getRequestUrl(input);
 
       const isLocal = !url ||
                       url.startsWith('/') || 
@@ -38,12 +37,18 @@ import { localizedMessage } from './i18n/localizedMessages';
         console.error(`[AegisVault Air-Gap] ${localizedMessage('networkBlocked')} ${url}`);
         return Promise.reject(new TypeError(localizedMessage('networkBlocked')));
       }
-      return originalFetch.apply(this, arguments as any);
+      return originalFetch.call(this, input, init);
     };
 
     // 2. Monkeypatch XMLHttpRequest
     const originalOpen = XMLHttpRequest.prototype.open;
-    XMLHttpRequest.prototype.open = function (method, url) {
+    XMLHttpRequest.prototype.open = function (
+      method: string,
+      url: string | URL,
+      async = true,
+      username?: string | null,
+      password?: string | null
+    ) {
       const urlStr = String(url);
       const isLocal = !urlStr ||
                       urlStr.startsWith('/') || 
@@ -57,7 +62,7 @@ import { localizedMessage } from './i18n/localizedMessages';
         console.error(`[AegisVault Air-Gap] ${localizedMessage('networkBlocked')} ${urlStr}`);
         throw new Error(localizedMessage('networkBlocked'));
       }
-      return originalOpen.apply(this, arguments as any);
+      return originalOpen.call(this, method, url, async, username, password);
     };
   } catch (e) {
     console.error(localizedMessage('airgapError'), e);

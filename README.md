@@ -73,10 +73,91 @@ Run the security regression scan:
 npm run security:scan
 ```
 
+Run the GitHub Actions workflow permission audit:
+
+```bash
+npm run security:workflows
+```
+
+Run the dependency policy audit:
+
+```bash
+npm run security:dependencies
+```
+
+Run the validation rules audit:
+
+```bash
+npm run security:validation
+```
+
+Run the privacy notice audit:
+
+```bash
+npm run security:privacy
+```
+
+Run the release signing policy audit:
+
+```bash
+npm run security:signing
+```
+
+Run the branch protection policy audit:
+
+```bash
+npm run security:branch-protection
+```
+
+Run the desktop smoke evidence policy audit:
+
+```bash
+npm run security:desktop-smoke
+```
+
+Run the security logging policy audit:
+
+```bash
+npm run security:logging
+```
+
+Run the error taxonomy audit:
+
+```bash
+npm run security:errors
+```
+
+Run the release notes template audit:
+
+```bash
+npm run security:release-notes
+```
+
+Run the vulnerability disclosure policy audit:
+
+```bash
+npm run security:disclosure
+```
+
 Generate the security evidence bundle:
 
 ```bash
 npm run security:evidence
+```
+
+The bundle includes copied policy documents, release workflow definitions, verification scripts, SHA-256 checksums, a machine-readable manifest, and `SECURITY_EVIDENCE_SUMMARY.md`. The command also verifies the generated manifest, summary, and checksum entries.
+
+Generate or verify the security evidence bundle separately:
+
+```bash
+npm run security:evidence:generate
+npm run security:evidence:verify
+```
+
+Generate the CycloneDX SBOM:
+
+```bash
+npm run security:sbom
 ```
 
 Run unit coverage:
@@ -106,6 +187,17 @@ The repository includes GitHub Actions workflows for pull request quality checks
 See [docs/RELEASE.md](docs/RELEASE.md) for the release flow and packaging roadmap.
 See [docs/SECURITY_MODEL.md](docs/SECURITY_MODEL.md) for the current cryptographic and storage architecture.
 See [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) for security assumptions, covered threats, and out-of-scope risks.
+See [docs/SECURE_SHARE_FORMAT.md](docs/SECURE_SHARE_FORMAT.md) for the local encrypted transfer bundle contract.
+See [docs/DEPENDENCY_POLICY.md](docs/DEPENDENCY_POLICY.md) for dependency update and triage rules.
+See [docs/VALIDATION_RULES.md](docs/VALIDATION_RULES.md) for import, export, search, and profile input validation rules.
+See [docs/PRIVACY_NOTICE.md](docs/PRIVACY_NOTICE.md) for local-first storage, telemetry, network, and export disclosures.
+See [docs/RELEASE_SIGNING_POLICY.md](docs/RELEASE_SIGNING_POLICY.md) for desktop signing modes and artifact integrity rules.
+See [docs/BRANCH_PROTECTION_POLICY.md](docs/BRANCH_PROTECTION_POLICY.md) for required branch protection, status checks, and release evidence rules.
+See [docs/DESKTOP_SMOKE_EVIDENCE.md](docs/DESKTOP_SMOKE_EVIDENCE.md) for packaged Windows, macOS, and Linux smoke evidence requirements.
+See [docs/SECURITY_LOGGING_POLICY.md](docs/SECURITY_LOGGING_POLICY.md) for local security log retention, severity, and sensitive-data rules.
+See [docs/ERROR_TAXONOMY.md](docs/ERROR_TAXONOMY.md) for security-sensitive error codes, categories, severity, and public-message rules.
+See [docs/RELEASE_NOTES_TEMPLATE.md](docs/RELEASE_NOTES_TEMPLATE.md) for public release notes, artifact integrity, signing disclosure, and smoke evidence fields.
+See [docs/VULNERABILITY_DISCLOSURE.md](docs/VULNERABILITY_DISCLOSURE.md) for private reporting, triage, advisory, and incident-response rules.
 See [docs/RELEASE_HARDENING.md](docs/RELEASE_HARDENING.md) for the release hardening checklist.
 See [docs/AUDIT_EVIDENCE.md](docs/AUDIT_EVIDENCE.md) for the audit evidence matrix.
 See [docs/OWASP_COMPLIANCE_MATRIX.md](docs/OWASP_COMPLIANCE_MATRIX.md) for OWASP Top 10, ASVS, MASVS, and DSOVS readiness mapping.
