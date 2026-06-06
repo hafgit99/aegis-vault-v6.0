@@ -63,11 +63,13 @@ npm run android:dev
 Android release candidates should be built as both APK and Google Play AAB artifacts:
 
 ```bash
+npm run android:build:apk:arm64
 npm run android:build:apk
 npm run android:build:aab
 ```
 
 See [docs/ANDROID_ROADMAP.md](docs/ANDROID_ROADMAP.md) for the Android security scope, native integration plan, and release gates.
+See [docs/ANDROID_BUILD_EVIDENCE.md](docs/ANDROID_BUILD_EVIDENCE.md) for the latest local Android build evidence and smoke checklist.
 
 Check production bundle budgets:
 

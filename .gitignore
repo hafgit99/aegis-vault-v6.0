@@ -9,7 +9,9 @@ security-evidence/
 sbom/
 .stryker-tmp/
 src-tauri/target/
-src-tauri/gen/
+src-tauri/gen/*
+!src-tauri/gen/android/
+!src-tauri/gen/android/**
 .DS_Store
 *.log
 .env*

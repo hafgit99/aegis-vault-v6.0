@@ -1,6 +1,6 @@
 # AegisVault Android Roadmap
 
-Status: Phase 0 started
+Status: Phase 1 scaffold generated
 Target: Android-first local vault companion for AegisVault v6
 
 This roadmap treats Android as a security product track, not as a simple web wrapper. The first Android release must preserve the local-first vault model, keep cloud/team features out of scope, and use native Android security services where the browser/WebView layer is not enough.
@@ -72,6 +72,8 @@ Phase 0 - readiness foundation:
 - Add Android Tauri bundle metadata.
 - Add Android readiness verification script.
 - Document Android scope, security controls, and release gates.
+- Generate and commit the Tauri Android scaffold after local SDK validation.
+- Add baseline Android backup blocking and `FLAG_SECURE` screenshot protection.
 
 Phase 1 - scaffold:
 
@@ -81,6 +83,7 @@ Phase 1 - scaffold:
 - Run `npm run android:init`.
 - Commit generated Android project files after review.
 - Keep debug and release installs separated in the generated Android Gradle configuration.
+- Produce an unsigned ARM64 APK smoke artifact before deeper native security work.
 
 Phase 2 - native security bridge:
 
@@ -116,6 +119,7 @@ Phase 5 - release:
 npm run android:doctor
 npm run android:init
 npm run android:dev
+npm run android:build:apk:arm64
 npm run android:build:apk
 npm run android:build:aab
 ```
