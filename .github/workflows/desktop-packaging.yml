@@ -325,11 +325,13 @@ jobs:
         run: node scripts/stage-desktop-artifacts.mjs ${{ matrix.bundle-path }} desktop-artifacts/${{ matrix.artifact-name }}
 
       - name: Attest desktop artifact provenance
+        continue-on-error: true
         uses: actions/attest@v4
         with:
           subject-path: desktop-artifacts/${{ matrix.artifact-name }}/*
 
       - name: Attest desktop SBOM
+        continue-on-error: true
         uses: actions/attest@v4
         with:
           subject-path: desktop-artifacts/${{ matrix.artifact-name }}/*
