@@ -47,6 +47,28 @@ Build a local desktop package:
 npm run desktop:build
 ```
 
+Check the Android product track before installing Android tooling:
+
+```bash
+npm run android:doctor
+```
+
+Initialize and run the Android shell after installing Android Studio, Android SDK/NDK, and Rust Android targets:
+
+```bash
+npm run android:init
+npm run android:dev
+```
+
+Android release candidates should be built as both APK and Google Play AAB artifacts:
+
+```bash
+npm run android:build:apk
+npm run android:build:aab
+```
+
+See [docs/ANDROID_ROADMAP.md](docs/ANDROID_ROADMAP.md) for the Android security scope, native integration plan, and release gates.
+
 Check production bundle budgets:
 
 ```bash

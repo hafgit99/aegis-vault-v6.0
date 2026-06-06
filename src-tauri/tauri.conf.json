@@ -29,6 +29,10 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "android": {
+      "minSdkVersion": 28,
+      "versionCode": 6000000
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
