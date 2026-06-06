@@ -84,7 +84,7 @@ Security properties and limits:
 - If the operating system account or biometric secure storage is compromised, this feature should be treated as compromised too.
 - Users who require maximum separation can leave biometric unlock disabled and continue using the master password plus device secret flow.
 
-The frontend CSP blocks arbitrary external connections. The only default external API exception is `https://api.pwnedpasswords.com` for user-started HIBP k-anonymity password checks. Air-Gap mode remains the strict no-network option.
+The frontend CSP blocks arbitrary external connections. The only default external API exception is `https://api.pwnedpasswords.com` for user-started HIBP k-anonymity password checks. Air-Gap mode also blocks arbitrary external runtime requests while preserving this range-lookup exception, so strict no-network sessions should not start HIBP scanning.
 
 ## Clipboard Model
 

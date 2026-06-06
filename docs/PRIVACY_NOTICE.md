@@ -42,7 +42,7 @@ The application cannot control files or clipboard values after the user moves th
 
 ## Network Behavior
 
-The current local-first release has no AegisVault-hosted backend API. The Tauri desktop CSP uses `connect-src 'self' https://api.pwnedpasswords.com` so the only external API allowed by default is the optional HIBP Pwned Passwords range endpoint. The optional Air-Gap mode blocks built-in network request APIs in the frontend runtime.
+The current local-first release has no AegisVault-hosted backend API. The Tauri desktop CSP uses `connect-src 'self' https://api.pwnedpasswords.com` so the only external API allowed by default is the optional HIBP Pwned Passwords range endpoint. Air-Gap mode blocks arbitrary external network request APIs in the frontend runtime while preserving the user-started HIBP range lookup exception.
 
 Known network-related exceptions:
 
@@ -69,7 +69,7 @@ If telemetry or hosted services are added in the future, this notice must be upd
 - Keep encrypted backup passwords and Secure Share transfer passwords private.
 - Store emergency kits and backups safely.
 - Avoid using remote avatar URLs if strict offline privacy is required.
-- Avoid HIBP breach scanning if strict no-network operation is required; use Air-Gap mode for sealed local-only sessions.
+- Avoid HIBP breach scanning if strict no-network operation is required; do not start the breach scan during sealed local-only sessions.
 - Treat plain-text exports as sensitive secrets.
 - Delete exported files when they are no longer needed.
 

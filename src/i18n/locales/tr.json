@@ -628,7 +628,7 @@
       "never": "Asla",
       "minutesShort": "{{count}} Dk",
       "airgap": "Arttırılmış Çevrimdışı Modu (Air-Gap)",
-      "airgapDescription": "Cihazın yerleşik API veya ağ isteklerini tamamen engelleyerek tam yerel sızdırmazlık kurar.",
+      "airgapDescription": "Keyfi dış ağ isteklerini engeller; yalnızca kullanıcı başlatırsa HIBP range sızıntı sorgusuna izin verir.",
       "cipherSuite": "Askeri Şifreleme Standardı (Cipher Suite)",
       "encryptedBackup": "Kriptolu Kasa Yedekleme",
       "encryptedRecommended": "ŞİFRELİ (ÖNERİLEN)",
@@ -761,7 +761,7 @@
         "prefix": "SİSTEM",
         "dbHealthy": "Sağlıklı (SQLite-WASM + OPFS)",
         "dbLocked": "Bağlantı Yok / Kilitli",
-        "airgapActive": "Aktif (Tam Güvenlik Sızdırmazlığı)",
+        "airgapActive": "Aktif (Sızdırmaz, HIBP Range İzinli)",
         "airgapPassive": "Pasif (Ağ İzin Verildi)"
       },
       "backupErrors": {

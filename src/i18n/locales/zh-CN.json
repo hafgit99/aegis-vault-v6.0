@@ -627,7 +627,7 @@
       "never": "从不",
       "minutesShort": "{{count}} 分钟",
       "airgap": "增强离线模式（Air-Gap）",
-      "airgapDescription": "阻止内置 API 或网络请求，以建立完全本地的密封运行。",
+      "airgapDescription": "阻止任意外部网络请求，仅允许用户启动的 HIBP range 泄露检查。",
       "cipherSuite": "军用级加密标准（Cipher Suite）",
       "encryptedBackup": "加密保险库备份",
       "encryptedRecommended": "加密（推荐）",
@@ -760,7 +760,7 @@
         "prefix": "系统",
         "dbHealthy": "健康（SQLite-WASM + OPFS）",
         "dbLocked": "无连接 / 已锁定",
-        "airgapActive": "已启用（完整安全密封）",
+        "airgapActive": "已启用（密封，允许 HIBP Range）",
         "airgapPassive": "未启用（允许网络）"
       },
       "backupErrors": {

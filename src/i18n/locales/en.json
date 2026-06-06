@@ -627,7 +627,7 @@
       "never": "Never",
       "minutesShort": "{{count}} Min",
       "airgap": "Enhanced Offline Mode (Air-Gap)",
-      "airgapDescription": "Blocks built-in APIs or network requests to establish fully local sealed operation.",
+      "airgapDescription": "Blocks arbitrary external network requests while allowing only user-started HIBP range checks for breach scanning.",
       "cipherSuite": "Military Encryption Standard (Cipher Suite)",
       "encryptedBackup": "Encrypted Vault Backup",
       "encryptedRecommended": "ENCRYPTED (RECOMMENDED)",
@@ -760,7 +760,7 @@
         "prefix": "SYSTEM",
         "dbHealthy": "Healthy (SQLite-WASM + OPFS)",
         "dbLocked": "No Connection / Locked",
-        "airgapActive": "Active (Full Security Sealing)",
+        "airgapActive": "Active (Sealed, HIBP Range Allowed)",
         "airgapPassive": "Passive (Network Allowed)"
       },
       "backupErrors": {

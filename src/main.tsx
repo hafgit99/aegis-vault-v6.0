@@ -4,6 +4,7 @@ import App from './App.tsx';
 import './index.css';
 import './i18n';
 import { localizedMessage } from './i18n/localizedMessages';
+import { isAllowedAirGapRequestUrl } from './lib/airgapNetworkPolicy';
 
 const getRequestUrl = (input: RequestInfo | URL): string => {
   if (typeof input === 'string') return input;
@@ -25,15 +26,7 @@ const getRequestUrl = (input: RequestInfo | URL): string => {
     window.fetch = function (input, init) {
       const url = getRequestUrl(input);
 
-      const isLocal = !url ||
-                      url.startsWith('/') || 
-                      url.includes('localhost') || 
-                      url.includes('127.0.0.1') || 
-                      url.includes('::1') ||
-                      url.startsWith('data:') ||
-                      url.startsWith('blob:');
-
-      if (!isLocal) {
+      if (!isAllowedAirGapRequestUrl(url)) {
         console.error(`[AegisVault Air-Gap] ${localizedMessage('networkBlocked')} ${url}`);
         return Promise.reject(new TypeError(localizedMessage('networkBlocked')));
       }
@@ -50,15 +43,7 @@ const getRequestUrl = (input: RequestInfo | URL): string => {
       password?: string | null
     ) {
       const urlStr = String(url);
-      const isLocal = !urlStr ||
-                      urlStr.startsWith('/') || 
-                      urlStr.includes('localhost') || 
-                      urlStr.includes('127.0.0.1') || 
-                      urlStr.includes('::1') ||
-                      urlStr.startsWith('data:') ||
-                      urlStr.startsWith('blob:');
-
-      if (!isLocal) {
+      if (!isAllowedAirGapRequestUrl(urlStr)) {
         console.error(`[AegisVault Air-Gap] ${localizedMessage('networkBlocked')} ${urlStr}`);
         throw new Error(localizedMessage('networkBlocked'));
       }
