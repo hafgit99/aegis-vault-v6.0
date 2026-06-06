@@ -96,8 +96,8 @@ describe('Settings', () => {
 
     await waitFor(() => {
       expect(vaultService.changeMasterPassword).toHaveBeenCalledWith('old-password', 'NewPassword123!');
+      expect(onAddLog).toHaveBeenCalledWith(expect.any(String), 'warning');
     });
-    expect(onAddLog).toHaveBeenCalledWith(expect.any(String), 'warning');
   }, 15000);
 
   it('renders only the audited AES-GCM cipher suite for new encryption', async () => {
