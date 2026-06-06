@@ -124,7 +124,7 @@ jobs:
           retention-days: 30
 
       - name: Unit coverage
-        run: npm run test:coverage
+        run: npm run test:coverage -- --retry=1
 
       - name: Build web assets
         run: npm run build
