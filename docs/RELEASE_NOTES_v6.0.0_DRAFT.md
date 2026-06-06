@@ -1,10 +1,10 @@
 # AegisVault v6.0.0 Release Notes Draft
 
 Release date: Pending
-Commit: `fa775d080cdb48b98ddcff9fa9d806ad22003aae`
-Quality Gate run: <https://github.com/hafgit99/aegis-vault-v6.0/actions/runs/27057022350>
-CodeQL run: <https://github.com/hafgit99/aegis-vault-v6.0/actions/runs/27057022343>
-Desktop Packaging run: <https://github.com/hafgit99/aegis-vault-v6.0/actions/runs/27057022356>
+Verified code commit: `403a2e99e2824e65a125b6819d8dbb27c2309f31`
+Quality Gate run: <https://github.com/hafgit99/aegis-vault-v6.0/actions/runs/27057680355>
+CodeQL run: <https://github.com/hafgit99/aegis-vault-v6.0/actions/runs/27057680350>
+Desktop Packaging run: <https://github.com/hafgit99/aegis-vault-v6.0/actions/runs/27057680347>
 Security evidence artifact: `security-evidence`
 SBOM artifact: `sbom`
 
