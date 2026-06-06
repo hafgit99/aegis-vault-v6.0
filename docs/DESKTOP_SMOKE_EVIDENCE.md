@@ -54,7 +54,7 @@ The current packaging workflow publishes the desktop artifacts from the `Desktop
 - per-platform SBOM artifacts
 - release checksums and artifact manifest files inside each desktop artifact archive
 
-Reference run: <https://github.com/hafgit99/aegis-vault-v6.0/actions/runs/27042350350>
+Reference run: <https://github.com/hafgit99/aegis-vault-v6.0/actions/runs/27057022356>
 
 Before publishing a GitHub Release, download each artifact archive from the workflow run and verify the installer package against its bundled `SHA256SUMS.txt`. Treat this as a human release gate because the Windows `.exe`/`.msi`, macOS `.dmg`/`.app`, and Linux `.AppImage`/`.deb` outputs must be launched on their real target OS.
 
