@@ -513,11 +513,11 @@ function AppWorkspace() {
       />
 
       {/* Main Workspace Area */}
-      <main className="ml-64 flex-1 flex flex-col min-w-0">
+      <main className="md:ml-64 flex-1 flex flex-col min-w-0 pb-16 md:pb-0">
         
         {/* Top Header Base */}
-        <header className="flex justify-between items-center h-16 px-8 w-full z-40 bg-surface-container-lowest/80 backdrop-blur-xl border-b border-outline-variant/30 sticky top-0">
-          <div className="flex items-center gap-4 flex-1">
+        <header className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 sm:gap-4 min-h-16 px-3 md:px-8 py-2 sm:py-0 w-full z-40 bg-surface-container-lowest/80 backdrop-blur-xl border-b border-outline-variant/30 sticky top-0">
+          <div className="flex items-center gap-4 flex-1 min-w-0">
             <div className={`relative w-full max-w-md group transition-all ${
               activeTab !== 'vault' ? 'opacity-40 pointer-events-none' : ''
             }`}>
@@ -533,13 +533,13 @@ function AppWorkspace() {
             </div>
           </div>
           
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-5">
+          <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-6 min-w-0">
+            <div className="flex items-center gap-3 sm:gap-5 min-w-0">
               <div className="relative">
                 <button
                   type="button"
                   onClick={() => setIsLanguageMenuOpen((isOpen) => !isOpen)}
-                  className={`h-9 flex items-center gap-2 px-2.5 rounded-lg bg-surface-container/70 border text-on-surface-variant hover:text-primary transition-colors ${
+                  className={`h-9 max-w-[8.5rem] flex items-center gap-2 px-2.5 rounded-lg bg-surface-container/70 border text-on-surface-variant hover:text-primary transition-colors ${
                     isLanguageMenuOpen ? 'border-primary/40 text-primary' : 'border-outline-variant/20'
                   }`}
                   aria-label={t('app.header.languageSelector')}
@@ -548,7 +548,7 @@ function AppWorkspace() {
                   title={t('app.header.languageSelector')}
                 >
                   <Languages className="w-4 h-4 shrink-0" />
-                  <span className="text-xs font-bold text-on-surface min-w-10 text-left">{t(currentLanguage.labelKey)}</span>
+                  <span className="text-xs font-bold text-on-surface min-w-0 max-w-20 truncate text-left">{t(currentLanguage.labelKey)}</span>
                   <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isLanguageMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
 
@@ -604,7 +604,7 @@ function AppWorkspace() {
                 title={t('app.header.lockSafely')}
               />
             </div>
-            <div className="h-6 w-px bg-outline-variant/30"></div>
+            <div className="h-6 w-px bg-outline-variant/30 hidden sm:block"></div>
             <div 
               onClick={() => setIsProfileModalOpen(true)}
               className="relative cursor-pointer group"

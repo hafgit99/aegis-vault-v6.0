@@ -44,6 +44,43 @@ Run these steps on every packaged platform:
 10. Confirm settings, language selector, profile image presets, and donation page render without blank or broken visual states.
 11. Close and reopen the app, then confirm the lock screen is shown again.
 
+## Packaged Artifact Gate
+
+The current packaging workflow publishes the desktop artifacts from the `Desktop Packaging` workflow. For v6.0.0 hardening, the latest verified green workflow run produced:
+
+- `aegisvault-windows`
+- `aegisvault-macos`
+- `aegisvault-linux`
+- per-platform SBOM artifacts
+- release checksums and artifact manifest files inside each desktop artifact archive
+
+Reference run: <https://github.com/hafgit99/aegis-vault-v6.0/actions/runs/27042350350>
+
+Before publishing a GitHub Release, download each artifact archive from the workflow run and verify the installer package against its bundled `SHA256SUMS.txt`. Treat this as a human release gate because the Windows `.exe`/`.msi`, macOS `.dmg`/`.app`, and Linux `.AppImage`/`.deb` outputs must be launched on their real target OS.
+
+## Platform-Specific Manual Checks
+
+Windows:
+
+- Install or launch the generated Windows package.
+- Confirm Windows Defender or SmartScreen warning text is expected for an unsigned community build.
+- Confirm lock/unlock, encrypted backup export, Secure Share import, Settings, Database modal, and profile preset images.
+- Uninstall or remove the test install after the smoke run.
+
+macOS:
+
+- Open the generated `.dmg` or `.app` on macOS.
+- Confirm Gatekeeper behavior is expected for the selected signing mode.
+- Confirm lock/unlock, encrypted backup export, Secure Share import, Settings, Database modal, and profile preset images.
+- If signed/notarized builds are enabled later, confirm notarization and staple status before release.
+
+Linux:
+
+- Launch the generated AppImage or install the generated deb/package on a clean Linux desktop.
+- Confirm required WebKit/runtime dependencies are present or documented.
+- Confirm lock/unlock, encrypted backup export, Secure Share import, Settings, Database modal, and profile preset images.
+- Remove the test install and any temporary vault data after the smoke run.
+
 ## Release Evidence Template
 
 Use this template in release notes, audit evidence, or an attached markdown artifact:

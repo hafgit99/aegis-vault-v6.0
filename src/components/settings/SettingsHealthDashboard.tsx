@@ -1,4 +1,4 @@
-import { AlertTriangle, Fingerprint, KeyRound, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Fingerprint, KeyRound, ShieldAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 interface SettingsHealthDashboardProps {
@@ -49,6 +49,69 @@ export default function SettingsHealthDashboard({
     { label: t('app.settingsPage.healthDashboard.mfaGaps'), value: totpMissingCount + incompletePasskeyCount, tone: (totpMissingCount + incompletePasskeyCount) > 0 ? 'text-error' : 'text-tertiary' },
   ];
   const plaintextLabel = plaintextExportLastAt || t('app.settingsPage.healthDashboard.noPlaintextExport');
+  const riskQueue = [
+    {
+      id: 'weak',
+      active: weakCount > 0,
+      severity: 100,
+      count: weakCount,
+      label: t('app.settingsPage.healthDashboard.riskLabels.weak'),
+      action: t('app.settingsPage.healthDashboard.weakAction', { count: weakCount }),
+      tone: 'error',
+    },
+    {
+      id: 'reuse',
+      active: duplicateEntryCount > 0,
+      severity: 90,
+      count: duplicateEntryCount,
+      label: t('app.settingsPage.healthDashboard.riskLabels.reuse'),
+      action: t('app.settingsPage.healthDashboard.reuseAction', { count: duplicateEntryCount }),
+      tone: 'primary',
+    },
+    {
+      id: 'master',
+      active: !masterPasswordStrong,
+      severity: 85,
+      count: masterPasswordStrong ? 0 : 1,
+      label: t('app.settingsPage.healthDashboard.riskLabels.master'),
+      action: t('app.settingsPage.healthDashboard.actions.auditMaster'),
+      tone: 'error',
+    },
+    {
+      id: 'plaintext',
+      active: plaintextExportRisk,
+      severity: 80,
+      count: plaintextExportRisk ? 1 : 0,
+      label: t('app.settingsPage.healthDashboard.riskLabels.plaintext'),
+      action: t('app.settingsPage.healthDashboard.plaintextAction'),
+      tone: 'error',
+    },
+    {
+      id: 'mfa',
+      active: totpMissingCount > 0,
+      severity: 65,
+      count: totpMissingCount,
+      label: t('app.settingsPage.healthDashboard.riskLabels.mfa'),
+      action: t('app.settingsPage.healthDashboard.mfaAction', { count: totpMissingCount }),
+      tone: 'primary',
+    },
+    {
+      id: 'old',
+      active: staleCount > 0,
+      severity: 45,
+      count: staleCount,
+      label: t('app.settingsPage.healthDashboard.riskLabels.old'),
+      action: t('app.settingsPage.healthDashboard.oldAction', { count: staleCount }),
+      tone: 'secondary',
+    },
+  ].sort((a, b) => Number(b.active) - Number(a.active) || b.severity - a.severity);
+
+  const riskToneClass = (tone: string, active: boolean) => {
+    if (!active) return 'border-white/5 bg-[#0e111d]/35 text-on-surface-variant';
+    if (tone === 'error') return 'border-error/25 bg-error-container/15 text-error';
+    if (tone === 'primary') return 'border-primary/25 bg-primary/10 text-primary';
+    return 'border-secondary/25 bg-secondary/10 text-secondary';
+  };
 
   return (
     <div className="glass-panel p-6 rounded-[1.25rem] space-y-5 border border-primary/10">
@@ -138,31 +201,29 @@ export default function SettingsHealthDashboard({
         </div>
       </div>
 
-      <div className="space-y-2 rounded-xl border border-white/5 bg-[#0e111d]/45 p-3">
+      <div className="space-y-3 rounded-xl border border-white/5 bg-[#0e111d]/45 p-3">
         <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/60">
           {t('app.settingsPage.healthDashboard.priority')}
         </span>
-        <div className="space-y-2 text-[11px] text-on-surface-variant/80">
-          <div className="flex items-start gap-2">
-            <span className={`mt-1.5 h-1.5 w-1.5 rounded-full ${weakCount > 0 ? 'bg-error' : 'bg-tertiary'}`} />
-            <span>{t('app.settingsPage.healthDashboard.weakAction', { count: weakCount })}</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className={`mt-1.5 h-1.5 w-1.5 rounded-full ${duplicateEntryCount > 0 ? 'bg-primary' : 'bg-tertiary'}`} />
-            <span>{t('app.settingsPage.healthDashboard.reuseAction', { count: duplicateEntryCount })}</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className={`mt-1.5 h-1.5 w-1.5 rounded-full ${staleCount > 0 ? 'bg-secondary' : 'bg-tertiary'}`} />
-            <span>{t('app.settingsPage.healthDashboard.oldAction', { count: staleCount })}</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className={`mt-1.5 h-1.5 w-1.5 rounded-full ${totpMissingCount > 0 ? 'bg-primary' : 'bg-tertiary'}`} />
-            <span>{t('app.settingsPage.healthDashboard.mfaAction', { count: totpMissingCount })}</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className={`mt-1.5 h-1.5 w-1.5 rounded-full ${plaintextExportRisk ? 'bg-error' : 'bg-tertiary'}`} />
-            <span>{t('app.settingsPage.healthDashboard.plaintextAction')}</span>
-          </div>
+        <div className="space-y-2">
+          {riskQueue.map((risk) => (
+            <div key={risk.id} className={`rounded-xl border p-3 flex items-start gap-3 ${riskToneClass(risk.tone, risk.active)}`}>
+              {risk.active ? (
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              ) : (
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-tertiary" />
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[10px] font-bold uppercase tracking-wider">{risk.label}</span>
+                  <span className="rounded-full border border-white/10 bg-black/10 px-2 py-0.5 text-[9px] font-geist-mono font-bold">
+                    {risk.active ? t('app.settingsPage.healthDashboard.riskOpen', { count: risk.count }) : t('app.settingsPage.healthDashboard.riskClear')}
+                  </span>
+                </div>
+                <p className="mt-1 text-[11px] leading-relaxed text-on-surface-variant/80">{risk.action}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

@@ -39,8 +39,16 @@ export default function SecurityAudit({ entries, onApplyPwnedResults, onAddLog }
   const weakCount = vaultHealth.weakCount;
   const duplicateGroups = vaultHealth.duplicateGroups;
   const totalDuplicates = vaultHealth.duplicateEntryCount;
-  const pwnedEntries = vaultHealth.activeEntries.filter((entry) => Number(entry.pwned_count || 0) > 0);
+  const pwnedEntries = vaultHealth.activeEntries
+    .filter((entry) => Number(entry.pwned_count || 0) > 0)
+    .sort((a, b) => Number(b.pwned_count || 0) - Number(a.pwned_count || 0));
   const pwnedEntryCount = vaultHealth.pwnedEntryCount;
+  const pwnedExposureTotal = pwnedEntries.reduce((total, entry) => total + Number(entry.pwned_count || 0), 0);
+  const pwnedSeverity = pwnedEntryCount === 0
+    ? t('app.audit.pwnedSeverityClean')
+    : pwnedExposureTotal >= 1000
+      ? t('app.audit.pwnedSeverityCritical')
+      : t('app.audit.pwnedSeverityAction');
 
   useEffect(() => {
     setRotationRecommendation(buildPasswordRotationRecommendation(entries));
@@ -600,6 +608,20 @@ export default function SecurityAudit({ entries, onApplyPwnedResults, onAddLog }
                   {lastPwnedScanSummary?.breached ?? 0}
                 </span>
               </div>
+              <div className="rounded-xl border border-white/5 bg-[#0e111d]/45 p-3 sm:col-span-3">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div>
+                    <span className="block text-[9px] font-bold uppercase tracking-wider text-on-surface-variant/55">{t('app.audit.pwnedReportStatus')}</span>
+                    <span className={`mt-1 block text-sm font-bold ${pwnedEntryCount > 0 ? 'text-error' : 'text-tertiary'}`}>{pwnedSeverity}</span>
+                  </div>
+                  <div className="text-left sm:text-right">
+                    <span className="block text-[9px] font-bold uppercase tracking-wider text-on-surface-variant/55">{t('app.audit.pwnedExposureTotal')}</span>
+                    <span className={`mt-1 block text-xl font-geist-mono font-extrabold ${pwnedExposureTotal > 0 ? 'text-error' : 'text-tertiary'}`}>
+                      {pwnedExposureTotal}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="rounded-xl border border-primary/15 bg-primary/5 p-4 flex gap-3 text-xs leading-relaxed text-on-surface-variant">
@@ -614,8 +636,13 @@ export default function SecurityAudit({ entries, onApplyPwnedResults, onAddLog }
             )}
 
             {pwnedEntries.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {pwnedEntries.map((entry) => (
+              <div className="space-y-3">
+                <div className="rounded-xl border border-error/20 bg-error-container/10 p-4 text-xs leading-relaxed text-on-surface-variant">
+                  <strong className="text-error">{t('app.audit.pwnedActionTitle')}</strong>{' '}
+                  {t('app.audit.pwnedActionDescription', { count: pwnedEntryCount })}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {pwnedEntries.slice(0, 8).map((entry) => (
                   <div key={entry.id} className="p-3.5 bg-error-container/10 border border-error/20 rounded-xl flex justify-between items-center gap-3">
                     <div className="min-w-0">
                       <span className="text-xs text-on-surface font-extrabold truncate block">{entry.title}</span>
@@ -626,6 +653,12 @@ export default function SecurityAudit({ entries, onApplyPwnedResults, onAddLog }
                     </span>
                   </div>
                 ))}
+                </div>
+                {pwnedEntries.length > 8 && (
+                  <div className="rounded-xl border border-white/5 bg-[#0e111d]/45 p-3 text-[11px] font-bold text-on-surface-variant">
+                    {t('app.audit.pwnedMoreFindings', { count: pwnedEntries.length - 8 })}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="p-6 text-center text-on-surface-variant/50 text-xs space-y-2">

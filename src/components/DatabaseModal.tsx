@@ -858,6 +858,22 @@ export default function DatabaseModal({
                           <span className="text-on-surface-variant/70">{importResult.kdfAlgorithm || t('app.settingsPage.importReview.noKdf')}</span>
                         </div>
                       </div>
+                      <div className={`rounded-xl border p-3 text-[11px] ${
+                        importResult.legacyKdf
+                          ? 'border-error/25 bg-error-container/15 text-error'
+                          : 'border-tertiary/20 bg-tertiary/5 text-on-surface'
+                      }`}>
+                        <span className="font-bold block">{t('app.settingsPage.importResult.securitySummary')}</span>
+                        <span className="text-on-surface-variant/75 leading-relaxed">
+                          {t('app.settingsPage.importResult.securitySummaryDetail', {
+                            encrypted: importResult.encrypted ? t('app.settingsPage.importResult.encryptedYes') : t('app.settingsPage.importResult.encryptedNo'),
+                            manifest: importResult.secureShare
+                              ? (importResult.secureShareManifestVerified ? t('app.settingsPage.importResult.manifestVerified') : t('app.settingsPage.importResult.manifestLegacy'))
+                              : t('app.settingsPage.importResult.manifestNotApplicable'),
+                            kdf: importResult.kdfAlgorithm || t('app.settingsPage.importReview.noKdf'),
+                          })}
+                        </span>
+                      </div>
                     </div>
                   )}
 
