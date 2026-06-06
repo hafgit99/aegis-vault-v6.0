@@ -353,6 +353,28 @@ describe('SecurityAudit', () => {
     expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument();
   });
 
+  it('opens risky audit findings so users can rotate the affected vault record', async () => {
+    await i18n.changeLanguage('en');
+    const user = userEvent.setup();
+    const onOpenEntry = vi.fn();
+
+    render(
+      <SecurityAudit
+        entries={[
+          baseEntry({ id: '1', title: 'Legacy Mail', username: 'ada', password: 'password', strength: 'GOOD', pwned_count: 42 }),
+          baseEntry({ id: '2', title: 'Work Chat', username: 'team', password: 'password', strength: 'GOOD' }),
+        ]}
+        onOpenEntry={onOpenEntry}
+      />
+    );
+
+    await user.click(screen.getAllByRole('button', { name: 'Rotate' })[0]);
+    expect(onOpenEntry).toHaveBeenCalledWith(expect.objectContaining({ id: '1', title: 'Legacy Mail' }));
+
+    await user.click(screen.getAllByRole('button', { name: 'Open Record' })[0]);
+    expect(onOpenEntry).toHaveBeenCalledWith(expect.objectContaining({ id: '1' }));
+  });
+
   it('shows clean audit states for unique strong passwords and a strong master key', async () => {
     await i18n.changeLanguage('en');
     localStorage.setItem('aegis_master_password_audit', JSON.stringify({

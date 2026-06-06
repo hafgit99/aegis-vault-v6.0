@@ -80,6 +80,7 @@ Complete the evidence record from [DESKTOP_SMOKE_EVIDENCE.md](DESKTOP_SMOKE_EVID
 - Added professional import result security summaries in Settings and Database modal flows.
 - Improved Password Health Dashboard with prioritized risk ordering.
 - Improved HIBP breach scan reporting with exposure totals and action severity.
+- Connected Security Audit findings to vault record opening actions for faster password rotation.
 - Improved mobile layout by converting sidebar navigation into a bottom mobile nav.
 - Strengthened desktop packaging artifact, SBOM, checksum, and smoke evidence documentation.
 - Stabilized Desktop Packaging coverage gate against transient CI timing failures.

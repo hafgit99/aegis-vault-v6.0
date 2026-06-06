@@ -144,9 +144,11 @@ function AppWorkspace() {
     setVisibleCount(50);
   }, [searchQuery, filterType]);
 
-  // Close detail panel when switching tabs
+  // Close detail panel when leaving the vault workspace.
   useEffect(() => {
-    setSelectedEntry(null);
+    if (activeTab !== 'vault') {
+      setSelectedEntry(null);
+    }
   }, [activeTab]);
 
   const handleLock = async () => {
@@ -196,6 +198,14 @@ function AppWorkspace() {
     }, 1000);
   };
 
+  const handleOpenEntryFromAudit = (entry: VaultEntry) => {
+    setSearchQuery('');
+    setFilterType('all');
+    setActiveTab('vault');
+    setSelectedEntry(entry);
+    showToast(t('app.audit.openRecordToast', { title: entry.title || t('app.audit.recordDetails') }));
+  };
+
   const vaultHealth = calculateVaultHealth(entries);
   const activeEntries = vaultHealth.activeEntries;
   const totalCount = vaultHealth.totalCount;
@@ -238,6 +248,7 @@ function AppWorkspace() {
             entries={entries}
             onApplyPwnedResults={handleUpdatePwnedCounts}
             onAddLog={addSecurityLog}
+            onOpenEntry={handleOpenEntryFromAudit}
           />
         );
       case 'generator':

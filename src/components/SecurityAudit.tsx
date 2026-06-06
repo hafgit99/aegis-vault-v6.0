@@ -19,9 +19,10 @@ interface SecurityAuditProps {
   entries: VaultEntry[];
   onApplyPwnedResults?: (results: PwnedVaultEntryResult[]) => Promise<void>;
   onAddLog?: (action: string, severity?: 'info' | 'warning' | 'critical') => void;
+  onOpenEntry?: (entry: VaultEntry) => void;
 }
 
-export default function SecurityAudit({ entries, onApplyPwnedResults, onAddLog }: SecurityAuditProps) {
+export default function SecurityAudit({ entries, onApplyPwnedResults, onAddLog, onOpenEntry }: SecurityAuditProps) {
   const { t } = useTranslation();
   const [showPasswordMap, setShowPasswordMap] = useState<Record<string, boolean>>({});
   const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>({ 0: true }); // Start with the first group expanded
@@ -356,6 +357,15 @@ export default function SecurityAudit({ entries, onApplyPwnedResults, onAddLog }
                                     <span className="text-xs text-on-surface font-bold truncate block">{entry.title}</span>
                                     <span className="text-[9px] text-on-surface-variant/60 truncate block">{entry.username || entry.url || t('app.audit.recordDetails')}</span>
                                   </div>
+                                  {onOpenEntry && (
+                                    <button
+                                      type="button"
+                                      onClick={() => onOpenEntry(entry)}
+                                      className="px-2 py-1 rounded-lg border border-secondary/20 bg-secondary/10 text-[9px] font-bold uppercase tracking-wider text-secondary hover:bg-secondary/20 transition-colors shrink-0"
+                                    >
+                                      {t('app.audit.openRecord')}
+                                    </button>
+                                  )}
                                 </div>
                               ))}
                             </div>
@@ -400,7 +410,7 @@ export default function SecurityAudit({ entries, onApplyPwnedResults, onAddLog }
                   const isCritical = pass.length < 8;
                   
                   return (
-                    <div key={entry.id} className="p-3.5 bg-surface-container-high/35 border border-white/5 rounded-xl flex justify-between items-center group hover:border-white/10 transition-colors">
+                    <div key={entry.id} className="p-3.5 bg-surface-container-high/35 border border-white/5 rounded-xl flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 group hover:border-white/10 transition-colors">
                       <div className="min-w-0 pr-3 flex items-center gap-3">
                         <div className={`w-2 h-2 rounded-full shrink-0 ${
                           isCritical 
@@ -412,7 +422,7 @@ export default function SecurityAudit({ entries, onApplyPwnedResults, onAddLog }
                           <span className="text-[10px] text-on-surface-variant/60 truncate block mt-0.5">{entry.username || t('app.audit.noUsername')}</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex flex-wrap items-center gap-2 shrink-0">
                         <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider font-geist-mono border ${
                           isCritical
                             ? 'bg-error/10 border-error/20 text-error'
@@ -423,6 +433,15 @@ export default function SecurityAudit({ entries, onApplyPwnedResults, onAddLog }
                         <span className="py-0.5 px-2 bg-white/5 border border-white/10 text-on-surface-variant text-[9px] font-bold rounded-lg uppercase tracking-wider font-geist-mono">
                           {t('app.audit.characterCount', { count: pass.length })}
                         </span>
+                        {onOpenEntry && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenEntry(entry)}
+                            className="px-2.5 py-1 rounded-lg border border-primary/20 bg-primary/10 text-[9px] font-bold uppercase tracking-wider text-primary hover:bg-primary/20 transition-colors"
+                          >
+                            {t('app.audit.rotateRecord')}
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -530,9 +549,15 @@ export default function SecurityAudit({ entries, onApplyPwnedResults, onAddLog }
                 <span className="text-[10px] text-on-surface-variant/50 uppercase tracking-widest font-bold">{t('app.audit.rotationAffectedRecords')}</span>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {rotationRecommendation.affectedEntries.slice(0, 8).map((entry) => (
-                    <span key={entry.id} className="px-2.5 py-1 rounded-lg bg-[#0e111d]/70 border border-white/5 text-[10px] font-bold text-on-surface">
+                    <button
+                      key={entry.id}
+                      type="button"
+                      onClick={() => onOpenEntry?.(entry)}
+                      disabled={!onOpenEntry}
+                      className="px-2.5 py-1 rounded-lg bg-[#0e111d]/70 border border-white/5 text-[10px] font-bold text-on-surface disabled:cursor-default disabled:opacity-90 hover:border-primary/25 hover:text-primary transition-colors"
+                    >
                       {entry.title}
-                    </span>
+                    </button>
                   ))}
                   {rotationRecommendation.affectedEntries.length > 8 && (
                     <span className="px-2.5 py-1 rounded-lg bg-[#0e111d]/70 border border-white/5 text-[10px] font-bold text-on-surface-variant">
@@ -643,14 +668,25 @@ export default function SecurityAudit({ entries, onApplyPwnedResults, onAddLog }
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {pwnedEntries.slice(0, 8).map((entry) => (
-                  <div key={entry.id} className="p-3.5 bg-error-container/10 border border-error/20 rounded-xl flex justify-between items-center gap-3">
+                  <div key={entry.id} className="p-3.5 bg-error-container/10 border border-error/20 rounded-xl flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                     <div className="min-w-0">
                       <span className="text-xs text-on-surface font-extrabold truncate block">{entry.title}</span>
                       <span className="text-[10px] text-on-surface-variant/60 truncate block mt-0.5">{entry.username || entry.url || t('app.audit.noUsername')}</span>
                     </div>
-                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider font-geist-mono border bg-error/10 border-error/20 text-error shrink-0">
-                      {t('app.audit.pwnedSeenCount', { count: Number(entry.pwned_count || 0) })}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider font-geist-mono border bg-error/10 border-error/20 text-error">
+                        {t('app.audit.pwnedSeenCount', { count: Number(entry.pwned_count || 0) })}
+                      </span>
+                      {onOpenEntry && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenEntry(entry)}
+                          className="px-2.5 py-1 rounded-lg border border-error/20 bg-error/10 text-[9px] font-bold uppercase tracking-wider text-error hover:bg-error/20 transition-colors"
+                        >
+                          {t('app.audit.rotateRecord')}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
                 </div>
