@@ -330,8 +330,8 @@ describe('App integration shell', () => {
     const user = userEvent.setup();
     render(<App />);
 
-    expect(screen.getByRole('heading', { name: 'Mock Lock Screen' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'unlock vault' }));
+    expect(await screen.findByRole('heading', { name: 'Mock Lock Screen' })).toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: 'unlock vault' }));
 
     expect(await screen.findByText('GitHub')).toBeInTheDocument();
     expect(vaultServiceMock.getPasswords).toHaveBeenCalled();
@@ -357,7 +357,7 @@ describe('App integration shell', () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(screen.getByRole('button', { name: 'unlock vault' }));
+    await user.click(await screen.findByRole('button', { name: 'unlock vault' }));
     await screen.findByText('GitHub');
 
     await user.click(screen.getByRole('button', { name: 'new entry' }));
@@ -409,7 +409,7 @@ describe('App integration shell', () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(screen.getByRole('button', { name: 'unlock vault' }));
+    await user.click(await screen.findByRole('button', { name: 'unlock vault' }));
     await screen.findByText('GitHub');
 
     await user.click(screen.getByRole('button', { name: 'audit tab' }));
@@ -435,22 +435,22 @@ describe('App integration shell', () => {
     await waitFor(() => {
       expect(vaultServiceMock.wipeAllData).toHaveBeenCalled();
     });
-    expect(screen.getByRole('heading', { name: 'Mock Lock Screen' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Mock Lock Screen' })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'unlock vault' }));
+    await user.click(await screen.findByRole('button', { name: 'unlock vault' }));
     await screen.findByRole('navigation', { name: 'mock sidebar' });
     await user.click(screen.getByRole('button', { name: 'lock vault' }));
     await waitFor(() => {
       expect(vaultServiceMock.lock).toHaveBeenCalled();
     });
-    expect(screen.getByRole('heading', { name: 'Mock Lock Screen' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Mock Lock Screen' })).toBeInTheDocument();
   });
 
   it('records local database sync start and completion from the header action', async () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(screen.getByRole('button', { name: 'unlock vault' }));
+    await user.click(await screen.findByRole('button', { name: 'unlock vault' }));
     await screen.findByText('GitHub');
 
     fireEvent.click(screen.getByTitle(/Senkronizasyonu|Sync/i));
@@ -496,7 +496,7 @@ describe('App integration shell', () => {
 
     render(<App />);
 
-    await user.click(screen.getByRole('button', { name: 'unlock vault' }));
+    await user.click(await screen.findByRole('button', { name: 'unlock vault' }));
     await screen.findByText('GitHub');
 
     await user.click(screen.getByRole('button', { name: 'trash tab' }));
@@ -534,7 +534,7 @@ describe('App integration shell', () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(screen.getByRole('button', { name: 'unlock vault' }));
+    await user.click(await screen.findByRole('button', { name: 'unlock vault' }));
     await screen.findByText('GitHub');
 
     const floatingAdd = screen.getByRole('button', { name: /Yeni güvenli kayıt ekle|Yeni g.venli kay.t ekle/i });
@@ -583,7 +583,7 @@ describe('App integration shell', () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(screen.getByRole('button', { name: 'unlock vault' }));
+    await user.click(await screen.findByRole('button', { name: 'unlock vault' }));
     await screen.findByText('GitHub');
 
     expect(screen.queryByText(/New Entry.*kasaya/i)).not.toBeInTheDocument();

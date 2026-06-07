@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import Sidebar from './components/Sidebar';
 import VaultItem from './components/VaultItem';
 import { VaultEntry, EntryType } from './types';
-import LockScreen from './components/LockScreen';
 import { vaultService } from './lib/vaultService';
 import { normalizeAvatarUrl } from './lib/avatarPresets';
 import { useTranslation } from 'react-i18next';
@@ -12,7 +11,6 @@ import { calculateVaultHealth } from './lib/vaultHealth';
 import { AppStateProvider, useAppState } from './context/AppStateContext';
 import { useAppNotifications } from './hooks/useAppNotifications';
 import { useAutoLock } from './hooks/useAutoLock';
-import { useAutofillHandoff } from './hooks/useAutofillHandoff';
 import { useSecurityLogs } from './hooks/useSecurityLogs';
 import { useVaultEntries } from './hooks/useVaultEntries';
 import { 
@@ -22,6 +20,7 @@ import {
 } from 'lucide-react';
 
 const SecurityAudit = lazy(() => import('./components/SecurityAudit'));
+const LockScreen = lazy(() => import('./components/LockScreen'));
 const Generator = lazy(() => import('./components/Generator'));
 const Settings = lazy(() => import('./components/Settings'));
 const TrashBin = lazy(() => import('./components/TrashBin'));
@@ -31,6 +30,7 @@ const ProfileModal = lazy(() => import('./components/ProfileModal'));
 const DatabaseModal = lazy(() => import('./components/DatabaseModal'));
 const SecurityLogsModal = lazy(() => import('./components/SecurityLogsModal'));
 const Donate = lazy(() => import('./components/Donate'));
+const AutofillHandoffController = lazy(() => import('./components/AutofillHandoffController'));
 
 const INITIAL_ENTRIES: VaultEntry[] = [
   {
@@ -206,14 +206,6 @@ function AppWorkspace() {
     setSelectedEntry(entry);
     showToast(t('app.audit.openRecordToast', { title: entry.title || t('app.audit.recordDetails') }));
   };
-
-  useAutofillHandoff({
-    entries,
-    isLocked,
-    onOpenEntry: handleOpenEntryFromAudit,
-    showToast,
-    addSecurityLog,
-  });
 
   const vaultHealth = calculateVaultHealth(entries);
   const activeEntries = vaultHealth.activeEntries;
@@ -515,11 +507,24 @@ function AppWorkspace() {
   };
 
   if (isLocked) {
-    return <LockScreen onUnlock={() => setIsLocked(false)} onAddLog={addSecurityLog} />;
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-surface" />}>
+        <LockScreen onUnlock={() => setIsLocked(false)} onAddLog={addSecurityLog} />
+      </Suspense>
+    );
   }
 
   return (
     <div className="flex min-h-screen bg-surface">
+      <Suspense fallback={null}>
+        <AutofillHandoffController
+          entries={entries}
+          isLocked={isLocked}
+          onOpenEntry={handleOpenEntryFromAudit}
+          showToast={showToast}
+          addSecurityLog={addSecurityLog}
+        />
+      </Suspense>
       {/* Sidebar - Fixed on left */}
       <Sidebar 
         activeTab={activeTab} 
