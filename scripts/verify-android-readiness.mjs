@@ -135,8 +135,10 @@ if (!existsSync(androidWorkflowPath)) {
   for (const required of [
     'npm run android:doctor',
     'npm run android:build:apk:arm64',
+    'npm run android:build:aab',
     'npm run android:checksums',
     'npm run android:stage',
+    'package_type',
     'aegisvault-android',
   ]) {
     if (!androidWorkflow.includes(required)) {

@@ -1,6 +1,6 @@
 # Android Build Evidence
 
-Status: initial ARM64 unsigned APK build and real-device install passed
+Status: signed release APK and signed release AAB build passed; real-device APK smoke passed
 
 ## Environment
 
@@ -15,18 +15,20 @@ Status: initial ARM64 unsigned APK build and real-device install passed
 npm run android:doctor
 cargo check --manifest-path src-tauri\Cargo.toml
 npm run android:build:apk:arm64
+npm run android:build:aab
 npm run android:checksums
 npm run android:stage
 ```
 
 ## GitHub Actions
 
-Android APK artifacts are built by `.github/workflows/android-packaging.yml`.
+Android artifacts are built by `.github/workflows/android-packaging.yml`.
 
 - Trigger: manual `workflow_dispatch`, `main` push, and `v*` tags.
+- Manual package choices: `apk`, `aab`, or `both`.
 - Gate: `android:doctor`, lint, Android-focused unit tests, and SBOM generation.
 - Artifact: `aegisvault-android`.
-- Signing status: signed APK when Android signing secrets are configured; otherwise unsigned community APK.
+- Signing status: signed APK/AAB when Android signing secrets are configured; otherwise unsigned community APK.
 
 ## APK Output
 
@@ -72,6 +74,24 @@ Signature verification:
 apksigner verify --verbose: Verifies; APK Signature Scheme v2: true; Number of signers: 1
 ```
 
+Locally signed release AAB:
+
+```text
+src-tauri\gen\android\app\build\outputs\bundle\universalRelease\app-universal-release.aab
+```
+
+SHA-256:
+
+```text
+B59A4EBB965EFF5C7C31F8E4B7E9B868B56BDE8B13E5D523FA4FF0F918A0BB18
+```
+
+Staged release artifact manifest:
+
+```text
+android-artifacts\aegisvault-android\artifact-manifest.json
+```
+
 ## Security Baseline Included
 
 - Android backup disabled with `android:allowBackup="false"`.
@@ -82,7 +102,8 @@ apksigner verify --verbose: Verifies; APK Signature Scheme v2: true; Number of s
 - Android WebView debugging is disabled in `MainActivity`.
 - Android app-private vault storage commands are registered behind the existing SQLite persistence boundary.
 - Settings diagnostics reports the active storage backend so real-device smoke runs can prove Android app-private storage is in use.
-- Android packaging workflow stages APK artifacts with `SHA256SUMS.txt` and `artifact-manifest.json`.
+- Android packaging workflow stages APK/AAB artifacts with `SHA256SUMS.txt` and `artifact-manifest.json`.
+- Android packaging can also build signed AAB artifacts for Google Play upload when run manually with `package_type: aab` or `both`.
 - Android release signing is documented in `docs/ANDROID_SIGNING.md`.
 - Local release signing is active when `.secrets/release-keystore.properties` and the matching keystore are present.
 

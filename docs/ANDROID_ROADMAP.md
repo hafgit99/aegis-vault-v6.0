@@ -110,8 +110,8 @@ Phase 4 - mobile UX:
 Phase 5 - release:
 
 - Keep GitHub Actions Android APK build active through `.github/workflows/android-packaging.yml`.
-- Produce unsigned APK for internal testing and staged artifact downloads.
-- Produce AAB for Google Play.
+- Produce signed or unsigned APK for internal testing and staged artifact downloads.
+- Produce signed AAB for Google Play through the Android Packaging workflow manual `package_type` input.
 - Keep Android signing documentation and secrets checklist current in `docs/ANDROID_SIGNING.md`.
 - Complete Google Play Data Safety and privacy policy review.
 

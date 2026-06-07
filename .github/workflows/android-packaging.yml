@@ -2,6 +2,16 @@ name: Android Packaging
 
 on:
   workflow_dispatch:
+    inputs:
+      package_type:
+        description: Android artifact type to build
+        required: true
+        default: apk
+        type: choice
+        options:
+          - apk
+          - aab
+          - both
   push:
     branches:
       - main
@@ -17,7 +27,7 @@ concurrency:
 
 jobs:
   android-apk:
-    name: Build Android APK artifacts
+    name: Build Android artifacts
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
@@ -98,20 +108,29 @@ jobs:
           ANDROID_RELEASE_KEYSTORE_BASE64: ${{ secrets.ANDROID_RELEASE_KEYSTORE_BASE64 }}
         run: |
           if [ -z "$ANDROID_RELEASE_KEYSTORE_BASE64" ]; then
-            echo "Android release signing secrets are not configured. Building unsigned community APK."
+            echo "Android release signing secrets are not configured. Building unsigned community Android artifacts."
             exit 0
           fi
           keystore_path="$RUNNER_TEMP/aegis-release.jks"
           echo "$ANDROID_RELEASE_KEYSTORE_BASE64" | base64 --decode > "$keystore_path"
           echo "RELEASE_STORE_FILE=$keystore_path" >> "$GITHUB_ENV"
-          echo "Android release keystore restored for signed APK build."
+          echo "Android release keystore restored for signed Android artifact build."
 
       - name: Build ARM64 APK
+        if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.package_type == 'apk' || github.event.inputs.package_type == 'both' }}
         env:
           RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: npm run android:build:apk:arm64
+
+      - name: Build Android App Bundle
+        if: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.package_type == 'aab' || github.event.inputs.package_type == 'both') }}
+        env:
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: npm run android:build:aab
 
       - name: Generate Android artifact checksums
         run: npm run android:checksums
