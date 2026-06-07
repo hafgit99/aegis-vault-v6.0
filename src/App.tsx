@@ -12,6 +12,7 @@ import { calculateVaultHealth } from './lib/vaultHealth';
 import { AppStateProvider, useAppState } from './context/AppStateContext';
 import { useAppNotifications } from './hooks/useAppNotifications';
 import { useAutoLock } from './hooks/useAutoLock';
+import { useAutofillHandoff } from './hooks/useAutofillHandoff';
 import { useSecurityLogs } from './hooks/useSecurityLogs';
 import { useVaultEntries } from './hooks/useVaultEntries';
 import { 
@@ -205,6 +206,14 @@ function AppWorkspace() {
     setSelectedEntry(entry);
     showToast(t('app.audit.openRecordToast', { title: entry.title || t('app.audit.recordDetails') }));
   };
+
+  useAutofillHandoff({
+    entries,
+    isLocked,
+    onOpenEntry: handleOpenEntryFromAudit,
+    showToast,
+    addSecurityLog,
+  });
 
   const vaultHealth = calculateVaultHealth(entries);
   const activeEntries = vaultHealth.activeEntries;

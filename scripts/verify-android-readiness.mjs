@@ -266,6 +266,12 @@ if (!existsSync(androidProjectPath)) {
   if (!activity.includes('WebView.setWebContentsDebuggingEnabled(false)')) {
     failures.push('MainActivity.kt must disable Android WebView debugging for release hardening.');
   }
+  if (!activity.includes('pending_autofill_request.json')) {
+    failures.push('MainActivity.kt must persist Android Autofill handoff context into app-private storage.');
+  }
+  if (!activity.includes('aegis_autofill_request')) {
+    failures.push('MainActivity.kt must detect scoped Android Autofill handoff intents.');
+  }
   if (!androidRootBuildGradle.includes('org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.0')) {
     failures.push('Android Gradle project must use Kotlin Gradle plugin 2.1.0 for current Tauri mobile plugin compatibility.');
   }
@@ -292,6 +298,14 @@ if (!existsSync(androidProjectPath)) {
     }
     if (!vaultStorageAdapter.includes(commandName)) {
       failures.push(`src/lib/vaultStorageAdapter.ts must invoke the Android storage command "${commandName}".`);
+    }
+  }
+  for (const commandName of [
+    'read_pending_autofill_request',
+    'clear_pending_autofill_request',
+  ]) {
+    if (!tauriRust.includes(commandName)) {
+      failures.push(`src-tauri/src/lib.rs must expose the Android Autofill handoff command "${commandName}".`);
     }
   }
 }

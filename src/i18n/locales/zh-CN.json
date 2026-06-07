@@ -8,6 +8,17 @@
       "chineseSimplified": "简体中文",
       "changeTo": "切换语言为 {{language}}"
     },
+    "autofill": {
+      "thisApp": "此应用",
+      "locked": "请先解锁 AegisVault，以查看 {{target}} 的自动填充匹配项。",
+      "ready": "自动填充匹配已就绪：{{target}} 的 {{title}}。",
+      "noMatch": "未找到适用于 {{target}} 的安全自动填充匹配项。",
+      "logs": {
+        "locked": "Android 自动填充在保险库锁定时请求了 {{target}}。",
+        "ready": "Android 自动填充已打开 {{target}} 的匹配记录 {{title}}。",
+        "noMatch": "Android 自动填充未找到 {{target}} 的安全记录匹配。"
+      }
+    },
     "lockScreen": {
       "tagline": "零匹配本地密码保险库",
       "heroEyebrow": "本地安全控制中心",

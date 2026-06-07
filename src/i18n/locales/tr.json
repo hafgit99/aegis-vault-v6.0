@@ -8,6 +8,17 @@
       "chineseSimplified": "简体中文",
       "changeTo": "Dili {{language}} olarak değiştir"
     },
+    "autofill": {
+      "thisApp": "bu uygulama",
+      "locked": "{{target}} için otomatik doldurma eşleşmelerini görmek üzere AegisVault kilidini açın.",
+      "ready": "Otomatik doldurma eşleşmesi hazır: {{target}} için {{title}}.",
+      "noMatch": "{{target}} için güvenli otomatik doldurma eşleşmesi bulunamadı.",
+      "logs": {
+        "locked": "Android Otomatik Doldurma, kasa kilitliyken {{target}} için istek gönderdi.",
+        "ready": "Android Otomatik Doldurma, {{target}} için eşleşen {{title}} kaydını açtı.",
+        "noMatch": "Android Otomatik Doldurma, {{target}} için güvenli kayıt eşleşmesi bulamadı."
+      }
+    },
     "lockScreen": {
       "tagline": "Düzenlenmiş sıfır eşleşmeli şifre muhafızı",
       "heroEyebrow": "Yerel güvenlik kontrol merkezi",

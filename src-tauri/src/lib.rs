@@ -3,6 +3,8 @@ use std::path::PathBuf;
 
 use tauri::Manager;
 
+const PENDING_AUTOFILL_REQUEST_FILE: &str = "pending_autofill_request.json";
+
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 const KEYCHAIN_SERVICE: &str = "AegisVault";
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
@@ -168,15 +170,28 @@ fn app_private_file_path(app: &tauri::AppHandle, filename: &str) -> Result<PathB
     Ok(dir.join(safe_filename))
 }
 
+fn pending_autofill_request_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    let dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| format!("App-private storage directory could not be resolved: {error}"))?;
+    fs::create_dir_all(&dir)
+        .map_err(|error| format!("App-private storage directory could not be created: {error}"))?;
+    Ok(dir.join(PENDING_AUTOFILL_REQUEST_FILE))
+}
+
 #[tauri::command]
-fn read_app_private_file(app: tauri::AppHandle, filename: String) -> Result<Option<Vec<u8>>, String> {
+fn read_app_private_file(
+    app: tauri::AppHandle,
+    filename: String,
+) -> Result<Option<Vec<u8>>, String> {
     let path = app_private_file_path(&app, &filename)?;
     if !path.exists() {
         return Ok(None);
     }
-    fs::read(path).map(Some).map_err(|error| {
-        format!("App-private vault file could not be read: {error}")
-    })
+    fs::read(path)
+        .map(Some)
+        .map_err(|error| format!("App-private vault file could not be read: {error}"))
 }
 
 #[tauri::command]
@@ -186,9 +201,8 @@ fn write_app_private_file(
     bytes: Vec<u8>,
 ) -> Result<(), String> {
     let path = app_private_file_path(&app, &filename)?;
-    fs::write(path, bytes).map_err(|error| {
-        format!("App-private vault file could not be written: {error}")
-    })
+    fs::write(path, bytes)
+        .map_err(|error| format!("App-private vault file could not be written: {error}"))
 }
 
 #[tauri::command]
@@ -197,7 +211,9 @@ fn delete_app_private_file(app: tauri::AppHandle, filename: String) -> Result<()
     match fs::remove_file(path) {
         Ok(()) => Ok(()),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(error) => Err(format!("App-private vault file could not be deleted: {error}")),
+        Err(error) => Err(format!(
+            "App-private vault file could not be deleted: {error}"
+        )),
     }
 }
 
@@ -214,15 +230,40 @@ fn clear_app_private_sqlite_files(app: tauri::AppHandle) -> Result<(), String> {
     for entry in fs::read_dir(dir)
         .map_err(|error| format!("App-private storage directory could not be listed: {error}"))?
     {
-        let entry = entry.map_err(|error| format!("App-private storage entry could not be read: {error}"))?;
+        let entry = entry
+            .map_err(|error| format!("App-private storage entry could not be read: {error}"))?;
         let path = entry.path();
         if path.extension().and_then(|value| value.to_str()) == Some("sqlite") {
-            fs::remove_file(path)
-                .map_err(|error| format!("App-private SQLite file could not be deleted: {error}"))?;
+            fs::remove_file(path).map_err(|error| {
+                format!("App-private SQLite file could not be deleted: {error}")
+            })?;
         }
     }
 
     Ok(())
+}
+
+#[tauri::command]
+fn read_pending_autofill_request(app: tauri::AppHandle) -> Result<Option<String>, String> {
+    let path = pending_autofill_request_path(&app)?;
+    if !path.exists() {
+        return Ok(None);
+    }
+    fs::read_to_string(path)
+        .map(Some)
+        .map_err(|error| format!("Pending autofill request could not be read: {error}"))
+}
+
+#[tauri::command]
+fn clear_pending_autofill_request(app: tauri::AppHandle) -> Result<(), String> {
+    let path = pending_autofill_request_path(&app)?;
+    match fs::remove_file(path) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(format!(
+            "Pending autofill request could not be cleared: {error}"
+        )),
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -238,6 +279,8 @@ pub fn run() {
             write_app_private_file,
             delete_app_private_file,
             clear_app_private_sqlite_files,
+            read_pending_autofill_request,
+            clear_pending_autofill_request,
         ])
         .run(tauri::generate_context!())
         .expect("failed to run AegisVault shell");

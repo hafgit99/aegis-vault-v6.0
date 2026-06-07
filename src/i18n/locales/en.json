@@ -8,6 +8,17 @@
       "chineseSimplified": "简体中文",
       "changeTo": "Change language to {{language}}"
     },
+    "autofill": {
+      "thisApp": "this app",
+      "locked": "Unlock AegisVault to review autofill matches for {{target}}.",
+      "ready": "Autofill match ready: {{title}} for {{target}}.",
+      "noMatch": "No safe autofill match found for {{target}}.",
+      "logs": {
+        "locked": "Android Autofill requested {{target}} while the vault was locked.",
+        "ready": "Android Autofill opened matched record {{title}} for {{target}}.",
+        "noMatch": "Android Autofill found no safe record match for {{target}}."
+      }
+    },
     "lockScreen": {
       "tagline": "Curated zero-match password keeper",
       "heroEyebrow": "Local security control center",
