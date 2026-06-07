@@ -251,6 +251,12 @@ if (!existsSync(androidProjectPath)) {
   if (!autofillService.includes('aegis_autofill_request')) {
     failures.push('AegisAutofillService.kt must carry a scoped autofill request marker into MainActivity.');
   }
+  if (!autofillService.includes('approved_autofill_payload.json')) {
+    failures.push('AegisAutofillService.kt must consume one-time approved Android Autofill payloads.');
+  }
+  if (!autofillService.includes('AutofillValue.forText')) {
+    failures.push('AegisAutofillService.kt must create Android Autofill values from approved payloads only.');
+  }
   if (!autofillParser.includes('AssistStructure')) {
     failures.push('AegisAutofillRequestParser.kt must parse AssistStructure field context.');
   }
@@ -303,6 +309,8 @@ if (!existsSync(androidProjectPath)) {
   for (const commandName of [
     'read_pending_autofill_request',
     'clear_pending_autofill_request',
+    'write_approved_autofill_payload',
+    'clear_approved_autofill_payload',
   ]) {
     if (!tauriRust.includes(commandName)) {
       failures.push(`src-tauri/src/lib.rs must expose the Android Autofill handoff command "${commandName}".`);

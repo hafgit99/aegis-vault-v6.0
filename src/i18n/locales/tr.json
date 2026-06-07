@@ -12,10 +12,12 @@
       "thisApp": "bu uygulama",
       "locked": "{{target}} için otomatik doldurma eşleşmelerini görmek üzere AegisVault kilidini açın.",
       "ready": "Otomatik doldurma eşleşmesi hazır: {{target}} için {{title}}.",
+      "approved": "{{title}} için otomatik doldurma onaylandı. {{target}} ekranına dönüp AegisVault'u tekrar seçin.",
       "noMatch": "{{target}} için güvenli otomatik doldurma eşleşmesi bulunamadı.",
       "logs": {
         "locked": "Android Otomatik Doldurma, kasa kilitliyken {{target}} için istek gönderdi.",
         "ready": "Android Otomatik Doldurma, {{target}} için eşleşen {{title}} kaydını açtı.",
+        "approved": "Android Otomatik Doldurma, {{target}} üzerindeki {{title}} için tek kullanımlık doldurma payload'u hazırladı.",
         "noMatch": "Android Otomatik Doldurma, {{target}} için güvenli kayıt eşleşmesi bulamadı."
       }
     },

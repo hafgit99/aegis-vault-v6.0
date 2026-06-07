@@ -33,6 +33,7 @@ Phase 2:
 - Convert native Android Autofill context into the shared matcher request contract.
 - Return an Android Autofill authentication response that opens AegisVault before any fill data is provided.
 - Persist pending Android Autofill handoff context in app-private storage for the React vault session.
+- Use a short-lived, single-use approved fill payload for Android dataset creation.
 - Bridge Android Autofill requests to the unlocked web vault session.
 - Require unlock/biometric confirmation before returning fill datasets.
 - Add save prompts only after explicit user consent.

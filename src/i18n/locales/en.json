@@ -12,10 +12,12 @@
       "thisApp": "this app",
       "locked": "Unlock AegisVault to review autofill matches for {{target}}.",
       "ready": "Autofill match ready: {{title}} for {{target}}.",
+      "approved": "Autofill approved for {{title}}. Return to {{target}} and choose AegisVault again.",
       "noMatch": "No safe autofill match found for {{target}}.",
       "logs": {
         "locked": "Android Autofill requested {{target}} while the vault was locked.",
         "ready": "Android Autofill opened matched record {{title}} for {{target}}.",
+        "approved": "Android Autofill prepared a one-time fill payload for {{title}} at {{target}}.",
         "noMatch": "Android Autofill found no safe record match for {{target}}."
       }
     },

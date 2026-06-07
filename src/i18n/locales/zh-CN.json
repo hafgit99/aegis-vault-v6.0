@@ -12,10 +12,12 @@
       "thisApp": "此应用",
       "locked": "请先解锁 AegisVault，以查看 {{target}} 的自动填充匹配项。",
       "ready": "自动填充匹配已就绪：{{target}} 的 {{title}}。",
+      "approved": "{{title}} 的自动填充已批准。请返回 {{target}} 并再次选择 AegisVault。",
       "noMatch": "未找到适用于 {{target}} 的安全自动填充匹配项。",
       "logs": {
         "locked": "Android 自动填充在保险库锁定时请求了 {{target}}。",
         "ready": "Android 自动填充已打开 {{target}} 的匹配记录 {{title}}。",
+        "approved": "Android 自动填充已为 {{target}} 的 {{title}} 准备一次性填充数据。",
         "noMatch": "Android 自动填充未找到 {{target}} 的安全记录匹配。"
       }
     },

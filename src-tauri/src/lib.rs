@@ -4,6 +4,8 @@ use std::path::PathBuf;
 use tauri::Manager;
 
 const PENDING_AUTOFILL_REQUEST_FILE: &str = "pending_autofill_request.json";
+const APPROVED_AUTOFILL_PAYLOAD_FILE: &str = "approved_autofill_payload.json";
+const MAX_AUTOFILL_PAYLOAD_BYTES: usize = 16 * 1024;
 
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 const KEYCHAIN_SERVICE: &str = "AegisVault";
@@ -180,6 +182,16 @@ fn pending_autofill_request_path(app: &tauri::AppHandle) -> Result<PathBuf, Stri
     Ok(dir.join(PENDING_AUTOFILL_REQUEST_FILE))
 }
 
+fn approved_autofill_payload_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    let dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| format!("App-private storage directory could not be resolved: {error}"))?;
+    fs::create_dir_all(&dir)
+        .map_err(|error| format!("App-private storage directory could not be created: {error}"))?;
+    Ok(dir.join(APPROVED_AUTOFILL_PAYLOAD_FILE))
+}
+
 #[tauri::command]
 fn read_app_private_file(
     app: tauri::AppHandle,
@@ -266,6 +278,30 @@ fn clear_pending_autofill_request(app: tauri::AppHandle) -> Result<(), String> {
     }
 }
 
+#[tauri::command]
+fn write_approved_autofill_payload(app: tauri::AppHandle, payload: String) -> Result<(), String> {
+    let trimmed = payload.trim();
+    if trimmed.is_empty() || trimmed.len() > MAX_AUTOFILL_PAYLOAD_BYTES {
+        return Err("Approved autofill payload size is invalid.".to_string());
+    }
+
+    let path = approved_autofill_payload_path(&app)?;
+    fs::write(path, trimmed)
+        .map_err(|error| format!("Approved autofill payload could not be written: {error}"))
+}
+
+#[tauri::command]
+fn clear_approved_autofill_payload(app: tauri::AppHandle) -> Result<(), String> {
+    let path = approved_autofill_payload_path(&app)?;
+    match fs::remove_file(path) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(format!(
+            "Approved autofill payload could not be cleared: {error}"
+        )),
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -281,6 +317,8 @@ pub fn run() {
             clear_app_private_sqlite_files,
             read_pending_autofill_request,
             clear_pending_autofill_request,
+            write_approved_autofill_payload,
+            clear_approved_autofill_payload,
         ])
         .run(tauri::generate_context!())
         .expect("failed to run AegisVault shell");

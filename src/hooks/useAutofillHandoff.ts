@@ -1,7 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NativeAutofillContext } from '../lib/autofillBridge';
-import { clearPendingAndroidAutofillContext, readPendingAndroidAutofillContext } from '../lib/autofillNativeBridge';
+import {
+  clearPendingAndroidAutofillContext,
+  createApprovedAndroidAutofillPayload,
+  readPendingAndroidAutofillContext,
+  writeApprovedAndroidAutofillPayload,
+} from '../lib/autofillNativeBridge';
 import { getAndroidAutofillProviderResult } from '../lib/autofillProvider';
 import { VaultEntry } from '../types';
 
@@ -68,8 +73,26 @@ export function useAutofillHandoff({
       const entry = entries.find((item) => item.id === candidate.id);
       if (entry) {
         onOpenEntry(entry);
-        showToast(t('app.autofill.ready', { title: entry.title, target: result.targetLabel || candidate.domain }));
-        addSecurityLog(t('app.autofill.logs.ready', { title: entry.title, target: result.targetLabel || candidate.domain }), 'info');
+        const payload = createApprovedAndroidAutofillPayload(context, entry);
+        if (payload) {
+          void writeApprovedAndroidAutofillPayload(payload)
+            .then((written) => {
+              if (written) {
+                showToast(t('app.autofill.approved', { title: entry.title, target: result.targetLabel || candidate.domain }));
+                addSecurityLog(t('app.autofill.logs.approved', { title: entry.title, target: result.targetLabel || candidate.domain }), 'info');
+              } else {
+                showToast(t('app.autofill.ready', { title: entry.title, target: result.targetLabel || candidate.domain }));
+                addSecurityLog(t('app.autofill.logs.ready', { title: entry.title, target: result.targetLabel || candidate.domain }), 'info');
+              }
+            })
+            .catch((error) => {
+              console.warn('Approved Android Autofill payload could not be written.', error);
+              showToast(t('app.autofill.ready', { title: entry.title, target: result.targetLabel || candidate.domain }));
+            });
+        } else {
+          showToast(t('app.autofill.ready', { title: entry.title, target: result.targetLabel || candidate.domain }));
+          addSecurityLog(t('app.autofill.logs.ready', { title: entry.title, target: result.targetLabel || candidate.domain }), 'info');
+        }
       }
       pendingContextRef.current = null;
       void clearPendingAndroidAutofillContext();
