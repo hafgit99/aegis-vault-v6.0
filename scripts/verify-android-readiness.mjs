@@ -257,6 +257,9 @@ if (!existsSync(androidProjectPath)) {
   if (!autofillService.includes('AutofillValue.forText')) {
     failures.push('AegisAutofillService.kt must create Android Autofill values from approved payloads only.');
   }
+  if (autofillService.includes('Unlock AegisVault for')) {
+    failures.push('AegisAutofillService.kt must use a neutral Autofill presentation label because the service cannot know the live vault lock state.');
+  }
   if (!autofillParser.includes('AssistStructure')) {
     failures.push('AegisAutofillRequestParser.kt must parse AssistStructure field context.');
   }

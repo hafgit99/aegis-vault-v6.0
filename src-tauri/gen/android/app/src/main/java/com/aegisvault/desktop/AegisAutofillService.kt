@@ -90,7 +90,7 @@ class AegisAutofillService : AutofillService() {
   private fun authenticationPresentation(context: AegisAutofillContext): RemoteViews {
     val presentation = RemoteViews(packageName, android.R.layout.simple_list_item_1)
     val target = context.webDomain ?: context.packageName.ifBlank { "this sign-in form" }
-    presentation.setTextViewText(android.R.id.text1, "Unlock AegisVault for $target")
+    presentation.setTextViewText(android.R.id.text1, "Fill with AegisVault for $target")
     return presentation
   }
 
