@@ -30,6 +30,7 @@ Phase 1:
 Phase 2:
 
 - Parse `AssistStructure` to detect username/password fields and web domains.
+- Convert native Android Autofill context into the shared matcher request contract.
 - Bridge Android Autofill requests to the unlocked web vault session.
 - Require unlock/biometric confirmation before returning fill datasets.
 - Add save prompts only after explicit user consent.

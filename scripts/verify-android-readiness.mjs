@@ -42,6 +42,28 @@ const androidActivityPath = join(
   'desktop',
   'MainActivity.kt',
 );
+const androidAutofillServicePath = join(
+  androidProjectPath,
+  'app',
+  'src',
+  'main',
+  'java',
+  'com',
+  'aegisvault',
+  'desktop',
+  'AegisAutofillService.kt',
+);
+const androidAutofillParserPath = join(
+  androidProjectPath,
+  'app',
+  'src',
+  'main',
+  'java',
+  'com',
+  'aegisvault',
+  'desktop',
+  'AegisAutofillRequestParser.kt',
+);
 const androidRootBuildGradlePath = join(androidProjectPath, 'build.gradle.kts');
 const androidAppBuildGradlePath = join(androidProjectPath, 'app', 'build.gradle.kts');
 const tauriRustPath = join(root, 'src-tauri', 'src', 'lib.rs');
@@ -176,6 +198,12 @@ if (!existsSync(androidProjectPath)) {
     ? readFileSync(androidAutofillConfigPath, 'utf8')
     : '';
   const activity = existsSync(androidActivityPath) ? readFileSync(androidActivityPath, 'utf8') : '';
+  const autofillService = existsSync(androidAutofillServicePath)
+    ? readFileSync(androidAutofillServicePath, 'utf8')
+    : '';
+  const autofillParser = existsSync(androidAutofillParserPath)
+    ? readFileSync(androidAutofillParserPath, 'utf8')
+    : '';
   const androidRootBuildGradle = existsSync(androidRootBuildGradlePath)
     ? readFileSync(androidRootBuildGradlePath, 'utf8')
     : '';
@@ -210,6 +238,18 @@ if (!existsSync(androidProjectPath)) {
   }
   if (!autofillConfig.includes('autofill-service')) {
     failures.push('autofill_service.xml must define Android Autofill service metadata.');
+  }
+  if (!autofillService.includes('AutofillService')) {
+    failures.push('AegisAutofillService.kt must implement the Android AutofillService boundary.');
+  }
+  if (!autofillService.includes('AegisAutofillRequestParser.parse')) {
+    failures.push('AegisAutofillService.kt must parse fill requests before bridge/dataset work starts.');
+  }
+  if (!autofillParser.includes('AssistStructure')) {
+    failures.push('AegisAutofillRequestParser.kt must parse AssistStructure field context.');
+  }
+  if (!autofillParser.includes('TYPE_TEXT_VARIATION_WEB_PASSWORD')) {
+    failures.push('AegisAutofillRequestParser.kt must recognize web password input variations.');
   }
   if (!networkSecurityConfig.includes('api.pwnedpasswords.com')) {
     failures.push('network_security_config.xml must include the HIBP range API domain allowlist.');

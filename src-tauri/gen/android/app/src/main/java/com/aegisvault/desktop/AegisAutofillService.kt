@@ -20,7 +20,17 @@ class AegisAutofillService : AutofillService() {
       return
     }
 
-    Log.i(TAG, "Autofill request received; vault bridge is not enabled yet.")
+    val context = AegisAutofillRequestParser.parse(request)
+    if (context == null || !context.canRequestCredentials) {
+      Log.i(TAG, "Autofill request ignored; no credential fields were detected.")
+      callback.onSuccess(null)
+      return
+    }
+
+    Log.i(
+      TAG,
+      "Autofill context detected for package=${context.packageName}, domain=${context.webDomain ?: "none"}, fields=${context.fields.size}; vault bridge is not enabled yet."
+    )
     callback.onSuccess(null)
   }
 
