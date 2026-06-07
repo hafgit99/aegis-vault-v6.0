@@ -6,16 +6,12 @@ export function ensureArrayBuffer(data: Uint8Array): ArrayBuffer {
   if (!(data instanceof Uint8Array)) {
     throw new TypeError('Expected Uint8Array');
   }
-  const isShared = typeof SharedArrayBuffer !== 'undefined' && data.buffer instanceof SharedArrayBuffer;
-  if (data.buffer instanceof ArrayBuffer && !isShared) {
-    return data.buffer;
-  }
-  const safeCopy = new Uint8Array(data.length);
-  safeCopy.set(data);
-  return safeCopy.buffer as ArrayBuffer;
+  const copy = new Uint8Array(data.byteLength);
+  copy.set(data);
+  return copy.buffer;
 }
 
-export function toBufferSource(data: Uint8Array | ArrayBuffer | BufferSource): BufferSource {
+export function toBufferSource(data: Uint8Array | ArrayBuffer | BufferSource): ArrayBuffer | BufferSource {
   if (data instanceof ArrayBuffer) {
     return data;
   }

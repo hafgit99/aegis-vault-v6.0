@@ -38,7 +38,7 @@ const getRequestUrl = (input: RequestInfo | URL): string => {
     XMLHttpRequest.prototype.open = function (
       method: string,
       url: string | URL,
-      async = true,
+      async?: boolean,
       username?: string | null,
       password?: string | null
     ) {
@@ -47,7 +47,7 @@ const getRequestUrl = (input: RequestInfo | URL): string => {
         console.error(`[AegisVault Air-Gap] ${localizedMessage('networkBlocked')} ${urlStr}`);
         throw new Error(localizedMessage('networkBlocked'));
       }
-      return originalOpen.call(this, method, url, async, username, password);
+      return originalOpen.call(this, method, url, async ?? true, username, password);
     };
   } catch (e) {
     console.error(localizedMessage('airgapError'), e);

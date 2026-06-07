@@ -592,28 +592,46 @@ function AppWorkspace() {
                   )}
                 </AnimatePresence>
               </div>
-              <RefreshCw 
+              <button
+                type="button"
                 onClick={handleHeaderSync}
-                className={`w-5 h-5 text-on-surface-variant hover:text-primary cursor-pointer transition-transform duration-700 ${
-                  isSyncing ? 'animate-spin text-primary' : ''
-                }`}
+                className="text-on-surface-variant hover:text-primary transition-colors"
                 title={t('app.header.localVaultSync')}
-              />
-              <UserRoundCheck 
+                aria-label={t('app.header.localVaultSync')}
+              >
+                <RefreshCw
+                  className={`w-5 h-5 transition-transform duration-700 ${
+                    isSyncing ? 'animate-spin text-primary' : ''
+                  }`}
+                />
+              </button>
+              <button
+                type="button"
                 onClick={() => setIsLogsModalOpen(true)}
-                className="w-5 h-5 text-on-surface-variant hover:text-primary cursor-pointer transition-colors" 
+                className="text-on-surface-variant hover:text-primary transition-colors"
                 title={t('app.header.securityLog')}
-              />
-              <Database 
+                aria-label={t('app.header.securityLog')}
+              >
+                <UserRoundCheck className="w-5 h-5" />
+              </button>
+              <button
+                type="button"
                 onClick={() => setIsDatabaseModalOpen(true)}
-                className="w-5 h-5 text-on-surface-variant hover:text-primary cursor-pointer transition-colors" 
+                className="text-on-surface-variant hover:text-primary transition-colors"
                 title={t('app.header.databaseManagement')}
-              />
-              <Lock 
+                aria-label={t('app.header.databaseManagement')}
+              >
+                <Database className="w-5 h-5" />
+              </button>
+              <button
+                type="button"
                 onClick={handleLock}
-                className="w-5 h-5 text-on-surface-variant hover:text-error cursor-pointer transition-colors" 
+                className="text-on-surface-variant hover:text-error transition-colors"
                 title={t('app.header.lockSafely')}
-              />
+                aria-label={t('app.header.lockSafely')}
+              >
+                <Lock className="w-5 h-5" />
+              </button>
             </div>
             <div className="h-6 w-px bg-outline-variant/30 hidden sm:block"></div>
             <div 

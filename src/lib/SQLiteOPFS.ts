@@ -75,8 +75,9 @@ export async function deleteOPFSFile(filename: string): Promise<void> {
 export async function clearAllOPFSFiles(): Promise<void> {
   if (!isOPFSAvailable()) return;
   try {
-    const root = await navigator.storage.getDirectory();
-    // @ts-expect-error entries async iterator is not modeled on all TS lib versions
+    const root = await navigator.storage.getDirectory() as FileSystemDirectoryHandle & {
+      entries(): AsyncIterable<[string, FileSystemHandle]>;
+    };
     for await (const [name] of root.entries()) {
       if (name.endsWith('.sqlite')) {
         await root.removeEntry(name);

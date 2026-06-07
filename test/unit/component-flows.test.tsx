@@ -892,7 +892,9 @@ describe('DetailPanel', () => {
     await i18n.changeLanguage('en');
     const user = userEvent.setup();
     const alert = vi.spyOn(window, 'alert').mockImplementation(() => undefined);
-    fileStoreMock.getEncryptedFile.mockResolvedValueOnce(null);
+    fileStoreMock.getEncryptedFile.mockResolvedValueOnce(
+      null as unknown as Awaited<ReturnType<typeof fileStoreMock.getEncryptedFile>>
+    );
     vi.mocked(URL.createObjectURL).mockClear();
 
     render(

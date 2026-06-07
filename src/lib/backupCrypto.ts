@@ -52,7 +52,7 @@ async function derivePBKDF2Key(password: string, salt: Uint8Array, iterations = 
   return window.crypto.subtle.deriveKey(
     {
       name: 'PBKDF2',
-      salt,
+      salt: toBufferSource(salt),
       iterations,
       hash: 'SHA-256'
     },

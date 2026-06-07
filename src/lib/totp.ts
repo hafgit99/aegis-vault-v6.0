@@ -1,4 +1,4 @@
-import { generateRandomBytes } from './crypto-types';
+import { generateRandomBytes, toBufferSource } from './crypto-types';
 
 export type TotpAlgorithm = 'SHA-1' | 'SHA-256' | 'SHA-512';
 
@@ -75,13 +75,13 @@ export async function generateTOTP({
 
   const key = await crypto.subtle.importKey(
     'raw',
-    decodeBase32(secret),
+    toBufferSource(decodeBase32(secret)),
     { name: 'HMAC', hash: algorithm },
     false,
     ['sign'],
   );
   const counter = Math.floor(timestamp / 1000 / period);
-  const signature = new Uint8Array(await crypto.subtle.sign('HMAC', key, counterToBytes(counter)));
+  const signature = new Uint8Array(await crypto.subtle.sign('HMAC', key, toBufferSource(counterToBytes(counter))));
   const offset = signature[signature.length - 1] & 0x0f;
   const binary = ((signature[offset] & 0x7f) << 24)
     | ((signature[offset + 1] & 0xff) << 16)

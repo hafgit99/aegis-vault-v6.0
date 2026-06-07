@@ -1,4 +1,4 @@
-import { bufferToBase64Url, generateRandomBytes } from './crypto-types';
+import { bufferToBase64Url, generateRandomBytes, toBufferSource } from './crypto-types';
 
 export interface RegisteredPasskey {
   credentialId: string;
@@ -62,10 +62,10 @@ export async function registerPasskey(domain: string, userName: string): Promise
   const displayName = domainToUserName(domain, userName);
   const credential = await navigator.credentials.create({
     publicKey: {
-      challenge: generateRandomBytes(32),
+      challenge: toBufferSource(generateRandomBytes(32)),
       rp: { name: AEGIS_VAULT_RP_NAME },
       user: {
-        id: generateRandomBytes(32),
+        id: toBufferSource(generateRandomBytes(32)),
         name: displayName,
         displayName,
       },
@@ -108,10 +108,10 @@ export async function authenticatePasskey(credentialId: string): Promise<Passkey
 
   const assertion = await navigator.credentials.get({
     publicKey: {
-      challenge: generateRandomBytes(32),
+      challenge: toBufferSource(generateRandomBytes(32)),
       allowCredentials: [{
         type: 'public-key',
-        id: base64UrlToBuffer(credentialId),
+        id: toBufferSource(base64UrlToBuffer(credentialId)),
       }],
       userVerification: 'preferred',
       timeout: 60_000,

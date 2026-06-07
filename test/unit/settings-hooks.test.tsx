@@ -439,7 +439,13 @@ describe('settings hooks', () => {
   describe('useMasterPasswordChange', () => {
     it('changes master password, audits it, clears fields, and writes a warning log', async () => {
       vi.mocked(vaultService.changeMasterPassword).mockResolvedValue(undefined);
-      vi.mocked(persistMasterPasswordAudit).mockResolvedValue(undefined);
+      vi.mocked(persistMasterPasswordAudit).mockResolvedValue({
+        score: 4,
+        zxcvbnScore: 4,
+        label: 'strong',
+        length: 22,
+        updatedAt: '2026-06-06T00:00:00.000Z',
+      });
       const onAddLog = vi.fn();
       const { result } = renderHook(() => useMasterPasswordChange({ onAddLog }));
 
