@@ -50,7 +50,13 @@ jobs:
             "platforms;android-36" \
             "build-tools;35.0.0" \
             "ndk;27.2.12479018"
+          set +o pipefail
           yes | sdkmanager --licenses
+          license_status="${PIPESTATUS[1]}"
+          set -o pipefail
+          if [ "$license_status" -ne 0 ]; then
+            exit "$license_status"
+          fi
           echo "NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
 
       - name: Setup Rust Android target
