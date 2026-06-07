@@ -35,6 +35,7 @@ Must ship:
 - HIBP k-anonymity scan with the existing range-only allowlist.
 - Encrypted backup export/import.
 - Secure Share export/import.
+- Android Autofill Service foundation with locked-vault-safe matching.
 - Turkish, English, and Chinese language support.
 - Dark mobile layout with accessible touch targets.
 - Android release APK/AAB artifact with checksum and SBOM evidence.
@@ -62,6 +63,7 @@ Android v1 must include these controls before public release:
 - Clipboard auto-clear after secret copy.
 - Native sensitive clipboard handling where Android supports it.
 - Local warning if clipboard clearing or native sensitive handling fails.
+- Autofill suggestions must not expose raw password values before explicit OS-mediated user selection.
 - Root/debug/emulator risk signals documented before release.
 - MASVS-aligned mobile threat model update.
 
@@ -105,6 +107,7 @@ Phase 4 - mobile UX:
 
 - Convert desktop-heavy modals to full-screen mobile flows or bottom-sheet style panels.
 - Tune touch targets, scroll containers, keyboard behavior, and safe areas.
+- Add Autofill setup guidance, locked-vault prompts, and domain-match warnings after the native Autofill bridge is connected.
 - Add Android smoke tests for lock/unlock, backup import/export, Secure Share, profile image, donation page, HIBP, and Password Health.
 
 Phase 5 - release:

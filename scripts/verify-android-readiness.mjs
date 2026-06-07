@@ -30,6 +30,7 @@ const androidIconPath = join(root, 'src-tauri', 'icons', 'android');
 const androidProjectPath = join(root, 'src-tauri', 'gen', 'android');
 const androidManifestPath = join(androidProjectPath, 'app', 'src', 'main', 'AndroidManifest.xml');
 const androidNetworkSecurityConfigPath = join(androidProjectPath, 'app', 'src', 'main', 'res', 'xml', 'network_security_config.xml');
+const androidAutofillConfigPath = join(androidProjectPath, 'app', 'src', 'main', 'res', 'xml', 'autofill_service.xml');
 const androidActivityPath = join(
   androidProjectPath,
   'app',
@@ -171,6 +172,9 @@ if (!existsSync(androidProjectPath)) {
   const networkSecurityConfig = existsSync(androidNetworkSecurityConfigPath)
     ? readFileSync(androidNetworkSecurityConfigPath, 'utf8')
     : '';
+  const autofillConfig = existsSync(androidAutofillConfigPath)
+    ? readFileSync(androidAutofillConfigPath, 'utf8')
+    : '';
   const activity = existsSync(androidActivityPath) ? readFileSync(androidActivityPath, 'utf8') : '';
   const androidRootBuildGradle = existsSync(androidRootBuildGradlePath)
     ? readFileSync(androidRootBuildGradlePath, 'utf8')
@@ -195,8 +199,17 @@ if (!existsSync(androidProjectPath)) {
   if (!manifest.includes('android:networkSecurityConfig="@xml/network_security_config"')) {
     failures.push('AndroidManifest.xml must apply @xml/network_security_config.');
   }
+  if (!manifest.includes('android.service.autofill.AutofillService')) {
+    failures.push('AndroidManifest.xml must register the Android AutofillService entry point.');
+  }
+  if (!manifest.includes('android.permission.BIND_AUTOFILL_SERVICE')) {
+    failures.push('Android AutofillService must be protected by android.permission.BIND_AUTOFILL_SERVICE.');
+  }
   if (!networkSecurityConfig.includes('cleartextTrafficPermitted="false"')) {
     failures.push('network_security_config.xml must disable cleartext traffic.');
+  }
+  if (!autofillConfig.includes('autofill-service')) {
+    failures.push('autofill_service.xml must define Android Autofill service metadata.');
   }
   if (!networkSecurityConfig.includes('api.pwnedpasswords.com')) {
     failures.push('network_security_config.xml must include the HIBP range API domain allowlist.');
