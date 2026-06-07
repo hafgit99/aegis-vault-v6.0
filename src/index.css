@@ -96,6 +96,35 @@
   .vault-scroll::-webkit-scrollbar-thumb:active {
     background: var(--color-tertiary);
   }
+
+  .vault-list-scroll {
+    max-height: calc(100vh - 360px);
+  }
+}
+
+@media (orientation: landscape) and (max-height: 540px) {
+  .mobile-landscape-hide {
+    display: none !important;
+  }
+
+  .vault-list-scroll {
+    max-height: calc(100vh - 210px);
+  }
+
+  .mobile-landscape-vault-item {
+    padding: 0.65rem !important;
+    gap: 0.65rem !important;
+  }
+
+  .mobile-landscape-vault-icon {
+    width: 2.25rem !important;
+    height: 2.25rem !important;
+  }
+
+  .text-display-lg {
+    font-size: 24px;
+    line-height: 1.15;
+  }
 }
 
 body {

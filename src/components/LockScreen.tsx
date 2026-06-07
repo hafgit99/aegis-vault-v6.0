@@ -15,12 +15,12 @@ import { clearStoredSecretKey, getStoredSecretKey, hasLocalSecretConfiguration, 
 import { persistMasterPasswordAudit } from '../lib/passwordStrength';
 import { validateMasterPasswordPolicy } from '../lib/passwordPolicy';
 import {
-  clearBiometricUnlockBundle,
-  getBiometricUnlockBundle,
-  getBiometricUnlockStatus,
-  saveBiometricUnlockBundle,
-  type BiometricUnlockStatus,
-} from '../lib/biometricUnlock';
+  clearAndroidBiometricUnlockBundle,
+  getAndroidBiometricUnlockBundle,
+  getAndroidSecurityBridgeStatus,
+  saveAndroidBiometricUnlockBundle,
+} from '../lib/androidSecurityBridge';
+import type { BiometricUnlockStatus } from '../lib/biometricUnlock';
 
 interface LockScreenProps {
   onUnlock: () => void;
@@ -127,9 +127,9 @@ export default function LockScreen({ onUnlock, onAddLog }: LockScreenProps) {
 
   const refreshBiometricStatus = async () => {
     try {
-      const status = await getBiometricUnlockStatus();
-      setBiometricStatus(status);
-      setBiometricUnlockEnabled(status.isAvailable);
+      const status = await getAndroidSecurityBridgeStatus();
+      setBiometricStatus(status.biometric);
+      setBiometricUnlockEnabled(status.biometric.isAvailable);
     } catch {
       setBiometricStatus(null);
       setBiometricUnlockEnabled(false);
@@ -249,7 +249,7 @@ export default function LockScreen({ onUnlock, onAddLog }: LockScreenProps) {
       localStorage.setItem('aegis_vault_configured', 'true');
       await persistSecretKey(generatedSecretKey, rememberDevice);
       if (rememberDevice && biometricUnlockEnabled && biometricStatus?.isAvailable) {
-        await saveBiometricUnlockBundle(setupPassword, generatedSecretKey);
+        await saveAndroidBiometricUnlockBundle(setupPassword, generatedSecretKey);
         await refreshBiometricStatus();
       }
       await persistMasterPasswordAudit(setupPassword);
@@ -297,7 +297,7 @@ export default function LockScreen({ onUnlock, onAddLog }: LockScreenProps) {
       localStorage.setItem('aegis_vault_configured', 'true');
       await persistSecretKey(cleanedInput, rememberDevice);
       if (rememberDevice && biometricUnlockEnabled && biometricStatus?.isAvailable) {
-        await saveBiometricUnlockBundle(loginPassword, cleanedInput);
+        await saveAndroidBiometricUnlockBundle(loginPassword, cleanedInput);
         await refreshBiometricStatus();
       }
       await persistMasterPasswordAudit(loginPassword);
@@ -347,7 +347,7 @@ export default function LockScreen({ onUnlock, onAddLog }: LockScreenProps) {
 
     setIsBiometricUnlocking(true);
     try {
-      const bundle = await getBiometricUnlockBundle(t('app.lockScreen.biometric.reason'));
+      const bundle = await getAndroidBiometricUnlockBundle(t('app.lockScreen.biometric.reason'));
       const cleanedSecretKey = bundle.secretKey.trim().toUpperCase();
 
       await vaultService.initDb(bundle.masterPassword, cleanedSecretKey, false);
@@ -858,7 +858,7 @@ export default function LockScreen({ onUnlock, onAddLog }: LockScreenProps) {
                           const currentLanguage = i18n.language;
                           localStorage.clear();
                           await clearStoredSecretKey();
-                          await clearBiometricUnlockBundle();
+                          await clearAndroidBiometricUnlockBundle();
                           if (currentLanguage === 'tr' || currentLanguage === 'en' || currentLanguage === 'zh-CN') {
                             localStorage.setItem('aegis_language', currentLanguage);
                           }

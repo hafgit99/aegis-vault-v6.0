@@ -347,8 +347,9 @@ describe('App integration shell', () => {
     await user.click(await screen.findByText('GitHub'));
     expect(await screen.findByRole('heading', { name: 'detail:GitHub' })).toBeInTheDocument();
     const detailWrapper = screen.getByRole('heading', { name: 'detail:GitHub' }).closest('aside')?.parentElement as HTMLElement;
-    expect(detailWrapper).toHaveClass('w-[800px]');
-    expect(detailWrapper.previousElementSibling).toHaveClass('max-w-[calc(100%-800px)]');
+    expect(detailWrapper).toHaveClass('md:w-[800px]');
+    expect(detailWrapper).toHaveClass('top-[env(safe-area-inset-top)]');
+    expect(detailWrapper.previousElementSibling).toHaveClass('md:max-w-[calc(100%-800px)]');
     expect(screen.getByRole('button', { name: /Yeni gÃ¼venli kayÄ±t ekle|Yeni g.venli kay.t ekle/i })).toHaveClass('right-[820px]');
   });
 

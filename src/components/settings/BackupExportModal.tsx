@@ -62,7 +62,7 @@ export default function BackupExportModal({
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             className="relative w-full max-w-lg bg-surface-container-high border border-white/10 rounded-2xl shadow-well overflow-hidden max-h-[90vh] flex flex-col"
           >
-            <div className="p-6 border-b border-white/5 flex items-center justify-between bg-surface-container-highest">
+            <div className="p-4 md:p-6 border-b border-white/5 flex items-center justify-between bg-surface-container-highest">
               <div className="flex items-center gap-3">
                 <div className={`p-2 rounded-lg ${exportMethod === 'plain' ? 'bg-error-container/20 text-error' : exportMethod === 'share' ? 'bg-primary/10 text-primary' : 'bg-tertiary/10 text-tertiary'}`}>
                   {exportMethod === 'plain' ? <AlertTriangle className="w-5 h-5" /> : exportMethod === 'share' ? <Upload className="w-5 h-5" /> : <Lock className="w-5 h-5" />}
@@ -87,7 +87,7 @@ export default function BackupExportModal({
               )}
             </div>
 
-            <div className="p-6 space-y-5 overflow-y-auto flex-1">
+            <div className="p-4 md:p-6 space-y-5 overflow-y-auto flex-1">
               {exportSuccessPreview ? (
                 <div className="space-y-4 text-center">
                   <div className="w-12 h-12 bg-tertiary/20 text-tertiary rounded-full flex items-center justify-center mx-auto mb-2">

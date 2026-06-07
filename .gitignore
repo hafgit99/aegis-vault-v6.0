@@ -7,6 +7,7 @@ test-results/
 reports/
 security-evidence/
 sbom/
+android-artifacts/
 .stryker-tmp/
 src-tauri/target/
 src-tauri/gen/*
@@ -16,3 +17,4 @@ src-tauri/gen/*
 *.log
 .env*
 !.env.example
+.secrets/

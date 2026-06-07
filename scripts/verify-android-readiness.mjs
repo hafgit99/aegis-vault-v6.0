@@ -23,9 +23,13 @@ const packageJson = readJson('package.json');
 const tauriConfig = readJson('src-tauri/tauri.conf.json');
 const cargoToml = readFileSync(join(root, 'src-tauri', 'Cargo.toml'), 'utf8');
 const roadmapPath = join(root, 'docs', 'ANDROID_ROADMAP.md');
+const androidSmokeChecklistPath = join(root, 'docs', 'ANDROID_SMOKE_CHECKLIST.md');
+const androidSigningPath = join(root, 'docs', 'ANDROID_SIGNING.md');
+const androidWorkflowPath = join(root, '.github', 'workflows', 'android-packaging.yml');
 const androidIconPath = join(root, 'src-tauri', 'icons', 'android');
 const androidProjectPath = join(root, 'src-tauri', 'gen', 'android');
 const androidManifestPath = join(androidProjectPath, 'app', 'src', 'main', 'AndroidManifest.xml');
+const androidNetworkSecurityConfigPath = join(androidProjectPath, 'app', 'src', 'main', 'res', 'xml', 'network_security_config.xml');
 const androidActivityPath = join(
   androidProjectPath,
   'app',
@@ -38,6 +42,9 @@ const androidActivityPath = join(
   'MainActivity.kt',
 );
 const androidRootBuildGradlePath = join(androidProjectPath, 'build.gradle.kts');
+const androidAppBuildGradlePath = join(androidProjectPath, 'app', 'build.gradle.kts');
+const tauriRustPath = join(root, 'src-tauri', 'src', 'lib.rs');
+const vaultStorageAdapterPath = join(root, 'src', 'lib', 'vaultStorageAdapter.ts');
 
 for (const scriptName of [
   'tauri',
@@ -104,13 +111,74 @@ if (!existsSync(roadmapPath)) {
   }
 }
 
+if (!existsSync(androidSmokeChecklistPath)) {
+  failures.push('docs/ANDROID_SMOKE_CHECKLIST.md must exist.');
+} else {
+  const smokeChecklist = readFileSync(androidSmokeChecklistPath, 'utf8');
+  for (const required of [
+    'Android app-private storage',
+    'Secure Share',
+    'HIBP',
+    'FLAG_SECURE',
+    'unsigned community APK',
+  ]) {
+    if (!smokeChecklist.includes(required)) {
+      failures.push(`docs/ANDROID_SMOKE_CHECKLIST.md must document "${required}".`);
+    }
+  }
+}
+
+if (!existsSync(androidWorkflowPath)) {
+  failures.push('.github/workflows/android-packaging.yml must exist.');
+} else {
+  const androidWorkflow = readFileSync(androidWorkflowPath, 'utf8');
+  for (const required of [
+    'npm run android:doctor',
+    'npm run android:build:apk:arm64',
+    'npm run android:checksums',
+    'npm run android:stage',
+    'aegisvault-android',
+  ]) {
+    if (!androidWorkflow.includes(required)) {
+      failures.push(`.github/workflows/android-packaging.yml must include "${required}".`);
+    }
+  }
+}
+
+if (!existsSync(androidSigningPath)) {
+  failures.push('docs/ANDROID_SIGNING.md must exist.');
+} else {
+  const androidSigning = readFileSync(androidSigningPath, 'utf8');
+  for (const required of [
+    'ANDROID_RELEASE_KEYSTORE_BASE64',
+    'RELEASE_STORE_PASSWORD',
+    'RELEASE_KEY_ALIAS',
+    'RELEASE_KEY_PASSWORD',
+    'unsigned community APK',
+  ]) {
+    if (!androidSigning.includes(required)) {
+      failures.push(`docs/ANDROID_SIGNING.md must document "${required}".`);
+    }
+  }
+}
+
 if (!existsSync(androidProjectPath)) {
   warnings.push('Android project scaffold is not present yet. Run "npm run android:init" after installing Android Studio, SDK, NDK, and Rust Android targets.');
 } else {
   const manifest = existsSync(androidManifestPath) ? readFileSync(androidManifestPath, 'utf8') : '';
+  const networkSecurityConfig = existsSync(androidNetworkSecurityConfigPath)
+    ? readFileSync(androidNetworkSecurityConfigPath, 'utf8')
+    : '';
   const activity = existsSync(androidActivityPath) ? readFileSync(androidActivityPath, 'utf8') : '';
   const androidRootBuildGradle = existsSync(androidRootBuildGradlePath)
     ? readFileSync(androidRootBuildGradlePath, 'utf8')
+    : '';
+  const androidAppBuildGradle = existsSync(androidAppBuildGradlePath)
+    ? readFileSync(androidAppBuildGradlePath, 'utf8')
+    : '';
+  const tauriRust = existsSync(tauriRustPath) ? readFileSync(tauriRustPath, 'utf8') : '';
+  const vaultStorageAdapter = existsSync(vaultStorageAdapterPath)
+    ? readFileSync(vaultStorageAdapterPath, 'utf8')
     : '';
 
   if (!manifest.includes('android:allowBackup="false"')) {
@@ -122,11 +190,48 @@ if (!existsSync(androidProjectPath)) {
   if (!manifest.includes('tools:replace="android:fullBackupContent"')) {
     failures.push('AndroidManifest.xml must keep android:fullBackupContent override active for dependency manifest merges.');
   }
+  if (!manifest.includes('android:networkSecurityConfig="@xml/network_security_config"')) {
+    failures.push('AndroidManifest.xml must apply @xml/network_security_config.');
+  }
+  if (!networkSecurityConfig.includes('cleartextTrafficPermitted="false"')) {
+    failures.push('network_security_config.xml must disable cleartext traffic.');
+  }
+  if (!networkSecurityConfig.includes('api.pwnedpasswords.com')) {
+    failures.push('network_security_config.xml must include the HIBP range API domain allowlist.');
+  }
   if (!activity.includes('WindowManager.LayoutParams.FLAG_SECURE')) {
     failures.push('MainActivity.kt must apply FLAG_SECURE to block sensitive screenshots and recent-app thumbnails.');
   }
+  if (!activity.includes('WebView.setWebContentsDebuggingEnabled(false)')) {
+    failures.push('MainActivity.kt must disable Android WebView debugging for release hardening.');
+  }
   if (!androidRootBuildGradle.includes('org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.0')) {
     failures.push('Android Gradle project must use Kotlin Gradle plugin 2.1.0 for current Tauri mobile plugin compatibility.');
+  }
+  for (const required of [
+    'releaseKeystoreProperties',
+    'RELEASE_STORE_FILE',
+    'RELEASE_STORE_PASSWORD',
+    'RELEASE_KEY_ALIAS',
+    'RELEASE_KEY_PASSWORD',
+    'signingConfigs',
+  ]) {
+    if (!androidAppBuildGradle.includes(required)) {
+      failures.push(`Android app build.gradle.kts must include release signing support for "${required}".`);
+    }
+  }
+  for (const commandName of [
+    'read_app_private_file',
+    'write_app_private_file',
+    'delete_app_private_file',
+    'clear_app_private_sqlite_files',
+  ]) {
+    if (!tauriRust.includes(commandName)) {
+      failures.push(`src-tauri/src/lib.rs must expose the Android storage command "${commandName}".`);
+    }
+    if (!vaultStorageAdapter.includes(commandName)) {
+      failures.push(`src/lib/vaultStorageAdapter.ts must invoke the Android storage command "${commandName}".`);
+    }
   }
 }
 

@@ -34,7 +34,7 @@ export default function BackupSettingsPanel({
   const { t } = useTranslation();
 
   return (
-    <div className="glass-panel p-6 rounded-[1.25rem] space-y-6">
+    <div className="glass-panel p-4 md:p-6 rounded-[1.25rem] space-y-5 md:space-y-6">
       <h3 className="text-item-title text-on-surface border-b border-white/5 pb-3">{t('app.settingsPage.encryptedBackup')}</h3>
       <div className="rounded-xl border border-tertiary/15 bg-tertiary/5 p-4 flex gap-3">
         <ShieldCheck className="w-5 h-5 text-tertiary shrink-0 mt-0.5" />
@@ -45,10 +45,10 @@ export default function BackupSettingsPanel({
       </div>
 
       <div className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-3 gap-2 md:gap-3">
           <button
             onClick={() => onSetExportMethod('encrypted')}
-            className={`p-4 rounded-xl border flex flex-col items-start gap-1 transition-all text-left ${
+            className={`p-3 md:p-4 rounded-xl border flex flex-col items-start gap-1 transition-all text-left ${
               exportMethod === 'encrypted'
                 ? 'bg-tertiary/10 border-tertiary/40 text-on-surface'
                 : 'border-white/5 hover:bg-white/5 text-on-surface-variant'
@@ -61,7 +61,7 @@ export default function BackupSettingsPanel({
 
           <button
             onClick={() => onSetExportMethod('share')}
-            className={`p-4 rounded-xl border flex flex-col items-start gap-1 transition-all text-left ${
+            className={`p-3 md:p-4 rounded-xl border flex flex-col items-start gap-1 transition-all text-left ${
               exportMethod === 'share'
                 ? 'bg-primary/10 border-primary/40 text-on-surface'
                 : 'border-white/5 hover:bg-white/5 text-on-surface-variant'
@@ -74,7 +74,7 @@ export default function BackupSettingsPanel({
 
           <button
             onClick={() => onSetExportMethod('plain')}
-            className={`p-4 rounded-xl border flex flex-col items-start gap-1 transition-all text-left ${
+            className={`p-3 md:p-4 rounded-xl border flex flex-col items-start gap-1 transition-all text-left ${
               exportMethod === 'plain'
                 ? 'bg-error-container/20 border-error/40 text-on-surface'
                 : 'border-white/5 hover:bg-white/5 text-on-surface-variant'

@@ -103,7 +103,7 @@ export default function ImportSettingsPanel({
     : [];
 
   return (
-    <div className="glass-panel p-6 rounded-[1.25rem] space-y-6 border border-tertiary/15">
+    <div className="glass-panel p-4 md:p-6 rounded-[1.25rem] space-y-5 md:space-y-6 border border-tertiary/15">
       <div className="flex items-center gap-3 border-b border-white/5 pb-3">
         <Sparkles className="text-tertiary w-5 h-5" />
         <h3 className="text-item-title text-on-surface">{t('app.settingsPage.importWizard')}</h3>
@@ -152,7 +152,7 @@ export default function ImportSettingsPanel({
           onDragOver={onDragOver}
           onDrop={onDrop}
           onClick={() => fileInputRef.current?.click()}
-          className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all hover:bg-white/5 ${
+          className={`border-2 border-dashed rounded-2xl p-4 md:p-6 text-center cursor-pointer transition-all hover:bg-white/5 ${
             importFile ? 'border-tertiary/40 bg-tertiary/5' : 'border-white/10 hover:border-white/20'
           }`}
         >
@@ -276,7 +276,7 @@ export default function ImportSettingsPanel({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px]">
+            <div className="grid grid-cols-2 md:grid-cols-2 gap-2 text-[11px]">
               <div className={`rounded-xl border p-3 ${
                 importResult.secureShare
                   ? 'border-tertiary/20 bg-tertiary/5 text-on-surface'
@@ -375,7 +375,7 @@ export default function ImportSettingsPanel({
                   ))}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px]">
+                <div className="grid grid-cols-2 md:grid-cols-2 gap-2 text-[11px]">
                   <div className={`rounded-xl border p-3 ${
                     importReview.encrypted
                       ? 'border-tertiary/20 bg-tertiary/5 text-on-surface'
@@ -467,7 +467,7 @@ export default function ImportSettingsPanel({
             <div className="space-y-3 bg-[#121625]/30 p-4 rounded-xl border border-white/5">
               <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider block">{t('app.database.import.strategy')}</label>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-2 gap-3">
                 <div
                   onClick={() => onSetImportConflictMode('merge')}
                   className={`p-3 rounded-lg border cursor-pointer flex gap-3 transition-all ${

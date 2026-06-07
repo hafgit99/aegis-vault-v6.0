@@ -88,7 +88,7 @@ export default function VaultItem({ entry, onDelete, onClick, onToggleFavorite, 
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: delay, duration: 0.3 }}
       onClick={onClick}
-      className={`glass-panel p-4 rounded-xl flex items-center justify-between gap-4 transition-all duration-300 group cursor-pointer ${themeVars.hoverBorder} ${
+      className={`glass-panel mobile-landscape-vault-item p-4 rounded-xl flex items-center justify-between gap-4 transition-all duration-300 group cursor-pointer ${themeVars.hoverBorder} ${
         isActive ? `border-l-2 !border-l-${entry.themeColor} bg-white/[0.04] shadow-lg shadow-${entry.themeColor}/5` : ''
       }`}
       style={isActive ? { borderLeftColor: `var(--color-${entry.themeColor})`, borderLeftWidth: '3px', backgroundColor: 'rgba(255,255,255,0.04)' } : {}}
@@ -96,7 +96,7 @@ export default function VaultItem({ entry, onDelete, onClick, onToggleFavorite, 
       <div className="flex items-center gap-4 min-w-0 flex-1">
         <div className={`w-1 h-10 ${themeVars.bg} rounded-full`} />
         
-        <div className="w-11 h-11 flex-shrink-0 rounded-lg bg-surface-container border border-white/5 flex items-center justify-center">
+        <div className="mobile-landscape-vault-icon w-11 h-11 flex-shrink-0 rounded-lg bg-surface-container border border-white/5 flex items-center justify-center">
           {getIcon()}
         </div>
         

@@ -33,7 +33,7 @@ export default function TrashBin({ entries, onRestore, onPermanentDelete, onClea
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 md:space-y-6">
       {/* Search & Header */}
       <motion.div 
         initial={{ opacity: 0, y: 15 }}
@@ -158,7 +158,7 @@ export default function TrashBin({ entries, onRestore, onPermanentDelete, onClea
             })}
           </AnimatePresence>
         ) : (
-          <div className="glass-panel p-12 rounded-[1.25rem] text-center border-dashed border-white/10 flex flex-col items-center justify-center space-y-3">
+              <div className="glass-panel p-8 md:p-12 rounded-[1.25rem] text-center border-dashed border-white/10 flex flex-col items-center justify-center space-y-3">
             <Trash2 className="w-8 h-8 text-on-surface-variant/30 animate-pulse" />
             <div>
               <h4 className="font-semibold text-on-surface text-base">{t('app.trash.emptyTitle')}</h4>

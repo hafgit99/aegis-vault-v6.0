@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { getVaultStorageBackend, type VaultStorageBackend } from '../../lib/vaultStorageAdapter';
 import { vaultService } from '../../lib/vaultService';
 
 interface DiagnosticResult {
   score: number;
   dbHealth: string;
+  storageBackend: VaultStorageBackend;
   cryptoEngine: string;
   airgapStatus: string;
   weakCount: number;
@@ -47,8 +49,9 @@ export default function SettingsDiagnosticsPanel({
       }, (index + 1) * 400);
     });
 
-    window.setTimeout(() => {
+    window.setTimeout(async () => {
       const dbHealth = vaultService.sqliteDb ? t('app.settingsPage.diagnostics.dbHealthy') : t('app.settingsPage.diagnostics.dbLocked');
+      const storageBackend = await getVaultStorageBackend();
       const storedCipher = localStorage.getItem('aegis_cipher_suite');
       const cryptoEngine = storedCipher === 'AES-256-GCM' ? storedCipher : 'AES-256-GCM';
       const airgapActive = localStorage.getItem('aegis_airgap') !== 'false';
@@ -65,6 +68,7 @@ export default function SettingsDiagnosticsPanel({
       setDiagnosticResult({
         score,
         dbHealth,
+        storageBackend,
         cryptoEngine,
         airgapStatus,
         weakCount,
@@ -77,7 +81,7 @@ export default function SettingsDiagnosticsPanel({
   };
 
   return (
-    <div className="glass-panel p-6 rounded-[1.25rem] space-y-4">
+    <div className="glass-panel p-4 md:p-6 rounded-[1.25rem] space-y-4">
       <h3 className="text-item-title text-on-surface font-outfit select-none">{t('app.settingsPage.diagnosticsUi.title')}</h3>
 
       <div className="space-y-3">
@@ -119,6 +123,17 @@ export default function SettingsDiagnosticsPanel({
             <div className="flex justify-between items-center border-b border-white/5 pb-1.5">
               <span className="text-on-surface-variant/75">{t('app.settingsPage.diagnosticsUi.sqlite')}</span>
               <span className="font-semibold text-on-surface">{diagnosticResult.dbHealth}</span>
+            </div>
+
+            <div className="flex justify-between items-center border-b border-white/5 pb-1.5 gap-3">
+              <span className="text-on-surface-variant/75">{t('app.settingsPage.diagnosticsUi.storageBackend')}</span>
+              <span className="font-semibold text-tertiary text-right">
+                {t(
+                  diagnosticResult.storageBackend === 'android-app-private'
+                    ? 'app.settingsPage.diagnosticsUi.storageBackendAndroid'
+                    : 'app.settingsPage.diagnosticsUi.storageBackendOpfs',
+                )}
+              </span>
             </div>
 
             <div className="flex justify-between items-center border-b border-white/5 pb-1.5">

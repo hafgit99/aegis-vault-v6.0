@@ -12,6 +12,26 @@ val tauriProperties = Properties().apply {
         propFile.inputStream().use { load(it) }
     }
 }
+val releaseKeystoreProperties = Properties().apply {
+    val propFile = file("../../../../.secrets/release-keystore.properties")
+    if (propFile.exists()) {
+        propFile.inputStream().use { load(it) }
+    }
+}
+
+fun releaseSigningValue(name: String): String? =
+    System.getenv(name)?.takeIf { it.isNotBlank() }
+        ?: releaseKeystoreProperties.getProperty(name)?.takeIf { it.isNotBlank() }
+
+val releaseStoreFileValue = releaseSigningValue("RELEASE_STORE_FILE")
+val releaseStoreFile = releaseStoreFileValue?.let { value ->
+    val explicitFile = file(value)
+    if (explicitFile.isAbsolute || explicitFile.exists()) explicitFile else file("../../../../.secrets/$value")
+}
+val hasReleaseSigningConfig = releaseStoreFile?.exists() == true &&
+    releaseSigningValue("RELEASE_STORE_PASSWORD") != null &&
+    releaseSigningValue("RELEASE_KEY_ALIAS") != null &&
+    releaseSigningValue("RELEASE_KEY_PASSWORD") != null
 
 android {
     compileSdk = 36
@@ -23,6 +43,16 @@ android {
         targetSdk = 36
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
         versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")
+    }
+    signingConfigs {
+        if (hasReleaseSigningConfig) {
+            create("release") {
+                storeFile = releaseStoreFile
+                storePassword = releaseSigningValue("RELEASE_STORE_PASSWORD")
+                keyAlias = releaseSigningValue("RELEASE_KEY_ALIAS")
+                keyPassword = releaseSigningValue("RELEASE_KEY_PASSWORD")
+            }
+        }
     }
     buildTypes {
         getByName("debug") {
@@ -37,6 +67,9 @@ android {
             }
         }
         getByName("release") {
+            if (hasReleaseSigningConfig) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = true
             proguardFiles(
                 *fileTree(".") { include("**/*.pro") }

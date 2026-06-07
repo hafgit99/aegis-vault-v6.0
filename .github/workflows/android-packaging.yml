@@ -1,0 +1,128 @@
+name: Android Packaging
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-packaging-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android-apk:
+    name: Build Android APK artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      CI: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        shell: bash
+        run: |
+          sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-36" \
+            "build-tools;35.0.0" \
+            "ndk;27.2.12479018"
+          yes | sdkmanager --licenses
+          echo "NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+
+      - name: Setup Rust Android target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            src-tauri/target/
+          key: android-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            android-cargo-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Android readiness gate
+        run: npm run android:doctor
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Android-focused unit tests
+        run: npm run test:unit -- test/unit/android-security-bridge.test.ts test/unit/vault-storage-adapter.test.ts test/unit/settings-database.test.tsx test/unit/component-flows.test.tsx
+
+      - name: Generate SBOM
+        run: npm run security:sbom
+
+      - name: Prepare Android release signing
+        shell: bash
+        env:
+          ANDROID_RELEASE_KEYSTORE_BASE64: ${{ secrets.ANDROID_RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$ANDROID_RELEASE_KEYSTORE_BASE64" ]; then
+            echo "Android release signing secrets are not configured. Building unsigned community APK."
+            exit 0
+          fi
+          keystore_path="$RUNNER_TEMP/aegis-release.jks"
+          echo "$ANDROID_RELEASE_KEYSTORE_BASE64" | base64 --decode > "$keystore_path"
+          echo "RELEASE_STORE_FILE=$keystore_path" >> "$GITHUB_ENV"
+          echo "Android release keystore restored for signed APK build."
+
+      - name: Build ARM64 APK
+        env:
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: npm run android:build:apk:arm64
+
+      - name: Generate Android artifact checksums
+        run: npm run android:checksums
+
+      - name: Stage Android artifacts
+        run: npm run android:stage
+
+      - name: Upload Android SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: aegisvault-android-sbom
+          path: sbom/
+          retention-days: 30
+
+      - name: Upload Android artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: aegisvault-android
+          path: android-artifacts/aegisvault-android/
+          retention-days: 30

@@ -24,6 +24,8 @@
     "android:build:apk:arm64": "tauri android build --apk --target aarch64",
     "android:build:apk": "tauri android build --apk --split-per-abi",
     "android:build:aab": "tauri android build --aab",
+    "android:checksums": "node scripts/generate-artifact-checksums.mjs src-tauri/gen/android/app/build/outputs/apk",
+    "android:stage": "node scripts/stage-android-artifacts.mjs src-tauri/gen/android/app/build/outputs/apk android-artifacts/aegisvault-android",
     "brand:icon:source": "node scripts/render-icon-source.mjs",
     "release:verify-version": "node scripts/verify-release-version.mjs",
     "build": "vite build",

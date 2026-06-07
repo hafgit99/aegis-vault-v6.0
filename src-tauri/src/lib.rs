@@ -1,3 +1,8 @@
+use std::fs;
+use std::path::PathBuf;
+
+use tauri::Manager;
+
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 const KEYCHAIN_SERVICE: &str = "AegisVault";
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
@@ -139,6 +144,87 @@ fn write_sensitive_clipboard(value: String) -> Result<(), String> {
     write_sensitive_clipboard_platform(&value)
 }
 
+fn validate_app_private_filename(filename: &str) -> Result<&str, String> {
+    let trimmed = filename.trim();
+    if trimmed.is_empty()
+        || trimmed.contains('/')
+        || trimmed.contains('\\')
+        || trimmed.contains("..")
+        || !trimmed.ends_with(".sqlite")
+    {
+        return Err("Invalid app-private vault filename.".to_string());
+    }
+    Ok(trimmed)
+}
+
+fn app_private_file_path(app: &tauri::AppHandle, filename: &str) -> Result<PathBuf, String> {
+    let safe_filename = validate_app_private_filename(filename)?;
+    let dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| format!("App-private storage directory could not be resolved: {error}"))?;
+    fs::create_dir_all(&dir)
+        .map_err(|error| format!("App-private storage directory could not be created: {error}"))?;
+    Ok(dir.join(safe_filename))
+}
+
+#[tauri::command]
+fn read_app_private_file(app: tauri::AppHandle, filename: String) -> Result<Option<Vec<u8>>, String> {
+    let path = app_private_file_path(&app, &filename)?;
+    if !path.exists() {
+        return Ok(None);
+    }
+    fs::read(path).map(Some).map_err(|error| {
+        format!("App-private vault file could not be read: {error}")
+    })
+}
+
+#[tauri::command]
+fn write_app_private_file(
+    app: tauri::AppHandle,
+    filename: String,
+    bytes: Vec<u8>,
+) -> Result<(), String> {
+    let path = app_private_file_path(&app, &filename)?;
+    fs::write(path, bytes).map_err(|error| {
+        format!("App-private vault file could not be written: {error}")
+    })
+}
+
+#[tauri::command]
+fn delete_app_private_file(app: tauri::AppHandle, filename: String) -> Result<(), String> {
+    let path = app_private_file_path(&app, &filename)?;
+    match fs::remove_file(path) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(format!("App-private vault file could not be deleted: {error}")),
+    }
+}
+
+#[tauri::command]
+fn clear_app_private_sqlite_files(app: tauri::AppHandle) -> Result<(), String> {
+    let dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| format!("App-private storage directory could not be resolved: {error}"))?;
+    if !dir.exists() {
+        return Ok(());
+    }
+
+    for entry in fs::read_dir(dir)
+        .map_err(|error| format!("App-private storage directory could not be listed: {error}"))?
+    {
+        let entry = entry.map_err(|error| format!("App-private storage entry could not be read: {error}"))?;
+        let path = entry.path();
+        if path.extension().and_then(|value| value.to_str()) == Some("sqlite") {
+            fs::remove_file(path)
+                .map_err(|error| format!("App-private SQLite file could not be deleted: {error}"))?;
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -148,6 +234,10 @@ pub fn run() {
             get_secret_key,
             delete_secret_key,
             write_sensitive_clipboard,
+            read_app_private_file,
+            write_app_private_file,
+            delete_app_private_file,
+            clear_app_private_sqlite_files,
         ])
         .run(tauri::generate_context!())
         .expect("failed to run AegisVault shell");

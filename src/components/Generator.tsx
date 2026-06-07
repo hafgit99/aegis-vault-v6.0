@@ -191,7 +191,7 @@ export default function Generator() {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="space-y-8"
+      className="space-y-5 md:space-y-8"
     >
       <div>
         <h2 className="text-display-lg text-on-surface mb-2 font-outfit tracking-tight">{t('app.generator.title')}</h2>
@@ -200,13 +200,13 @@ export default function Generator() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 md:gap-8">
         
         {/* Main Generator Console */}
-        <div className="lg:col-span-8 space-y-6">
+        <div className="xl:col-span-8 space-y-5 md:space-y-6">
           
           {/* Result Panel */}
-          <div className="glass-panel p-6 rounded-[1.25rem] flex flex-col md:flex-row items-center gap-4 justify-between border-white/10">
+          <div className="glass-panel p-4 md:p-6 rounded-[1.25rem] flex flex-col sm:flex-row items-center gap-4 justify-between border-white/10">
             <div className="flex-1 min-w-0 w-full">
               <span className="text-xs text-on-surface-variant/50 font-semibold block mb-1 uppercase tracking-widest">{t('app.generator.generatedPassword')}</span>
               <div className="text-xl md:text-2xl font-geist-mono text-on-surface select-all truncate break-all selection:bg-primary/30">
@@ -214,7 +214,7 @@ export default function Generator() {
               </div>
             </div>
 
-            <div className="flex gap-2 w-full md:w-auto justify-end">
+            <div className="flex gap-2 w-full sm:w-auto justify-end">
               <button 
                 onClick={generatePassword}
                 aria-label={t('app.generator.regenerate')}
@@ -226,7 +226,7 @@ export default function Generator() {
               
               <button 
                 onClick={copyToClipboard}
-                className="flex-1 md:flex-none py-3 px-5 bg-primary hover:bg-primary/90 text-on-primary rounded-xl font-semibold flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-primary/10"
+                className="flex-1 sm:flex-none py-3 px-5 bg-primary hover:bg-primary/90 text-on-primary rounded-xl font-semibold flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-primary/10"
               >
                 {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
                 {copied ? t('app.generator.copied') : t('app.generator.copy')}
@@ -235,7 +235,7 @@ export default function Generator() {
           </div>
 
             {/* Configuration Form */}
-            <div className="glass-panel p-8 rounded-[1.25rem] space-y-6">
+            <div className="glass-panel p-4 md:p-8 rounded-[1.25rem] space-y-5 md:space-y-6">
 
             <div className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-surface-container/25 p-1">
               <button
@@ -276,9 +276,9 @@ export default function Generator() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                <div className="grid grid-cols-2 md:grid-cols-2 gap-3 md:gap-4 pt-2">
                   
-                  <label className="flex items-center gap-3 p-4 bg-surface-container/30 hover:bg-surface-container/50 rounded-xl border border-white/5 cursor-pointer select-none transition-colors group">
+                  <label className="flex items-center gap-2 md:gap-3 p-3 md:p-4 bg-surface-container/30 hover:bg-surface-container/50 rounded-xl border border-white/5 cursor-pointer select-none transition-colors group">
                     <input 
                       type="checkbox" 
                       checked={includeUppercase} 
@@ -291,7 +291,7 @@ export default function Generator() {
                     </div>
                   </label>
 
-                  <label className="flex items-center gap-3 p-4 bg-surface-container/30 hover:bg-surface-container/50 rounded-xl border border-white/5 cursor-pointer select-none transition-colors group">
+                  <label className="flex items-center gap-2 md:gap-3 p-3 md:p-4 bg-surface-container/30 hover:bg-surface-container/50 rounded-xl border border-white/5 cursor-pointer select-none transition-colors group">
                     <input 
                       type="checkbox" 
                       checked={includeLowercase} 
@@ -304,7 +304,7 @@ export default function Generator() {
                     </div>
                   </label>
 
-                  <label className="flex items-center gap-3 p-4 bg-surface-container/30 hover:bg-surface-container/50 rounded-xl border border-white/5 cursor-pointer select-none transition-colors group">
+                  <label className="flex items-center gap-2 md:gap-3 p-3 md:p-4 bg-surface-container/30 hover:bg-surface-container/50 rounded-xl border border-white/5 cursor-pointer select-none transition-colors group">
                     <input 
                       type="checkbox" 
                       checked={includeNumbers} 
@@ -317,7 +317,7 @@ export default function Generator() {
                     </div>
                   </label>
 
-                  <label className="flex items-center gap-3 p-4 bg-surface-container/30 hover:bg-surface-container/50 rounded-xl border border-white/5 cursor-pointer select-none transition-colors group">
+                  <label className="flex items-center gap-2 md:gap-3 p-3 md:p-4 bg-surface-container/30 hover:bg-surface-container/50 rounded-xl border border-white/5 cursor-pointer select-none transition-colors group">
                     <input 
                       type="checkbox" 
                       checked={includeSymbols} 
@@ -334,7 +334,7 @@ export default function Generator() {
               </>
             ) : (
               <div className="space-y-5">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-2 gap-3 md:gap-4">
                   <label className="space-y-2">
                     <span className="text-item-title text-on-surface select-none">{t('app.generator.dicewareLanguage')}</span>
                     <select
@@ -411,9 +411,9 @@ export default function Generator() {
         </div>
 
         {/* Dynamic Strength Info Rail */}
-        <div className="lg:col-span-4 space-y-6">
+        <div className="xl:col-span-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-5 md:gap-6">
           
-          <div className="glass-panel p-6 rounded-[1.25rem] space-y-4">
+          <div className="glass-panel p-4 md:p-6 rounded-[1.25rem] space-y-4">
             <h3 className="text-item-title text-on-surface font-outfit select-none">{t('app.generator.analysis')}</h3>
             
             <div className="space-y-1">
@@ -440,7 +440,7 @@ export default function Generator() {
             </p>
           </div>
 
-          <div className="security-gradient p-6 rounded-[1.25rem] border border-primary/10 flex gap-3">
+          <div className="security-gradient p-4 md:p-6 rounded-[1.25rem] border border-primary/10 flex gap-3">
             <ShieldAlert className="text-tertiary w-5 h-5 flex-shrink-0 mt-0.5" />
             <div>
               <h4 className="text-xs font-bold text-on-surface uppercase tracking-widest mb-1">{t('app.generator.warningTitle')}</h4>

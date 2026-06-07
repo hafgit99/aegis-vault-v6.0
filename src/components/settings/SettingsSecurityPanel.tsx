@@ -1,6 +1,11 @@
-import { Languages, Radio, ToggleLeft, ToggleRight } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Languages, Radio, ShieldCheck, Smartphone, ToggleLeft, ToggleRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { supportedLanguages, SupportedLanguage } from '../../i18n';
+import {
+  getAndroidSecurityBridgeStatus,
+  type AndroidSecurityBridgeStatus,
+} from '../../lib/androidSecurityBridge';
 
 interface SettingsSecurityPanelProps {
   activeLanguage: string;
@@ -24,10 +29,48 @@ export default function SettingsSecurityPanel({
   onSetEncryptionType,
 }: SettingsSecurityPanelProps) {
   const { t } = useTranslation();
+  const [androidSecurityStatus, setAndroidSecurityStatus] = useState<AndroidSecurityBridgeStatus | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    getAndroidSecurityBridgeStatus()
+      .then((status) => {
+        if (mounted) setAndroidSecurityStatus(status);
+      })
+      .catch(() => {
+        if (mounted) setAndroidSecurityStatus(null);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const androidSecurityControls = androidSecurityStatus
+    ? [
+        {
+          label: t('app.settingsPage.androidSecurity.screenCapture'),
+          active: androidSecurityStatus.screenCaptureProtected,
+        },
+        {
+          label: t('app.settingsPage.androidSecurity.backup'),
+          active: androidSecurityStatus.appBackupDisabled,
+        },
+        {
+          label: t('app.settingsPage.androidSecurity.network'),
+          active: androidSecurityStatus.networkAllowlistConfigured,
+        },
+        {
+          label: t('app.settingsPage.androidSecurity.biometric'),
+          active: androidSecurityStatus.keystoreBackedBiometricStore,
+        },
+      ]
+    : [];
 
   return (
     <>
-      <div className="glass-panel p-6 rounded-[1.25rem] space-y-4">
+      <div className="glass-panel p-4 md:p-6 rounded-[1.25rem] space-y-4">
         <div className="flex items-start gap-3 border-b border-white/5 pb-4">
           <div className="p-2.5 bg-primary/10 rounded-xl text-primary border border-primary/15">
             <Languages className="w-5 h-5" />
@@ -40,7 +83,7 @@ export default function SettingsSecurityPanel({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 sm:grid-cols-3 gap-2">
           {supportedLanguages.map((language) => (
             <button
               key={language.code}
@@ -58,7 +101,7 @@ export default function SettingsSecurityPanel({
         </div>
       </div>
 
-      <div className="glass-panel p-6 rounded-[1.25rem] space-y-6">
+      <div className="glass-panel p-4 md:p-6 rounded-[1.25rem] space-y-5 md:space-y-6">
         <h3 className="text-item-title text-on-surface border-b border-white/5 pb-3">{t('app.settings.securityControls')}</h3>
 
         <div className="space-y-3">
@@ -97,6 +140,55 @@ export default function SettingsSecurityPanel({
             {offlineMode ? <ToggleRight className="w-12 h-12 text-tertiary" /> : <ToggleLeft className="w-12 h-12 text-on-surface-variant/40" />}
           </div>
         </div>
+
+        {androidSecurityStatus && (
+          <div className="rounded-2xl border border-white/5 bg-[#0e111d]/45 p-4 space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-tertiary/10 border border-tertiary/20 rounded-xl text-tertiary">
+                <Smartphone className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <h4 className="text-sm font-bold text-on-surface">{t('app.settingsPage.androidSecurity.title')}</h4>
+                <p className="text-xs text-on-surface-variant/70 leading-relaxed mt-0.5">
+                  {t(
+                    androidSecurityStatus.platform === 'android'
+                      ? 'app.settingsPage.androidSecurity.androidDescription'
+                      : 'app.settingsPage.androidSecurity.previewDescription',
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              {androidSecurityControls.map((control) => (
+                <div
+                  key={control.label}
+                  className={`rounded-xl border px-3 py-2.5 ${
+                    control.active
+                      ? 'border-tertiary/20 bg-tertiary/5 text-tertiary'
+                      : 'border-secondary/20 bg-secondary/5 text-secondary'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider leading-tight">{control.label}</span>
+                  </div>
+                  <span className="mt-1 block text-[10px] font-semibold text-on-surface-variant/70">
+                    {control.active
+                      ? t('app.settingsPage.androidSecurity.active')
+                      : t('app.settingsPage.androidSecurity.limited')}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {androidSecurityStatus.warnings.length > 0 && (
+              <div className="rounded-xl border border-secondary/20 bg-secondary/5 p-3 text-[11px] leading-relaxed text-secondary">
+                {androidSecurityStatus.warnings.join(' ')}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="space-y-3">
           <label className="text-sm font-semibold text-on-surface block">{t('app.settingsPage.cipherSuite')}</label>

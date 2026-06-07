@@ -120,7 +120,7 @@ export default function Donate() {
   };
 
   return (
-    <div className="space-y-8 pb-10">
+    <div className="space-y-5 md:space-y-8 pb-10">
       <motion.section
         initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
@@ -144,8 +144,8 @@ export default function Donate() {
         </div>
       </motion.section>
 
-      <section className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_420px] gap-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <section className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_420px] gap-5 md:gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-2 gap-3 md:gap-4">
           {DONATION_ASSETS.map((asset, index) => (
             <motion.button
               key={asset.id}
@@ -154,7 +154,7 @@ export default function Donate() {
               transition={{ delay: Math.min(index * 0.03, 0.18) }}
               onClick={() => setSelectedAssetId(asset.id)}
               aria-label={`${asset.symbol} ${asset.name} ${asset.network}`}
-              className={`glass-panel p-4 rounded-xl text-left transition-all cursor-pointer border ${
+              className={`glass-panel p-3 md:p-4 rounded-xl text-left transition-all cursor-pointer border ${
                 selectedAsset.id === asset.id
                   ? 'border-primary/45 bg-primary/5 shadow-lg shadow-primary/5'
                   : 'border-white/5 hover:border-primary/20 hover:bg-white/[0.03]'
@@ -162,7 +162,7 @@ export default function Donate() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-11 h-11 rounded-xl bg-surface-container-high border border-white/10 flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 md:w-11 md:h-11 rounded-xl bg-surface-container-high border border-white/10 flex items-center justify-center shrink-0">
                     <span className={`text-sm font-geist-mono font-black ${asset.accent}`}>{asset.symbol}</span>
                   </div>
                   <div className="min-w-0">
@@ -182,7 +182,7 @@ export default function Donate() {
         <motion.aside
           initial={{ opacity: 0, x: 18 }}
           animate={{ opacity: 1, x: 0 }}
-          className="glass-panel rounded-[1.25rem] p-6 border border-primary/10 h-fit sticky top-24"
+          className="glass-panel rounded-[1.25rem] p-4 md:p-6 border border-primary/10 h-fit xl:sticky xl:top-24"
         >
           <div className="flex items-start justify-between gap-4 mb-6">
             <div>
@@ -224,7 +224,7 @@ export default function Donate() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-2 gap-3">
               <button
                 onClick={() => copyValue(selectedAsset.address, `${selectedAsset.id}:address`)}
                 className="h-11 bg-primary text-on-primary rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors"
@@ -251,7 +251,7 @@ export default function Donate() {
         </motion.aside>
       </section>
 
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
         {[t('app.donatePage.noteVerify'), t('app.donatePage.noteNetwork'), t('app.donatePage.notePrivacy')].map((note) => (
           <div key={note} className="security-gradient rounded-xl p-4 border border-primary/10 flex gap-3">
             <ShieldCheck className="w-5 h-5 text-tertiary shrink-0" />

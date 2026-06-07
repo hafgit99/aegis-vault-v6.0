@@ -753,13 +753,13 @@
       "diagnostics": {
         "steps": [
           "Kriptografi motoru ve donanım ivmesi doğrulanıyor...",
-          "SQLite-WASM OPFS veritabanı sağlık ve tablo şeması denetleniyor...",
+          "SQLite-WASM veritabanı sağlığı ve platform depolama katmanı denetleniyor...",
           "Kasa içerisindeki şifre gücü analizi başlatılıyor...",
           "Ağ sızdırmazlık koruması (Air-Gap) global interceptor durumu doğrulanıyor...",
           "Güvenlik teşhis raporu derleniyor..."
         ],
         "prefix": "SİSTEM",
-        "dbHealthy": "Sağlıklı (SQLite-WASM + OPFS)",
+        "dbHealthy": "Sağlıklı (SQLite-WASM)",
         "dbLocked": "Bağlantı Yok / Kilitli",
         "airgapActive": "Aktif (Sızdırmaz, HIBP Range İzinli)",
         "airgapPassive": "Pasif (Ağ İzin Verildi)"
@@ -781,6 +781,17 @@
         "app": "Uygulama hatası: {{message}}",
         "legacyKdfConfirm": "Bu yedek eski PBKDF2 uyumluluk yolunu kullanıyor veya KDF bilgisi içermiyor. Yalnızca dosya kaynağına güveniyorsanız devam edin.",
         "legacyKdfRejected": "Eski PBKDF2 yedek içe aktarma işlemi iptal edildi."
+      },
+      "androidSecurity": {
+        "title": "Android Yerel Güvenlik",
+        "androidDescription": "Bu cihazda native Android korumaları etkinleştirilmiş durumda.",
+        "previewDescription": "Web/desktop önizlemede Android native korumaları sınırlı görünür.",
+        "screenCapture": "Ekran koruması",
+        "backup": "Backup kapalı",
+        "network": "HIBP allowlist",
+        "biometric": "Biyometrik store",
+        "active": "Aktif",
+        "limited": "Sınırlı"
       },
       "importSuccess": "{{count}} adet yeni kayıt sorunsuz ve güvenli şekilde kasaya eklendi!",
       "importDecryptDefault": "Varsayılan: mevcut ana parolanız",
@@ -825,7 +836,10 @@
         "title": "Sistem Durumu ve Teşhis",
         "storage": "DEPOLAMA ALANI (YEREL)",
         "score": "GÜVENLİK PUANI",
-        "sqlite": "SQLite OPFS Veritabanı:",
+        "sqlite": "SQLite Veritabanı:",
+        "storageBackend": "Depolama Backend'i:",
+        "storageBackendAndroid": "Android app-private storage",
+        "storageBackendOpfs": "SQLite-WASM + OPFS",
         "cipher": "Şifreleme Motoru (Cipher):",
         "airgap": "Ağ Sızdırmazlığı (Air-Gap):",
         "weakPasswords": "Zayıf Parola Sayısı:",

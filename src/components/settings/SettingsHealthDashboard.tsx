@@ -114,7 +114,7 @@ export default function SettingsHealthDashboard({
   };
 
   return (
-    <div className="glass-panel p-6 rounded-[1.25rem] space-y-5 border border-primary/10">
+    <div className="glass-panel p-4 md:p-6 rounded-[1.25rem] space-y-5 border border-primary/10">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="text-item-title text-on-surface font-outfit">{t('app.settingsPage.healthDashboard.title')}</h3>

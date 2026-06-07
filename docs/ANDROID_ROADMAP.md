@@ -1,6 +1,6 @@
 # AegisVault Android Roadmap
 
-Status: Phase 1 scaffold generated
+Status: Phase 4 Android packaging and smoke hardening in progress
 Target: Android-first local vault companion for AegisVault v6
 
 This roadmap treats Android as a security product track, not as a simple web wrapper. The first Android release must preserve the local-first vault model, keep cloud/team features out of scope, and use native Android security services where the browser/WebView layer is not enough.
@@ -58,6 +58,7 @@ Android v1 must include these controls before public release:
 - No Android auto-backup for plaintext or decrypted vault state.
 - HIBP network allowlist limited to `https://api.pwnedpasswords.com/range/`.
 - Network Security Config with cleartext traffic disabled.
+- Settings diagnostics must show the active vault storage backend during Android smoke tests.
 - Clipboard auto-clear after secret copy.
 - Native sensitive clipboard handling where Android supports it.
 - Local warning if clipboard clearing or native sensitive handling fails.
@@ -95,8 +96,9 @@ Phase 2 - native security bridge:
 
 Phase 3 - storage adapter:
 
-- Validate OPFS support on Android WebView.
-- If OPFS is unreliable, introduce an Android storage adapter behind the existing SQLite persistence boundary.
+- Keep OPFS as the browser/desktop persistence backend.
+- Use Android app-private file commands behind the existing SQLite persistence boundary when running inside Android Tauri.
+- Surface the selected storage backend in Settings diagnostics for real-device smoke evidence.
 - Preserve encrypted record and backup formats so desktop and Android can exchange encrypted backups.
 
 Phase 4 - mobile UX:
@@ -107,10 +109,10 @@ Phase 4 - mobile UX:
 
 Phase 5 - release:
 
-- Add GitHub Actions Android build once Android SDK and signing strategy are stable.
-- Produce APK for internal testing.
+- Keep GitHub Actions Android APK build active through `.github/workflows/android-packaging.yml`.
+- Produce unsigned APK for internal testing and staged artifact downloads.
 - Produce AAB for Google Play.
-- Add Android signing documentation and secrets checklist.
+- Keep Android signing documentation and secrets checklist current in `docs/ANDROID_SIGNING.md`.
 - Complete Google Play Data Safety and privacy policy review.
 
 ## Local Commands
@@ -128,8 +130,8 @@ npm run android:build:aab
 
 ## Current Known Risks
 
-- OPFS behavior must be verified on Android WebView before treating the existing SQLiteOPFS layer as production-ready.
-- Desktop keyring code is not the final Android Keystore implementation.
+- Android app-private storage persistence must complete the manual smoke checklist before public Android release.
+- Desktop keyring code is not the final Android Keystore implementation for all remembered-secret paths.
 - Browser-style downloads may need replacement with Android native file picker/share intents.
 - WebAuthn/passkey support on Android WebView needs real-device verification.
 - Tauri mobile plugin support must be tested before committing to public Android release dates.

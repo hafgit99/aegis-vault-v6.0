@@ -752,13 +752,13 @@
       "diagnostics": {
         "steps": [
           "正在验证加密引擎和硬件加速...",
-          "正在检查 SQLite-WASM OPFS 数据库健康状况和表结构...",
+          "正在检查 SQLite-WASM 数据库健康状况和平台存储层...",
           "正在启动保险库内密码强度分析...",
           "正在验证 Air-Gap 网络密封全局拦截器状态...",
           "正在生成安全诊断报告..."
         ],
         "prefix": "系统",
-        "dbHealthy": "健康（SQLite-WASM + OPFS）",
+        "dbHealthy": "健康（SQLite-WASM）",
         "dbLocked": "无连接 / 已锁定",
         "airgapActive": "已启用（密封，允许 HIBP Range）",
         "airgapPassive": "未启用（允许网络）"
@@ -780,6 +780,17 @@
         "app": "应用错误：{{message}}",
         "legacyKdfConfirm": "此备份使用旧版 PBKDF2 兼容路径或缺少 KDF 元数据。仅在信任文件来源时继续。",
         "legacyKdfRejected": "旧版 PBKDF2 备份导入已取消。"
+      },
+      "androidSecurity": {
+        "title": "Android 原生安全",
+        "androidDescription": "此设备已启用 Android 原生保护。",
+        "previewDescription": "在 Web/桌面预览中，Android 原生保护显示为受限。",
+        "screenCapture": "屏幕保护",
+        "backup": "备份已关闭",
+        "network": "HIBP 白名单",
+        "biometric": "生物识别存储",
+        "active": "启用",
+        "limited": "受限"
       },
       "importSuccess": "{{count}} 条新记录已安全成功添加到保险库。",
       "importDecryptDefault": "默认：当前主密码",
@@ -824,7 +835,10 @@
         "title": "系统状态与诊断",
         "storage": "存储空间（本地）",
         "score": "安全评分",
-        "sqlite": "SQLite OPFS 数据库：",
+        "sqlite": "SQLite 数据库：",
+        "storageBackend": "存储后端：",
+        "storageBackendAndroid": "Android 应用私有存储",
+        "storageBackendOpfs": "SQLite-WASM + OPFS",
         "cipher": "加密引擎（Cipher）：",
         "airgap": "网络密封（Air-Gap）：",
         "weakPasswords": "弱密码数量：",

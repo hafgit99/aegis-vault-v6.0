@@ -752,13 +752,13 @@
       "diagnostics": {
         "steps": [
           "Verifying cryptography engine and hardware acceleration...",
-          "Checking SQLite-WASM OPFS database health and table schema...",
+          "Checking SQLite-WASM database health and platform storage layer...",
           "Starting password strength analysis inside the vault...",
           "Verifying global interceptor state for Air-Gap network sealing...",
           "Compiling security diagnostic report..."
         ],
         "prefix": "SYSTEM",
-        "dbHealthy": "Healthy (SQLite-WASM + OPFS)",
+        "dbHealthy": "Healthy (SQLite-WASM)",
         "dbLocked": "No Connection / Locked",
         "airgapActive": "Active (Sealed, HIBP Range Allowed)",
         "airgapPassive": "Passive (Network Allowed)"
@@ -780,6 +780,17 @@
         "app": "Application error: {{message}}",
         "legacyKdfConfirm": "This backup uses the legacy PBKDF2 compatibility path or has no KDF metadata. Continue only if you trust the file source.",
         "legacyKdfRejected": "Legacy PBKDF2 backup import was cancelled."
+      },
+      "androidSecurity": {
+        "title": "Android Native Security",
+        "androidDescription": "Native Android protections are enabled on this device.",
+        "previewDescription": "Android native protections are limited in web/desktop preview.",
+        "screenCapture": "Screen guard",
+        "backup": "Backup blocked",
+        "network": "HIBP allowlist",
+        "biometric": "Biometric store",
+        "active": "Active",
+        "limited": "Limited"
       },
       "importSuccess": "{{count}} new records were added to the vault safely and successfully.",
       "importDecryptDefault": "Default: your current master password",
@@ -824,7 +835,10 @@
         "title": "System Status and Diagnostics",
         "storage": "STORAGE AREA (LOCAL)",
         "score": "SECURITY SCORE",
-        "sqlite": "SQLite OPFS Database:",
+        "sqlite": "SQLite Database:",
+        "storageBackend": "Storage Backend:",
+        "storageBackendAndroid": "Android app-private storage",
+        "storageBackendOpfs": "SQLite-WASM + OPFS",
         "cipher": "Encryption Engine (Cipher):",
         "airgap": "Network Sealing (Air-Gap):",
         "weakPasswords": "Weak Password Count:",

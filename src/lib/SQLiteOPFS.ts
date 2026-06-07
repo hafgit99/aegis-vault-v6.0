@@ -8,6 +8,12 @@
  */
 import initSqlJs, { type Database } from 'sql.js';
 import sqlWasmUrl from 'sql.js/dist/sql-wasm.wasm?url';
+import {
+  clearNativeVaultSqliteFiles,
+  deleteNativeVaultFile,
+  readNativeVaultFile,
+  writeNativeVaultFile,
+} from './vaultStorageAdapter';
 
 export type SQLitePasswordRow = Record<string, any> & {
   id: string;
@@ -41,6 +47,9 @@ export function isOPFSAvailable(): boolean {
 
 /** Read file from OPFS (returns null if not found) */
 async function readOPFSFile(filename: string): Promise<Uint8Array | null> {
+  const nativeBytes = await readNativeVaultFile(filename);
+  if (nativeBytes) return nativeBytes;
+
   try {
     const root = await navigator.storage.getDirectory();
     const fileHandle = await root.getFileHandle(filename);
@@ -54,6 +63,8 @@ async function readOPFSFile(filename: string): Promise<Uint8Array | null> {
 
 /** Write file to OPFS */
 async function writeOPFSFile(filename: string, data: Uint8Array): Promise<void> {
+  if (await writeNativeVaultFile(filename, data)) return;
+
   const root = await navigator.storage.getDirectory();
   const fileHandle = await root.getFileHandle(filename, { create: true });
   const writable = await fileHandle.createWritable();
@@ -64,6 +75,7 @@ async function writeOPFSFile(filename: string, data: Uint8Array): Promise<void> 
 /** Delete file from OPFS */
 export async function deleteOPFSFile(filename: string): Promise<void> {
   try {
+    if (await deleteNativeVaultFile(filename)) return;
     const root = await navigator.storage.getDirectory();
     await root.removeEntry(filename);
   } catch {
@@ -73,6 +85,7 @@ export async function deleteOPFSFile(filename: string): Promise<void> {
 
 /** Delete all OPFS files (for reset / factory settings) */
 export async function clearAllOPFSFiles(): Promise<void> {
+  if (await clearNativeVaultSqliteFiles()) return;
   if (!isOPFSAvailable()) return;
   try {
     const root = await navigator.storage.getDirectory() as FileSystemDirectoryHandle & {

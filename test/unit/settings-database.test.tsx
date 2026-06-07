@@ -136,6 +136,7 @@ describe('Settings', () => {
     });
 
     expect(screen.getByText('AES-256-GCM')).toBeInTheDocument();
+    expect(screen.getByText('SQLite-WASM + OPFS')).toBeInTheDocument();
     expect(screen.getByText(/Pasif|A. .zin Verildi|Ağ İzin Verildi/i)).toBeInTheDocument();
     expect(onAddLog).toHaveBeenCalledWith(expect.stringContaining('60'), 'info');
   });

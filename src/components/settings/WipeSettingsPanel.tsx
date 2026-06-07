@@ -25,7 +25,7 @@ export default function WipeSettingsPanel({
   const { t } = useTranslation();
 
   return (
-    <div className="glass-panel p-6 rounded-[1.25rem] space-y-6">
+    <div className="glass-panel p-4 md:p-6 rounded-[1.25rem] space-y-5 md:space-y-6">
       <h3 className="text-item-title text-on-surface border-b border-white/5 pb-3 font-outfit text-error">{t('app.settingsPage.wipe.title')}</h3>
 
       <div className="border-t border-white/5 pt-2 flex flex-col items-stretch gap-4">

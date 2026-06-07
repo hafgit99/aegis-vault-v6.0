@@ -439,10 +439,10 @@ export default function DetailPanel({ entry, onClose, onDelete, onUpdate }: Deta
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 40 }}
       transition={{ type: 'spring', duration: 0.4, bounce: 0.15 }}
-      className="relative h-full flex flex-col bg-surface-container-lowest border-l border-outline-variant/20"
+      className="relative h-full flex flex-col bg-surface-container-lowest border-t md:border-t-0 md:border-l border-outline-variant/20"
     >
       {/* Panel Header */}
-      <div className="p-6 border-b border-white/5 bg-surface-container/30 shrink-0">
+      <div className="p-4 md:p-6 border-b border-white/5 bg-surface-container/30 shrink-0">
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-center gap-4 min-w-0 flex-1">
             <div className={`p-3 rounded-xl border shrink-0 ${typeColorClass}`}>
@@ -625,7 +625,7 @@ export default function DetailPanel({ entry, onClose, onDelete, onUpdate }: Deta
       </AnimatePresence>
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto vault-scroll p-6 space-y-4">
+      <div className="flex-1 overflow-y-auto vault-scroll p-4 md:p-6 space-y-4">
         
         {/* ===== LOGIN ===== */}
         {entry.type === 'login' && !isEditing && (

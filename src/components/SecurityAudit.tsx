@@ -142,32 +142,38 @@ export default function SecurityAudit({ entries, onApplyPwnedResults, onAddLog, 
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="space-y-8 select-none"
+      className="space-y-4 md:space-y-8 select-none"
     >
       {/* Title */}
-      <div>
-        <h2 className="text-display-lg text-on-surface mb-2 font-outfit tracking-tight">{t('app.audit.title')}</h2>
-        <p className="text-body-base text-on-surface-variant/80">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="text-3xl md:text-display-lg text-on-surface mb-2 font-outfit tracking-tight">{t('app.audit.title')}</h2>
+          <p className="text-sm md:text-body-base text-on-surface-variant/80 max-w-3xl leading-relaxed">
           {t('app.audit.description')}
-        </p>
+          </p>
+        </div>
+        <div className={`shrink-0 self-start sm:self-auto rounded-2xl border px-4 py-2.5 ${getScoreColor(overallScore)}`}>
+          <span className="block text-[9px] font-bold uppercase tracking-wider text-on-surface-variant/60">{t('app.audit.vaultIntegrity')}</span>
+          <span className="mt-0.5 block text-xl font-geist-mono font-extrabold leading-none">{overallScore}%</span>
+        </div>
       </div>
 
       {/* Dynamic Bento Box Statistics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 md:gap-6">
         
         {/* Card 1: Overall Security Health Score */}
-        <div className={`glass-panel p-6 rounded-[1.25rem] border flex flex-col justify-between transition-all duration-300 ${getScoreColor(overallScore)}`}>
+        <div className={`glass-panel col-span-2 sm:col-span-1 p-4 md:p-6 rounded-[1.25rem] border flex flex-col justify-between transition-all duration-300 ${getScoreColor(overallScore)}`}>
           <div>
-            <div className="flex justify-between items-start mb-4">
-              <div className="p-3 bg-white/5 rounded-xl border border-white/5">
-                <ShieldCheck className="w-6 h-6" />
+            <div className="flex justify-between items-start mb-3 md:mb-4">
+              <div className="p-2.5 md:p-3 bg-white/5 rounded-xl border border-white/5">
+                <ShieldCheck className="w-5 h-5 md:w-6 md:h-6" />
               </div>
-              <span className="text-headline-md font-geist-mono font-bold leading-none">{overallScore}%</span>
+              <span className="text-2xl md:text-headline-md font-geist-mono font-bold leading-none">{overallScore}%</span>
             </div>
             <h3 className="text-item-title text-on-surface mb-1 font-semibold">{t('app.audit.healthScore')}</h3>
-            <p className="text-xs text-on-surface-variant/70 leading-relaxed">{t('app.audit.healthDescription')}</p>
+            <p className="hidden sm:block text-xs text-on-surface-variant/70 leading-relaxed">{t('app.audit.healthDescription')}</p>
           </div>
-          <div className="mt-6 space-y-2">
+          <div className="mt-4 md:mt-6 space-y-2">
             <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden">
               <div className={`h-full transition-all duration-700 ${getScoreProgressColor(overallScore)}`} style={{ width: `${overallScore}%` }}></div>
             </div>
@@ -176,21 +182,21 @@ export default function SecurityAudit({ entries, onApplyPwnedResults, onAddLog, 
         </div>
 
         {/* Card 2: Reused / Duplicate Passwords */}
-        <div className={`glass-panel p-6 rounded-[1.25rem] border flex flex-col justify-between transition-all duration-300 ${
+        <div className={`glass-panel p-3.5 md:p-6 rounded-[1.25rem] border flex flex-col justify-between transition-all duration-300 ${
           totalDuplicates > 0 ? 'border-secondary/25 text-secondary bg-secondary/5' : 'border-white/5 text-on-surface'
         }`}>
           <div>
-            <div className="flex justify-between items-start mb-4">
-              <div className="p-3 bg-white/5 rounded-xl border border-white/5">
-                <RefreshCw className={`w-6 h-6 ${totalDuplicates > 0 ? 'animate-spin-slow' : ''}`} />
+            <div className="flex justify-between items-start mb-3 md:mb-4">
+              <div className="p-2 md:p-3 bg-white/5 rounded-xl border border-white/5">
+                <RefreshCw className={`w-5 h-5 md:w-6 md:h-6 ${totalDuplicates > 0 ? 'animate-spin-slow' : ''}`} />
               </div>
-              <span className="text-headline-md font-geist-mono font-bold leading-none">{duplicateGroups.length}</span>
+              <span className="text-xl md:text-headline-md font-geist-mono font-bold leading-none">{duplicateGroups.length}</span>
             </div>
             <h3 className="text-item-title text-on-surface mb-1 font-semibold">{t('app.audit.reusedPasswords')}</h3>
-            <p className="text-xs text-on-surface-variant/70 leading-relaxed">{t('app.audit.reusedDescription')}</p>
+            <p className="hidden sm:block text-xs text-on-surface-variant/70 leading-relaxed">{t('app.audit.reusedDescription')}</p>
           </div>
-          <div className="mt-6 flex items-center justify-between">
-            <span className="text-[10px] text-on-surface-variant/50 uppercase tracking-widest font-bold">{t('app.audit.chainRisk')}</span>
+          <div className="mt-4 md:mt-6 flex flex-col min-[420px]:flex-row min-[420px]:items-center gap-2 min-[420px]:justify-between">
+            <span className="text-[9px] md:text-[10px] text-on-surface-variant/50 uppercase tracking-widest font-bold">{t('app.audit.chainRisk')}</span>
             <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
               totalDuplicates > 0 ? 'bg-secondary/15 border border-secondary/25' : 'bg-tertiary/10 text-tertiary border border-tertiary/20'
             }`}>
@@ -200,21 +206,21 @@ export default function SecurityAudit({ entries, onApplyPwnedResults, onAddLog, 
         </div>
 
         {/* Card 3: Weak Credentials Card */}
-        <div className={`glass-panel p-6 rounded-[1.25rem] border flex flex-col justify-between transition-all duration-300 ${
+        <div className={`glass-panel p-3.5 md:p-6 rounded-[1.25rem] border flex flex-col justify-between transition-all duration-300 ${
           weakCount > 0 ? 'border-secondary/25 text-secondary bg-secondary/5' : 'border-white/5 text-on-surface'
         }`}>
           <div>
-            <div className="flex justify-between items-start mb-4">
-              <div className="p-3 bg-white/5 rounded-xl border border-white/5">
-                <AlertTriangle className="w-6 h-6" />
+            <div className="flex justify-between items-start mb-3 md:mb-4">
+              <div className="p-2 md:p-3 bg-white/5 rounded-xl border border-white/5">
+                <AlertTriangle className="w-5 h-5 md:w-6 md:h-6" />
               </div>
-              <span className="text-headline-md font-geist-mono font-bold leading-none">{weakCount}</span>
+              <span className="text-xl md:text-headline-md font-geist-mono font-bold leading-none">{weakCount}</span>
             </div>
             <h3 className="text-item-title text-on-surface mb-1 font-semibold">{t('app.audit.weakCredentials')}</h3>
-            <p className="text-xs text-on-surface-variant/70 leading-relaxed">{t('app.audit.weakDescription')}</p>
+            <p className="hidden sm:block text-xs text-on-surface-variant/70 leading-relaxed">{t('app.audit.weakDescription')}</p>
           </div>
-          <div className="mt-6 flex items-center justify-between">
-            <span className="text-[10px] text-on-surface-variant/50 uppercase tracking-widest font-bold">{t('app.audit.bruteForce')}</span>
+          <div className="mt-4 md:mt-6 flex flex-col min-[420px]:flex-row min-[420px]:items-center gap-2 min-[420px]:justify-between">
+            <span className="text-[9px] md:text-[10px] text-on-surface-variant/50 uppercase tracking-widest font-bold">{t('app.audit.bruteForce')}</span>
             <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
               weakCount > 0 ? 'bg-secondary/15 border border-secondary/25' : 'bg-tertiary/10 text-tertiary border border-tertiary/20'
             }`}>
@@ -226,19 +232,19 @@ export default function SecurityAudit({ entries, onApplyPwnedResults, onAddLog, 
       </div>
 
       {/* Actionable Risk Analysis Grid Report */}
-      <div className="space-y-6">
+      <div className="space-y-4 md:space-y-6">
         
         {/* Segment A: Master Password Audit */}
-        <div className="glass-panel p-6 rounded-2xl border border-white/5 text-left">
-          <div className="flex items-start gap-4 mb-4 border-b border-white/5 pb-4">
+        <div className="glass-panel p-4 md:p-6 rounded-2xl border border-white/5 text-left">
+          <div className="flex flex-wrap items-start gap-3 md:gap-4 mb-4 border-b border-white/5 pb-4">
             <div className="p-2.5 bg-primary/10 border border-primary/20 rounded-xl text-primary">
               <Lock className="w-5 h-5" />
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-w-[180px]">
               <h4 className="font-outfit text-md text-on-surface font-semibold">{t('app.audit.masterTitle')}</h4>
               <p className="text-xs text-on-surface-variant/70 mt-0.5">{t('app.audit.masterDescription')}</p>
             </div>
-            <span className={`text-xs font-bold px-3 py-1 rounded-xl border ${
+            <span className={`text-[10px] md:text-xs font-bold px-3 py-1 rounded-xl border shrink-0 ${
               isMasterStrong 
                 ? 'bg-tertiary/10 border-tertiary/20 text-tertiary' 
                 : 'bg-secondary/10 border-secondary/20 text-secondary'
@@ -262,7 +268,7 @@ export default function SecurityAudit({ entries, onApplyPwnedResults, onAddLog, 
 
         {/* Segment B: Duplicate Passwords Collapsible lists */}
         <div className="glass-panel rounded-2xl border border-white/5 overflow-hidden text-left">
-          <div className="p-6 border-b border-white/5 bg-white/[0.01]">
+          <div className="p-4 md:p-6 border-b border-white/5 bg-white/[0.01]">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-4 min-w-0 flex-1">
                 <div className="p-2.5 bg-[#ad93eb]/10 border border-[#ad93eb]/20 rounded-xl text-[#ad93eb] shrink-0">
@@ -297,9 +303,9 @@ export default function SecurityAudit({ entries, onApplyPwnedResults, onAddLog, 
                     {/* Collapsible Header */}
                     <div 
                       onClick={() => toggleGroupExpanded(idx)}
-                      className="flex items-center justify-between p-4 hover:bg-white/[0.02] cursor-pointer transition-colors select-none"
+                      className="flex items-center justify-between p-3.5 md:p-4 hover:bg-white/[0.02] cursor-pointer transition-colors select-none"
                     >
-                      <div className="flex items-center gap-3 min-w-0 flex-1 pr-3">
+                      <div className="flex items-center gap-2.5 md:gap-3 min-w-0 flex-1 pr-2 md:pr-3">
                         <div className="p-2 bg-secondary/15 text-secondary rounded-lg border border-secondary/20 shrink-0">
                           <AlertCircle className="w-4 h-4 shadow-[0_0_8px_rgba(235,172,172,0.3)]" />
                         </div>
@@ -345,11 +351,11 @@ export default function SecurityAudit({ entries, onApplyPwnedResults, onAddLog, 
                           transition={{ duration: 0.2 }}
                           className="overflow-hidden bg-[#0d111d]/60 border-t border-white/5"
                         >
-                          <div className="p-4 space-y-3">
+                          <div className="p-3.5 md:p-4 space-y-3">
                             <span className="text-[9px] text-on-surface-variant/40 uppercase font-bold tracking-wider block font-geist-mono">
                               {t('app.audit.riskyDetails')}
                             </span>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div className="grid grid-cols-1 min-[520px]:grid-cols-2 gap-2">
                               {group.map(entry => (
                                 <div key={entry.id} className="p-2.5 bg-surface-container-high/30 border border-white/5 rounded-xl flex items-center gap-2 hover:border-white/10 transition-colors">
                                   <div className="w-1.5 h-1.5 rounded-full bg-secondary shadow-[0_0_6px_rgba(235,172,172,0.6)]"></div>
@@ -404,7 +410,7 @@ export default function SecurityAudit({ entries, onApplyPwnedResults, onAddLog, 
 
           {weakCount > 0 ? (
             <div className="p-5 max-h-[320px] overflow-y-auto pr-1 vault-scroll">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 min-[520px]:grid-cols-2 gap-3">
                 {weakEntries.map(entry => {
                   const pass = entry.password || '';
                   const isCritical = pass.length < 8;
@@ -461,7 +467,7 @@ export default function SecurityAudit({ entries, onApplyPwnedResults, onAddLog, 
 
         {/* Segment D: Rotation Recommendations */}
         <div className="glass-panel rounded-2xl border border-white/5 overflow-hidden text-left">
-          <div className="p-6 border-b border-white/5 bg-white/[0.01]">
+          <div className="p-4 md:p-6 border-b border-white/5 bg-white/[0.01]">
             <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
               <div className="flex items-start gap-4">
                 <div className="p-2.5 bg-primary/10 border border-primary/20 rounded-xl text-primary">
@@ -483,8 +489,8 @@ export default function SecurityAudit({ entries, onApplyPwnedResults, onAddLog, 
             </div>
           </div>
 
-          <div className="p-5 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="p-4 md:p-5 space-y-4">
+            <div className="grid grid-cols-3 gap-2.5 md:gap-3">
               <div className="rounded-xl border border-white/5 bg-[#0e111d]/45 p-3">
                 <span className="block text-[9px] font-bold uppercase tracking-wider text-on-surface-variant/55">{t('app.audit.rotationAffected')}</span>
                 <span className={`mt-1 block text-xl font-geist-mono font-extrabold ${rotationRecommendation.affectedCount > 0 ? 'text-secondary' : 'text-tertiary'}`}>
@@ -505,7 +511,7 @@ export default function SecurityAudit({ entries, onApplyPwnedResults, onAddLog, 
               </div>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 min-[560px]:grid-cols-2 gap-3 md:gap-4">
               <div className="rounded-xl border border-white/5 bg-surface-container-high/25 p-4 space-y-3">
                 <div>
                   <span className="text-[10px] text-on-surface-variant/50 uppercase tracking-widest font-bold">{t('app.audit.rotationRandomLabel')}</span>
@@ -579,7 +585,7 @@ export default function SecurityAudit({ entries, onApplyPwnedResults, onAddLog, 
         <div className={`glass-panel rounded-2xl border overflow-hidden text-left ${
           pwnedEntryCount > 0 ? 'border-error/25 bg-error-container/10' : 'border-white/5'
         }`}>
-          <div className="p-6 border-b border-white/5 bg-white/[0.01]">
+          <div className="p-4 md:p-6 border-b border-white/5 bg-white/[0.01]">
             <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
               <div className="flex items-start gap-4">
                 <div className={`p-2.5 rounded-xl border ${
@@ -615,8 +621,8 @@ export default function SecurityAudit({ entries, onApplyPwnedResults, onAddLog, 
             </div>
           </div>
 
-          <div className="p-5 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="p-4 md:p-5 space-y-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 md:gap-3">
               <div className="rounded-xl border border-white/5 bg-[#0e111d]/45 p-3">
                 <span className="block text-[9px] font-bold uppercase tracking-wider text-on-surface-variant/55">{t('app.audit.pwnedStoredFindings')}</span>
                 <span className={`mt-1 block text-xl font-geist-mono font-extrabold ${pwnedEntryCount > 0 ? 'text-error' : 'text-tertiary'}`}>{pwnedEntryCount}</span>
@@ -633,7 +639,7 @@ export default function SecurityAudit({ entries, onApplyPwnedResults, onAddLog, 
                   {lastPwnedScanSummary?.breached ?? 0}
                 </span>
               </div>
-              <div className="rounded-xl border border-white/5 bg-[#0e111d]/45 p-3 sm:col-span-3">
+              <div className="rounded-xl border border-white/5 bg-[#0e111d]/45 p-3 col-span-2 sm:col-span-3">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div>
                     <span className="block text-[9px] font-bold uppercase tracking-wider text-on-surface-variant/55">{t('app.audit.pwnedReportStatus')}</span>
@@ -666,7 +672,7 @@ export default function SecurityAudit({ entries, onApplyPwnedResults, onAddLog, 
                   <strong className="text-error">{t('app.audit.pwnedActionTitle')}</strong>{' '}
                   {t('app.audit.pwnedActionDescription', { count: pwnedEntryCount })}
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 min-[560px]:grid-cols-2 gap-3">
                 {pwnedEntries.slice(0, 8).map((entry) => (
                   <div key={entry.id} className="p-3.5 bg-error-container/10 border border-error/20 rounded-xl flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                     <div className="min-w-0">
@@ -709,16 +715,16 @@ export default function SecurityAudit({ entries, onApplyPwnedResults, onAddLog, 
         </div>
 
         {/* Segment F: Sandbox Integrity Check */}
-        <div className="glass-panel p-6 rounded-2xl border border-white/5 text-left">
-          <div className="flex items-start gap-4 mb-4 border-b border-white/5 pb-4">
+        <div className="glass-panel p-4 md:p-6 rounded-2xl border border-white/5 text-left">
+          <div className="flex flex-wrap items-start gap-3 md:gap-4 mb-4 border-b border-white/5 pb-4">
             <div className="p-2.5 bg-tertiary/10 border border-tertiary/20 rounded-xl text-tertiary">
               <Server className="w-5 h-5" />
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-w-[180px]">
               <h4 className="font-outfit text-md text-on-surface font-semibold">{t('app.audit.sandboxTitle')}</h4>
               <p className="text-xs text-on-surface-variant/70 mt-0.5">{t('app.audit.sandboxDescription')}</p>
             </div>
-            <span className="text-xs font-bold px-3 py-1 rounded-xl border bg-tertiary/10 border-tertiary/20 text-tertiary">
+            <span className="text-[10px] md:text-xs font-bold px-3 py-1 rounded-xl border bg-tertiary/10 border-tertiary/20 text-tertiary shrink-0">
               {t('app.audit.sandboxStatus')}
             </span>
           </div>

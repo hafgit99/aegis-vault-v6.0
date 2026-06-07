@@ -298,20 +298,20 @@ function AppWorkspace() {
             </motion.section>
 
             {/* Core Metrics Bento Grid */}
-            <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <section className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
               
               {/* Health Score */}
               <motion.div 
                 initial={{ opacity: 0, y: 20 }} 
                 animate={{ opacity: 1, y: 0 }} 
                 transition={{ delay: 0.1 }} 
-                className="glass-panel p-6 rounded-[1.25rem] relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300"
+                className="glass-panel p-4 md:p-6 rounded-[1.25rem] relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300"
               >
-                <div className="flex justify-between items-start mb-5">
-                  <div className="p-3 bg-tertiary/10 rounded-xl border border-tertiary/10">
-                    <ShieldPlus className="text-tertiary w-6 h-6" />
+                <div className="flex justify-between items-start mb-3 md:mb-5">
+                  <div className="p-2.5 md:p-3 bg-tertiary/10 rounded-xl border border-tertiary/10">
+                    <ShieldPlus className="text-tertiary w-5 h-5 md:w-6 md:h-6" />
                   </div>
-                  <span className={`text-headline-md font-geist-mono font-bold ${
+                  <span className={`text-xl md:text-headline-md font-geist-mono font-bold ${
                     healthPercent >= 90 ? 'text-tertiary' : healthPercent >= 70 ? 'text-primary' : 'text-secondary'
                   }`}>{healthPercent}%</span>
                 </div>
@@ -326,13 +326,13 @@ function AppWorkspace() {
                 initial={{ opacity: 0, y: 20 }} 
                 animate={{ opacity: 1, y: 0 }} 
                 transition={{ delay: 0.2 }} 
-                className="glass-panel p-6 rounded-[1.25rem] relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300"
+                className="glass-panel p-4 md:p-6 rounded-[1.25rem] relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300"
               >
-                <div className="flex justify-between items-start mb-5">
-                  <div className="p-3 bg-error/10 rounded-xl border border-error/10">
-                    <ShieldX className="text-error w-6 h-6" />
+                <div className="flex justify-between items-start mb-3 md:mb-5">
+                  <div className="p-2.5 md:p-3 bg-error/10 rounded-xl border border-error/10">
+                    <ShieldX className="text-error w-5 h-5 md:w-6 md:h-6" />
                   </div>
-                  <span className="text-on-surface text-headline-md font-geist-mono font-bold">{weakCount}</span>
+                  <span className="text-on-surface text-xl md:text-headline-md font-geist-mono font-bold">{weakCount}</span>
                 </div>
                 <p className="text-label-caps text-on-surface-variant font-semibold mb-1">{t('app.dashboard.passwordsToImprove')}</p>
                 <p className="text-xs text-on-surface-variant/70">
@@ -345,11 +345,11 @@ function AppWorkspace() {
                 initial={{ opacity: 0, y: 20 }} 
                 animate={{ opacity: 1, y: 0 }} 
                 transition={{ delay: 0.3 }} 
-                className="glass-panel p-6 rounded-[1.25rem] relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300"
+                className="glass-panel p-4 md:p-6 rounded-[1.25rem] relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300 col-span-2 md:col-span-1"
               >
-                <div className="flex justify-between items-start mb-5">
-                  <div className="p-3 bg-secondary/10 rounded-xl border border-secondary/10">
-                    <CloudOff className="text-secondary w-6 h-6" />
+                <div className="flex justify-between items-start mb-3 md:mb-5">
+                  <div className="p-2.5 md:p-3 bg-secondary/10 rounded-xl border border-secondary/10">
+                    <CloudOff className="text-secondary w-5 h-5 md:w-6 md:h-6" />
                   </div>
                   <span className="text-on-surface-variant text-item-title font-geist-mono">{t('app.dashboard.off')}</span>
                 </div>
@@ -364,24 +364,24 @@ function AppWorkspace() {
               initial={{ opacity: 0, y: 10 }} 
               animate={{ opacity: 1, y: 0 }} 
               transition={{ delay: 0.35 }}
-              className="grid grid-cols-1 md:grid-cols-4 gap-4"
+              className="mobile-landscape-hide grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4"
             >
               {/* Activity items as compact horizontal cards */}
-              <div className="glass-panel rounded-xl p-4 flex gap-3 items-center hover:bg-white/[0.03] transition-colors group">
+              <div className="glass-panel rounded-xl p-3 md:p-4 flex gap-3 items-center hover:bg-white/[0.03] transition-colors group">
                 <div className="w-2 h-2 rounded-full bg-secondary shadow-[0_0_8px_rgba(172,201,235,0.6)] shrink-0"></div>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-on-surface truncate group-hover:text-primary transition-colors">{t('app.dashboard.passwordGenerated')}</p>
                   <p className="text-[11px] text-on-surface-variant/70 truncate">{t('app.dashboard.generatedLocally')}</p>
                 </div>
               </div>
-              <div className="glass-panel rounded-xl p-4 flex gap-3 items-center hover:bg-white/[0.03] transition-colors group">
+              <div className="glass-panel rounded-xl p-3 md:p-4 flex gap-3 items-center hover:bg-white/[0.03] transition-colors group">
                 <div className="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_8px_rgba(181,205,177,0.6)] shrink-0"></div>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-on-surface truncate group-hover:text-primary transition-colors">{t('app.dashboard.securityAudit')}</p>
                   <p className="text-[11px] text-on-surface-variant/70 truncate">{t('app.dashboard.systemIntegrityScanned')}</p>
                 </div>
               </div>
-              <div className="glass-panel rounded-xl p-4 flex gap-3 items-center hover:bg-white/[0.03] transition-colors group">
+              <div className="glass-panel rounded-xl p-3 md:p-4 flex gap-3 items-center hover:bg-white/[0.03] transition-colors group">
                 <div className="w-2 h-2 rounded-full bg-outline shrink-0"></div>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-on-surface truncate group-hover:text-primary transition-colors">{t('app.dashboard.databaseSync')}</p>
@@ -389,7 +389,7 @@ function AppWorkspace() {
                 </div>
               </div>
               {/* Compact device sovereignty badge */}
-              <div className="security-gradient rounded-xl p-4 border border-primary/10 flex items-center gap-3 group relative overflow-hidden">
+              <div className="security-gradient rounded-xl p-3 md:p-4 border border-primary/10 flex items-center gap-3 group relative overflow-hidden">
                 <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-5 group-hover:opacity-10 transition-opacity">
                   <Network className="w-16 h-16 text-primary" />
                 </div>
@@ -409,7 +409,7 @@ function AppWorkspace() {
                 <h3 className="text-headline-md text-on-surface font-outfit select-none">{t('app.dashboard.vaultRecords', { count: filteredEntries.length })}</h3>
                 
                 {/* Category tabs */}
-                <div className="flex bg-surface-container/50 p-1 rounded-xl border border-white/5 self-start sm:self-center">
+                <div className="flex max-w-full overflow-x-auto bg-surface-container/50 p-1 rounded-xl border border-white/5 self-start sm:self-center">
                   {[
                     { id: 'all', label: t('app.filters.all') },
                     { id: 'favorite', label: t('app.filters.favorites') },
@@ -422,7 +422,7 @@ function AppWorkspace() {
                     <button
                       key={tab.id}
                       onClick={() => setFilterType(tab.id)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                         filterType === tab.id 
                           ? 'bg-secondary-container/40 text-secondary border border-secondary/20 shadow-sm' 
                           : 'text-on-surface-variant/70 hover:text-on-surface hover:bg-white/5'
@@ -438,8 +438,7 @@ function AppWorkspace() {
                 <div 
                   ref={containerRef}
                   onScroll={handleScroll}
-                  className="vault-scroll overflow-y-auto pr-3 scroll-smooth flex-1"
-                  style={{ maxHeight: 'calc(100vh - 380px)' }}
+                  className="vault-scroll vault-list-scroll overflow-y-auto pr-0 md:pr-3 scroll-smooth flex-1"
                 >
                   <div className="space-y-3">
                     {visibleEntries.map((entry, index) => (
@@ -524,14 +523,14 @@ function AppWorkspace() {
       />
 
       {/* Main Workspace Area */}
-      <main className="md:ml-64 flex-1 flex flex-col min-w-0 pb-16 md:pb-0">
+      <main className="md:ml-64 flex-1 flex flex-col min-w-0 pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:pb-0">
         
         {/* Top Header Base */}
-        <header className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 sm:gap-4 min-h-16 px-3 md:px-8 py-2 sm:py-0 w-full z-40 bg-surface-container-lowest/80 backdrop-blur-xl border-b border-outline-variant/30 sticky top-0">
+        <header className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 sm:gap-4 min-h-[calc(4rem+env(safe-area-inset-top))] md:min-h-16 px-3 md:px-8 pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-2 sm:pb-0 md:pt-0 w-full z-40 bg-surface-container-lowest/90 backdrop-blur-xl border-b border-outline-variant/30 sticky top-0">
           <div className="flex items-center gap-4 flex-1 min-w-0">
-            <div className={`relative w-full max-w-md group transition-all ${
-              activeTab !== 'vault' ? 'opacity-40 pointer-events-none' : ''
-            }`}>
+              <div className={`relative w-full max-w-none sm:max-w-md group transition-all ${
+                activeTab !== 'vault' ? 'opacity-40 pointer-events-none' : ''
+              }`}>
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant group-focus-within:text-tertiary transition-colors" />
               <input 
                 value={searchQuery}
@@ -653,8 +652,8 @@ function AppWorkspace() {
         {/* Main Content Area: List + Detail Panel side by side */}
         <div className="flex flex-1 min-h-0 overflow-hidden">
           {/* Scrollable Content Container */}
-          <div className={`p-8 space-y-10 w-full flex-1 overflow-y-auto overflow-x-hidden transition-all duration-300 ${
-            selectedEntry && activeTab === 'vault' ? 'max-w-[calc(100%-800px)]' : 'max-w-[1400px] mx-auto'
+          <div className={`p-4 md:p-8 space-y-6 md:space-y-10 w-full flex-1 overflow-y-auto overflow-x-hidden transition-all duration-300 ${
+            selectedEntry && activeTab === 'vault' ? 'max-w-full md:max-w-[calc(100%-800px)]' : 'max-w-[1400px] mx-auto'
           }`}>
             <Suspense fallback={<div className="text-xs text-on-surface-variant/60">{t('app.dashboard.loading')}</div>}>
               {renderTabContent()}
@@ -664,7 +663,7 @@ function AppWorkspace() {
           {/* 1Password-style Detail Panel */}
           <AnimatePresence>
             {selectedEntry && activeTab === 'vault' && (
-              <div className="w-[800px] shrink-0 h-full">
+              <div className="fixed inset-x-0 top-[env(safe-area-inset-top)] bottom-[calc(4rem+env(safe-area-inset-bottom))] z-[90] bg-surface-container-lowest md:static md:inset-auto md:z-auto md:w-[800px] md:shrink-0 md:h-full">
                 <Suspense fallback={null}>
                   <DetailPanel
                     entry={selectedEntry}
@@ -742,7 +741,7 @@ function AppWorkspace() {
             initial={{ opacity: 0, y: 50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            className="fixed bottom-8 left-8 bg-surface-container-high border border-primary/20 text-on-surface px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 z-[150] max-w-sm backdrop-blur-md"
+            className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-4 right-4 md:bottom-8 md:left-8 md:right-auto bg-surface-container-high border border-primary/20 text-on-surface px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 z-[150] max-w-sm backdrop-blur-md"
           >
             <ShieldCheck className="w-5 h-5 text-tertiary shrink-0" />
             <span className="text-xs font-semibold leading-relaxed">{toastMessage}</span>
@@ -756,8 +755,8 @@ function AppWorkspace() {
           whileHover={{ scale: 1.05, rotate: 90 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setIsAddModalOpen(true)}
-          className={`fixed bottom-8 w-14 h-14 bg-secondary text-on-secondary rounded-full shadow-lg shadow-secondary/20 flex items-center justify-center z-[80] transition-all cursor-pointer ${
-            selectedEntry ? 'right-[820px]' : 'right-8'
+          className={`fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] md:bottom-8 w-14 h-14 bg-secondary text-on-secondary rounded-full shadow-lg shadow-secondary/20 items-center justify-center z-[80] transition-all cursor-pointer ${
+            selectedEntry ? 'hidden right-[820px] md:flex md:right-[820px]' : 'flex right-4 md:right-8'
           }`}
           aria-label={t('app.header.addRecordAria')}
         >

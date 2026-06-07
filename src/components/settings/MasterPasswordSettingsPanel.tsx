@@ -32,7 +32,7 @@ export default function MasterPasswordSettingsPanel({
   const { t } = useTranslation();
 
   return (
-    <div className="glass-panel p-6 rounded-[1.25rem] space-y-6">
+    <div className="glass-panel p-4 md:p-6 rounded-[1.25rem] space-y-5 md:space-y-6">
       <h3 className="text-item-title text-on-surface border-b border-white/5 pb-3 font-outfit">{t('app.settingsPage.masterPassword.title')}</h3>
 
       <p className="text-xs text-on-surface-variant/80 leading-relaxed">
@@ -62,7 +62,7 @@ export default function MasterPasswordSettingsPanel({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
           <div className="space-y-2 text-left">
             <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider block">{t('app.settingsPage.masterPassword.new')}</label>
             <input

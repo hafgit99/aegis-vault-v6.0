@@ -225,7 +225,7 @@ export default function Settings({ onReset, entries, onImport, onAddLog }: Setti
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="space-y-8 pb-10"
+      className="space-y-5 md:space-y-8 pb-10"
     >
       <div>
         <h2 className="text-display-lg text-on-surface mb-2 font-outfit tracking-tight">{t('app.settings.title')}</h2>
@@ -234,10 +234,10 @@ export default function Settings({ onReset, entries, onImport, onAddLog }: Setti
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 md:gap-8">
         
         {/* Left Column: Config Panel */}
-        <div className="lg:col-span-8 space-y-8">
+        <div className="xl:col-span-8 space-y-5 md:space-y-8">
           <SettingsSecurityPanel
             activeLanguage={i18n.language}
             autoLock={autoLock}
@@ -318,7 +318,7 @@ export default function Settings({ onReset, entries, onImport, onAddLog }: Setti
 
         </div>
         {/* Right Column: Storage & Health Details */}
-        <div className="lg:col-span-4 space-y-6">
+        <div className="xl:col-span-4 space-y-5 md:space-y-6">
 
           <SettingsHealthDashboard
             activeCount={activeEntries.length}
@@ -348,7 +348,7 @@ export default function Settings({ onReset, entries, onImport, onAddLog }: Setti
             onAddLog={onAddLog}
           />
 
-          <div className="security-gradient p-6 rounded-[1.25rem] border border-primary/10 space-y-3 bg-[#121625]/20">
+          <div className="security-gradient p-4 md:p-6 rounded-[1.25rem] border border-primary/10 space-y-3 bg-[#121625]/20">
             <div className="flex gap-2">
               <ShieldAlert className="text-primary w-5 h-5 flex-shrink-0 mt-0.5" />
               <h4 className="text-xs font-bold text-on-surface uppercase tracking-widest">{t('app.settingsPage.protection.title')}</h4>
@@ -359,7 +359,7 @@ export default function Settings({ onReset, entries, onImport, onAddLog }: Setti
           </div>
 
           {/* Import Help Info */}
-          <div className="p-6 rounded-[1.25rem] border border-white/5 bg-[#121625]/40 space-y-3">
+          <div className="p-4 md:p-6 rounded-[1.25rem] border border-white/5 bg-[#121625]/40 space-y-3">
             <div className="flex gap-2">
               <Info className="text-tertiary w-5 h-5 flex-shrink-0 mt-0.5" />
               <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider">{t('app.settingsPage.importTips.title')}</h4>

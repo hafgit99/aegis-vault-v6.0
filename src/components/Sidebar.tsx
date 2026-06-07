@@ -23,7 +23,7 @@ export default function Sidebar({ activeTab, setActiveTab, onAddNewEntry, onLock
   const { t } = useTranslation();
 
   return (
-    <aside className="fixed bottom-0 left-0 right-0 h-16 w-full md:top-0 md:bottom-auto md:h-screen md:w-64 flex flex-row md:flex-col bg-surface-container-lowest border-t md:border-t-0 md:border-r border-outline-variant/20 z-50">
+    <aside className="fixed bottom-0 left-0 right-0 h-[calc(4rem+env(safe-area-inset-bottom))] w-full pb-[env(safe-area-inset-bottom)] md:top-0 md:bottom-auto md:h-screen md:w-64 md:pb-0 flex flex-row md:flex-col bg-surface-container-lowest border-t md:border-t-0 md:border-r border-outline-variant/20 z-50">
       <div className="hidden md:block p-6">
         <div className="flex items-center gap-3 mb-1">
           <ShieldCheck className="text-primary w-8 h-8" />
