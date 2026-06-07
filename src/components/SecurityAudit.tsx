@@ -153,7 +153,7 @@ export default function SecurityAudit({ entries, onApplyPwnedResults, onAddLog, 
           </p>
         </div>
         <div className={`shrink-0 self-start sm:self-auto rounded-2xl border px-4 py-2.5 ${getScoreColor(overallScore)}`}>
-          <span className="block text-[9px] font-bold uppercase tracking-wider text-on-surface-variant/60">{t('app.audit.vaultIntegrity')}</span>
+          <span className="block text-[9px] font-bold uppercase tracking-wider text-on-surface-variant/60">{t('app.audit.mobileScore')}</span>
           <span className="mt-0.5 block text-xl font-geist-mono font-extrabold leading-none">{overallScore}%</span>
         </div>
       </div>

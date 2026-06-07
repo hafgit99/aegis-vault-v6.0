@@ -258,6 +258,7 @@
       "description": "Real-time crypto analysis report for password strength, reuse risks, and database integrity across all saved vault passwords.",
       "healthScore": "Overall Health Score",
       "healthDescription": "General coefficient based on password strength, reuse, and leak checks.",
+      "mobileScore": "Security Score",
       "vaultIntegrity": "Vault Integrity",
       "reusedPasswords": "Reused Passwords",
       "reusedDescription": "Record groups that use the same password across multiple accounts and create chained breach risk.",

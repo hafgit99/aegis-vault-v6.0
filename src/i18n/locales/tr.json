@@ -258,6 +258,7 @@
       "description": "Kasaya kaydedilmiş tüm şifrelerin güçlüğü, tekrarlanma riskleri ve veritabanı bütünlüğü hakkında gerçek zamanlı kripto analiz raporu.",
       "healthScore": "Genel Sağlık Skoru",
       "healthDescription": "Şifre güçleri, çoklu kullanım ve sızdırma denetimlerine dayalı genel katsayı.",
+      "mobileScore": "Güvenlik Skoru",
       "vaultIntegrity": "Kasa Bütünlüğü",
       "reusedPasswords": "Tekrarlanan Parolalar",
       "reusedDescription": "Birden fazla hesapta ortak kullanılan, zincirleme hack riski oluşturan kayıt grupları.",

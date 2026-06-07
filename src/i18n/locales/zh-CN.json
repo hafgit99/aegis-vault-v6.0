@@ -258,6 +258,7 @@
       "description": "针对保险库中所有已保存密码的强度、复用风险和数据库完整性的实时加密分析报告。",
       "healthScore": "总体健康评分",
       "healthDescription": "基于密码强度、复用和泄露检查的综合系数。",
+      "mobileScore": "安全评分",
       "vaultIntegrity": "保险库完整性",
       "reusedPasswords": "重复使用的密码",
       "reusedDescription": "多个账户共用同一密码的记录组，会造成连锁入侵风险。",
