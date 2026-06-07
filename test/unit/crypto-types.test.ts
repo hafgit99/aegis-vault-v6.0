@@ -15,8 +15,11 @@ describe('crypto type utilities', () => {
     const bytes = new Uint8Array([1, 2, 3]);
     const buffer = ensureArrayBuffer(bytes);
 
-    expect(buffer).toBe(bytes.buffer);
-    expect(toBufferSource(bytes)).toBe(bytes.buffer);
+    expect(buffer).not.toBe(bytes.buffer);
+    expect(new Uint8Array(buffer)).toEqual(bytes);
+    const source = toBufferSource(bytes);
+    expect(source).not.toBe(bytes.buffer);
+    expect(new Uint8Array(source as ArrayBuffer)).toEqual(bytes);
     expect(toBufferSource(buffer)).toBe(buffer);
   });
 
