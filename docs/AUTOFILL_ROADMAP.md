@@ -31,6 +31,7 @@ Phase 2:
 
 - Parse `AssistStructure` to detect username/password fields and web domains.
 - Convert native Android Autofill context into the shared matcher request contract.
+- Return an Android Autofill authentication response that opens AegisVault before any fill data is provided.
 - Bridge Android Autofill requests to the unlocked web vault session.
 - Require unlock/biometric confirmation before returning fill datasets.
 - Add save prompts only after explicit user consent.

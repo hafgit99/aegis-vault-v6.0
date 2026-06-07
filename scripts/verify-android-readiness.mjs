@@ -245,6 +245,12 @@ if (!existsSync(androidProjectPath)) {
   if (!autofillService.includes('AegisAutofillRequestParser.parse')) {
     failures.push('AegisAutofillService.kt must parse fill requests before bridge/dataset work starts.');
   }
+  if (!autofillService.includes('setAuthentication')) {
+    failures.push('AegisAutofillService.kt must use OS-mediated authentication before returning fill data.');
+  }
+  if (!autofillService.includes('aegis_autofill_request')) {
+    failures.push('AegisAutofillService.kt must carry a scoped autofill request marker into MainActivity.');
+  }
   if (!autofillParser.includes('AssistStructure')) {
     failures.push('AegisAutofillRequestParser.kt must parse AssistStructure field context.');
   }
