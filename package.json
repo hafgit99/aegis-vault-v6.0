@@ -12,7 +12,7 @@
   },
   "homepage": "https://github.com/hafgit99/aegis-vault-v6.0#readme",
   "scripts": {
-    "dev": "vite --port=3000 --host=0.0.0.0",
+    "dev": "vite --port=3000 --host=127.0.0.1",
     "tauri": "tauri",
     "desktop:dev": "tauri dev",
     "desktop:build": "tauri build",

@@ -85,11 +85,15 @@ export class VaultService {
         const credential = await VaultAuthService.createAuthCredential(password, params);
         
         db.putMetadata('main_salt', { id: 'main_salt', salt: saltB64 });
+        if (derived.hkdfSaltB64) {
+          db.putMetadata('hkdf_salt', { id: 'hkdf_salt', salt: derived.hkdfSaltB64 });
+        }
         db.putMetadata('auth_credential', { id: 'auth_credential', credential });
         await db.flushToOPFS();
       } else {
         // 2b. Unlock Action: Retrieve salt and verify password
         const saltMeta = db.getMetadata<{ salt: string }>('main_salt');
+        const hkdfSaltMeta = db.getMetadata<{ salt: string }>('hkdf_salt');
         const authMeta = db.getMetadata<{ credential: StoredCredential }>('auth_credential');
 
         if (!saltMeta || !authMeta) {
@@ -100,6 +104,8 @@ export class VaultService {
           password,
           secretKey,
           saltB64: saltMeta.salt,
+          hkdfSaltB64: hkdfSaltMeta?.salt,
+          allowLegacyZeroHkdfSalt: !hkdfSaltMeta?.salt,
           params,
         });
 
@@ -444,6 +450,9 @@ export class VaultService {
       const newCredential = await VaultAuthService.createAuthCredential(newPassword, params);
       
       this.sqliteDb.putMetadata('main_salt', { id: 'main_salt', salt: newSaltB64 });
+      if (newDerived.hkdfSaltB64) {
+        this.sqliteDb.putMetadata('hkdf_salt', { id: 'hkdf_salt', salt: newDerived.hkdfSaltB64 });
+      }
       this.sqliteDb.putMetadata('auth_credential', { id: 'auth_credential', credential: newCredential });
       
       // Flush to disk

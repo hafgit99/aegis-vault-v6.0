@@ -149,9 +149,11 @@ export class VaultAuthService {
     password: string;
     secretKey: string;
     saltB64?: string;
+    hkdfSaltB64?: string;
+    allowLegacyZeroHkdfSalt?: boolean;
     params: NonNullable<StoredCredential['argon2']>;
     version?: number;
-  }): Promise<{ saltB64: string; aesKey: CryptoKey; sensitiveMaterial: Uint8Array }> {
+  }): Promise<{ saltB64: string; hkdfSaltB64?: string; aesKey: CryptoKey; sensitiveMaterial: Uint8Array }> {
     const { password, secretKey, saltB64, params, version = 3 } = args;
     let salt: Uint8Array;
 
@@ -162,6 +164,7 @@ export class VaultAuthService {
     }
 
     let sensitiveMaterial: Uint8Array;
+    let derivedHkdfSaltB64: string | undefined;
 
     if (version >= 3) {
       const ikm = await Argon2WorkerService.deriveBinary({
@@ -174,6 +177,14 @@ export class VaultAuthService {
       });
 
       const info = new TextEncoder().encode(`aegis-vault-v5:${secretKey}`);
+      const hkdfSalt = args.hkdfSaltB64
+        ? Uint8Array.from(atob(args.hkdfSaltB64), (c) => c.charCodeAt(0))
+        : args.allowLegacyZeroHkdfSalt
+          ? new Uint8Array(32)
+          : window.crypto.getRandomValues(new Uint8Array(32));
+      if (!args.allowLegacyZeroHkdfSalt) {
+        derivedHkdfSaltB64 = args.hkdfSaltB64 || btoa(String.fromCharCode(...hkdfSalt));
+      }
       try {
         const keyMaterial = await window.crypto.subtle.importKey(
           'raw',
@@ -184,7 +195,7 @@ export class VaultAuthService {
         );
 
         const derivedBits = await window.crypto.subtle.deriveBits(
-          { name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(32), info },
+          { name: 'HKDF', hash: 'SHA-256', salt: hkdfSalt, info },
           keyMaterial,
           256
         );
@@ -192,6 +203,7 @@ export class VaultAuthService {
       } finally {
         ikm.fill(0);
         info.fill(0);
+        hkdfSalt.fill(0);
       }
     } else {
       const combinedMaterial = `${password}:${secretKey}`;
@@ -218,6 +230,7 @@ export class VaultAuthService {
 
     return {
       saltB64: btoa(String.fromCharCode(...salt)),
+      hkdfSaltB64: derivedHkdfSaltB64,
       aesKey,
       sensitiveMaterial,
     };

@@ -277,11 +277,12 @@ export class SQLiteOPFS {
 
   /** Force immediate write to OPFS */
   async flushToOPFS(): Promise<void> {
+    const hadScheduledPersist = !!this.saveTimeout;
     if (this.saveTimeout) {
       clearTimeout(this.saveTimeout);
       this.saveTimeout = null;
     }
-    if (this.isDirty) {
+    if (this.isDirty || hadScheduledPersist) {
       await this.persistToOPFS();
     }
   }

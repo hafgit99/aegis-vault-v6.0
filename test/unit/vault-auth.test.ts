@@ -88,4 +88,38 @@ describe('VaultAuthService', () => {
       hashLength: 32,
     }));
   });
+
+  it('uses stored random HKDF salt for v3 keys while keeping legacy zero-salt compatibility explicit', async () => {
+    const salt = btoa(String.fromCharCode(...new Uint8Array(16).fill(3)));
+    const params = { iterations: 4, memorySize: 65536, parallelism: 1, hashLength: 32 };
+
+    const fresh = await VaultAuthService.deriveMasterKey({
+      password: 'master-password',
+      secretKey: 'secret-key',
+      saltB64: salt,
+      params,
+    });
+    const zeroHkdfSalt = btoa(String.fromCharCode(...new Uint8Array(32)));
+
+    expect(fresh.hkdfSaltB64).toBeTruthy();
+    expect(fresh.hkdfSaltB64).not.toBe(zeroHkdfSalt);
+
+    const restored = await VaultAuthService.deriveMasterKey({
+      password: 'master-password',
+      secretKey: 'secret-key',
+      saltB64: salt,
+      hkdfSaltB64: fresh.hkdfSaltB64,
+      params,
+    });
+    expect(restored.hkdfSaltB64).toBe(fresh.hkdfSaltB64);
+
+    const legacy = await VaultAuthService.deriveMasterKey({
+      password: 'master-password',
+      secretKey: 'secret-key',
+      saltB64: salt,
+      params,
+      allowLegacyZeroHkdfSalt: true,
+    });
+    expect(legacy.hkdfSaltB64).toBeUndefined();
+  });
 });

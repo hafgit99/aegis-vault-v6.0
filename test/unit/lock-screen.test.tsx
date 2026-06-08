@@ -109,7 +109,8 @@ describe('LockScreen', () => {
     expect(localStorage.getItem('aegis_vault_configured')).toBe('true');
     expect(localStorage.getItem('aegis_secret_key')).toBeNull();
     expect(sessionStorage.getItem('aegis_session_secret_key')).toBe(generatedKey.textContent);
-    expect(localStorage.getItem('aegis_remembered_secret_key')).toBe(generatedKey.textContent);
+    expect(localStorage.getItem('aegis_remembered_secret_key')).toBeNull();
+    expect(localStorage.getItem('aegis_secret_key_session_only_warning')).toBe('session-only');
     expect(onAddLog).toHaveBeenCalledWith(expect.any(String), 'warning');
     expect(onUnlock).toHaveBeenCalled();
   });
@@ -368,6 +369,8 @@ describe('LockScreen', () => {
 
     expect(clearAllOPFSFiles).not.toHaveBeenCalled();
     expect(localStorage.getItem('aegis_secret_key')).toBe('A3-STORED-STORED-KEY01-KEY02');
-    expect(localStorage.getItem('aegis_remembered_secret_key')).toBe('A3-REMEMBERED-KEY01-KEY02-KEY03');
+    expect(localStorage.getItem('aegis_remembered_secret_key')).toBeNull();
+    expect(sessionStorage.getItem('aegis_session_secret_key')).toBe('A3-REMEMBERED-KEY01-KEY02-KEY03');
+    expect(localStorage.getItem('aegis_secret_key_session_only_warning')).toBe('session-only');
   });
 });

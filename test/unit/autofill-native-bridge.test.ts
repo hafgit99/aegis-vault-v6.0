@@ -67,7 +67,7 @@ describe('autofillNativeBridge', () => {
       username: 'octo@example.com',
       password: 'Secret123!',
       formHints: ['username', 7, 'password'],
-      expiresAt: 61_000,
+      expiresAt: 16_000,
     }), 1_000)).toEqual({
       platform: 'android',
       webDomain: 'github.com',
@@ -75,7 +75,7 @@ describe('autofillNativeBridge', () => {
       username: 'octo@example.com',
       password: 'Secret123!',
       formHints: ['username', 'password'],
-      expiresAt: 61_000,
+      expiresAt: 16_000,
     });
 
     expect(autofillNativeBridgeInternals.parsePendingAutofillSaveRequest('{bad json', 1_000)).toBeNull();
@@ -91,13 +91,13 @@ describe('autofillNativeBridge', () => {
       webDomain: '',
       packageName: '',
       password: 'Secret123!',
-      expiresAt: 61_000,
+      expiresAt: 16_000,
     }), 1_000)).toBeNull();
     expect(autofillNativeBridgeInternals.parsePendingAutofillSaveRequest(JSON.stringify({
       platform: 'android',
       webDomain: 'github.com',
       password: '',
-      expiresAt: 61_000,
+      expiresAt: 16_000,
     }), 1_000)).toBeNull();
   });
 
@@ -182,7 +182,7 @@ describe('autofillNativeBridge', () => {
       title: 'Example',
       username: 'octo@example.com',
       password: 'Secret123!',
-      expiresAt: 61_000,
+      expiresAt: 16_000,
     });
 
     expect(createApprovedAndroidAutofillPayload({
@@ -215,7 +215,7 @@ describe('autofillNativeBridge', () => {
       title: 'Example',
       username: 'octo@example.com',
       password: 'Secret123!',
-      expiresAt: 61_000,
+      expiresAt: 16_000,
     };
 
     await expect(writeApprovedAndroidAutofillPayload(payload)).resolves.toBe(true);
@@ -244,7 +244,7 @@ describe('autofillNativeBridge', () => {
         status: 'canceled',
         webDomain: 'example.com',
         packageName: 'com.android.chrome',
-        expiresAt: 31_000,
+        expiresAt: 16_000,
       }),
     });
   });

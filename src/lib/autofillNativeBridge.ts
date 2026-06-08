@@ -140,7 +140,7 @@ export function createApprovedAndroidAutofillPayload(
     title: entry.title,
     username: entry.username || entry.subtitle || '',
     password: entry.password,
-    expiresAt: now + 60_000,
+    expiresAt: now + 15_000,
   };
   if (origin) payload.origin = origin;
   return payload;
@@ -168,7 +168,7 @@ export async function writeCanceledAndroidAutofillPayload(
     status: 'canceled',
     webDomain: context.webDomain?.trim() || null,
     packageName: context.packageName?.trim() || null,
-    expiresAt: now + 30_000,
+    expiresAt: now + 15_000,
   };
   const origin = context.origin?.trim();
   if (origin) payload.origin = origin;

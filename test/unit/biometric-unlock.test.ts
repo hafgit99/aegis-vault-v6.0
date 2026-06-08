@@ -64,6 +64,34 @@ describe('biometricUnlock', () => {
   });
 
   it('stores and reads the biometric unlock bundle through the plugin store', async () => {
+    let storedData = '';
+    vi.mocked(getData).mockResolvedValue({
+      domain: 'com.aegisvault.desktop',
+      name: 'vault-unlock-bundle',
+      get data() {
+        return storedData;
+      },
+    });
+    vi.mocked(setData).mockImplementation(async ({ data }) => {
+      storedData = data;
+    });
+
+    await saveBiometricUnlockBundle('MasterPassword123!', 'A3-BIOMET-BUNDLE-KEY01-KEY02');
+
+    expect(setData).toHaveBeenCalledWith(expect.objectContaining({
+      domain: 'com.aegisvault.desktop',
+      name: 'vault-unlock-bundle',
+      data: expect.not.stringContaining('MasterPassword123!'),
+    }));
+    expect(storedData).not.toContain('A3-BIOMET-BUNDLE-KEY01-KEY02');
+    await expect(getBiometricUnlockBundle('Unlock vault')).resolves.toMatchObject({
+      version: 1,
+      masterPassword: 'MasterPassword123!',
+      secretKey: 'A3-BIOMET-BUNDLE-KEY01-KEY02',
+    });
+  });
+
+  it('keeps legacy plaintext biometric bundles readable for migration', async () => {
     vi.mocked(getData).mockResolvedValue({
       domain: 'com.aegisvault.desktop',
       name: 'vault-unlock-bundle',
@@ -75,15 +103,7 @@ describe('biometricUnlock', () => {
       }),
     });
 
-    await saveBiometricUnlockBundle('MasterPassword123!', 'A3-BIOMET-BUNDLE-KEY01-KEY02');
-
-    expect(setData).toHaveBeenCalledWith(expect.objectContaining({
-      domain: 'com.aegisvault.desktop',
-      name: 'vault-unlock-bundle',
-      data: expect.stringContaining('MasterPassword123!'),
-    }));
     await expect(getBiometricUnlockBundle('Unlock vault')).resolves.toMatchObject({
-      version: 1,
       masterPassword: 'MasterPassword123!',
       secretKey: 'A3-BIOMET-BUNDLE-KEY01-KEY02',
     });

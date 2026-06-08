@@ -333,8 +333,25 @@ fn write_approved_autofill_payload(app: tauri::AppHandle, payload: String) -> Re
     }
 
     let path = approved_autofill_payload_path(&app)?;
-    fs::write(path, trimmed)
-        .map_err(|error| format!("Approved autofill payload could not be written: {error}"))
+    fs::write(&path, trimmed)
+        .map_err(|error| format!("Approved autofill payload could not be written: {error}"))?;
+    restrict_approved_autofill_payload_permissions(&path)
+}
+
+fn restrict_approved_autofill_payload_permissions(path: &PathBuf) -> Result<(), String> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(path, fs::Permissions::from_mode(0o600))
+            .map_err(|error| format!("Approved autofill payload permissions could not be restricted: {error}"))?;
+    }
+
+    #[cfg(not(unix))]
+    {
+        let _ = path;
+    }
+
+    Ok(())
 }
 
 #[tauri::command]
