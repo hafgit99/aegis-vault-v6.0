@@ -35,6 +35,21 @@ const defaultLabels: ImporterLabels = {
   onePasswordRecord: '1Password Record'
 };
 
+const isPlainObject = (value: unknown): value is Record<string, unknown> => (
+  !!value
+  && typeof value === 'object'
+  && !Array.isArray(value)
+  && (Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null)
+);
+
+const safeString = (value: unknown): string => (
+  typeof value === 'string' ? value : ''
+);
+
+const safeObjectArray = (value: unknown): Record<string, unknown>[] => (
+  Array.isArray(value) ? value.filter(isPlainObject) : []
+);
+
 // Robust CSV parser handling headers, quotation marks, commas, and escaped characters.
 export function parseCSV(csvText: string): string[][] {
   const result: string[][] = [];
@@ -274,37 +289,42 @@ export function parseKeePassCSV(csvText: string, labels: ImporterLabels = defaul
 }
 
 export function parseBitwardenJSON(jsonText: string, labels: ImporterLabels = defaultLabels): Partial<VaultEntry>[] {
-  const data = JSON.parse(jsonText);
+  const data = JSON.parse(jsonText) as unknown;
+  if (!isPlainObject(data)) return [];
   // Support both standard exports and encrypted-unlocked json files
-  const items = data.items || [];
+  const items = safeObjectArray(data.items);
   const results: Partial<VaultEntry>[] = [];
 
   for (const item of items) {
     const entry: Partial<VaultEntry> = {
-      title: item.name,
-      notes: item.notes || ''
+      title: safeString(item.name),
+      notes: safeString(item.notes)
     };
 
-    if (item.type === 1 && item.login) {
+    if (item.type === 1 && isPlainObject(item.login)) {
+      const login = item.login;
       entry.type = 'login';
-      entry.username = item.login.username || '';
-      entry.password = item.login.password || '';
-      if (item.login.uris && item.login.uris.length > 0) {
-        entry.url = item.login.uris[0].uri || '';
+      entry.username = safeString(login.username);
+      entry.password = safeString(login.password);
+      const uris = safeObjectArray(login.uris);
+      if (uris.length > 0) {
+        entry.url = safeString(uris[0].uri);
       }
-    } else if (item.type === 2 && item.secureNote) {
+    } else if (item.type === 2 && isPlainObject(item.secureNote)) {
       entry.type = 'note';
-    } else if (item.type === 3 && item.card) {
+    } else if (item.type === 3 && isPlainObject(item.card)) {
+      const card = item.card;
       entry.type = 'card';
-      entry.cardholder = item.card.cardholderName || '';
-      entry.cardNumber = item.card.number || '';
-      entry.expiryDate = `${item.card.expMonth || ''}/${item.card.expYear || ''}`;
-      entry.cvv = item.card.code || '';
-    } else if (item.type === 4 && item.identity) {
+      entry.cardholder = safeString(card.cardholderName);
+      entry.cardNumber = safeString(card.number);
+      entry.expiryDate = `${safeString(card.expMonth)}/${safeString(card.expYear)}`;
+      entry.cvv = safeString(card.code);
+    } else if (item.type === 4 && isPlainObject(item.identity)) {
+      const identity = item.identity;
       entry.type = 'identity';
-      entry.idFullName = `${item.identity.firstName || ''} ${item.identity.lastName || ''}`.trim();
-      entry.idNumber = item.identity.ssn || '';
-      entry.idNationality = item.identity.passportNumber ? labels.international : labels.notSpecified;
+      entry.idFullName = `${safeString(identity.firstName)} ${safeString(identity.lastName)}`.trim();
+      entry.idNumber = safeString(identity.ssn);
+      entry.idNationality = safeString(identity.passportNumber) ? labels.international : labels.notSpecified;
     } else {
       entry.type = 'note';
     }
@@ -316,26 +336,30 @@ export function parseBitwardenJSON(jsonText: string, labels: ImporterLabels = de
 }
 
 export function parse1PasswordJSON(jsonText: string, labels: ImporterLabels = defaultLabels): Partial<VaultEntry>[] {
-  const data = JSON.parse(jsonText);
+  const data = JSON.parse(jsonText) as unknown;
+  if (!Array.isArray(data) && !isPlainObject(data)) return [];
   // Standard 1Password unencrypted export structure
   const results: Partial<VaultEntry>[] = [];
 
   // Support array list directly or nested elements
-  const list = Array.isArray(data) ? data : (data.items || []);
+  const list = Array.isArray(data) ? data.filter(isPlainObject) : safeObjectArray(data.items);
 
   for (const item of list) {
     const entry: Partial<VaultEntry> = {
-      title: item.title || item.name || labels.onePasswordRecord,
-      notes: item.notes || item.notesPlain || '',
+      title: safeString(item.title) || safeString(item.name) || labels.onePasswordRecord,
+      notes: safeString(item.notes) || safeString(item.notesPlain),
       type: 'login'
     };
 
     // Category mapping
-    const category = (item.category || item.typeName || '').toLowerCase();
+    const category = (safeString(item.category) || safeString(item.typeName)).toLowerCase();
     if (category.includes('credit') || category.includes('card')) {
       entry.type = 'card';
-      const fields = item.fields || [];
-      const getFieldVal = (lbls: string[]) => fields.find((f: any) => lbls.some(l => (f.label || f.name || '').toLowerCase().includes(l)))?.value || '';
+      const fields = safeObjectArray(item.fields);
+      const getFieldVal = (lbls: string[]) => safeString(fields.find((field) => {
+        const label = (safeString(field.label) || safeString(field.name)).toLowerCase();
+        return lbls.some(l => label.includes(l));
+      })?.value);
       entry.cardholder = getFieldVal(['cardholder', 'holder', 'name']);
       entry.cardNumber = getFieldVal(['number', 'cardumber']).replace(/\s/g, '');
       entry.expiryDate = getFieldVal(['expiry', 'expiration']);
@@ -344,11 +368,14 @@ export function parse1PasswordJSON(jsonText: string, labels: ImporterLabels = de
       entry.type = 'note';
     } else {
       entry.type = 'login';
-      const fields = item.fields || [];
-      const getFieldVal = (lbls: string[]) => fields.find((f: any) => lbls.some(l => (f.label || f.name || '').toLowerCase() === l))?.value || '';
+      const fields = safeObjectArray(item.fields);
+      const getFieldVal = (lbls: string[]) => safeString(fields.find((field) => {
+        const label = (safeString(field.label) || safeString(field.name)).toLowerCase();
+        return lbls.some(l => label === l);
+      })?.value);
       entry.username = getFieldVal(['username', 'email', 'login', 'kullanıcı adı']);
       entry.password = getFieldVal(['password', 'kod', 'parola', 'şifre']);
-      entry.url = item.url || getFieldVal(['url', 'website', 'adres']);
+      entry.url = safeString(item.url) || getFieldVal(['url', 'website', 'adres']);
     }
 
     results.push(entry);

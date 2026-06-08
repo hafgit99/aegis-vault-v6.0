@@ -11,6 +11,7 @@ interface SettingsSecurityPanelProps {
   activeLanguage: string;
   autoLock: string;
   offlineMode: boolean;
+  airgapPolicyLocked?: boolean;
   encryptionType: string;
   onSetLanguage: (language: SupportedLanguage) => void;
   onSetAutoLock: (value: string) => void;
@@ -22,6 +23,7 @@ export default function SettingsSecurityPanel({
   activeLanguage,
   autoLock,
   offlineMode,
+  airgapPolicyLocked = false,
   encryptionType,
   onSetLanguage,
   onSetAutoLock,
@@ -134,8 +136,11 @@ export default function SettingsSecurityPanel({
             </span>
           </div>
           <div
-            onClick={() => onSetOfflineMode(!offlineMode)}
-            className="cursor-pointer text-tertiary select-none transition-transform active:scale-95 flex-shrink-0"
+            onClick={() => {
+              if (!airgapPolicyLocked) onSetOfflineMode(!offlineMode);
+            }}
+            className={`${airgapPolicyLocked ? 'cursor-not-allowed opacity-70' : 'cursor-pointer active:scale-95'} text-tertiary select-none transition-transform flex-shrink-0`}
+            aria-disabled={airgapPolicyLocked}
           >
             {offlineMode ? <ToggleRight className="w-12 h-12 text-tertiary" /> : <ToggleLeft className="w-12 h-12 text-on-surface-variant/40" />}
           </div>

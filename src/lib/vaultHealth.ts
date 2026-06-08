@@ -28,6 +28,7 @@ export interface VaultHealthSnapshot {
 }
 
 export const PLAINTEXT_EXPORT_AUDIT_KEY = 'aegis_plaintext_export_last_at';
+const LEGACY_PLAINTEXT_EXPORT_AUDIT_KEY = PLAINTEXT_EXPORT_AUDIT_KEY;
 
 const isWeakLoginEntry = (entry: VaultEntry): boolean => (
   entry.type === 'login'
@@ -63,7 +64,8 @@ export function getStaleLoginEntries(entries: VaultEntry[], now = Date.now()): V
 
 export function recordPlaintextExportAudit(now = new Date()): void {
   try {
-    localStorage.setItem(PLAINTEXT_EXPORT_AUDIT_KEY, now.toISOString());
+    sessionStorage.setItem(PLAINTEXT_EXPORT_AUDIT_KEY, now.toISOString());
+    localStorage.removeItem(LEGACY_PLAINTEXT_EXPORT_AUDIT_KEY);
   } catch (error) {
     // Health audit history is best-effort and must not block export.
   }
@@ -71,7 +73,14 @@ export function recordPlaintextExportAudit(now = new Date()): void {
 
 export function readPlaintextExportAudit(): string | null {
   try {
-    return localStorage.getItem(PLAINTEXT_EXPORT_AUDIT_KEY);
+    const sessionValue = sessionStorage.getItem(PLAINTEXT_EXPORT_AUDIT_KEY);
+    if (sessionValue) return sessionValue;
+    const legacyValue = localStorage.getItem(LEGACY_PLAINTEXT_EXPORT_AUDIT_KEY);
+    if (legacyValue) {
+      localStorage.removeItem(LEGACY_PLAINTEXT_EXPORT_AUDIT_KEY);
+      sessionStorage.setItem(PLAINTEXT_EXPORT_AUDIT_KEY, legacyValue);
+    }
+    return legacyValue;
   } catch (error) {
     return null;
   }

@@ -47,6 +47,7 @@ const emptyInitialEntries: VaultEntry[] = [];
 describe('app hooks', () => {
   beforeEach(() => {
     localStorage.clear();
+    sessionStorage.clear();
     vi.mocked(vaultService.getPasswords).mockReset();
     vi.mocked(vaultService.savePassword).mockReset();
     vi.mocked(vaultService.deletePassword).mockReset();
@@ -89,7 +90,8 @@ describe('app hooks', () => {
       const { result } = renderHook(() => useSecurityLogs(), { wrapper });
 
       await waitFor(() => expect(result.current.logs).toHaveLength(2));
-      expect(localStorage.getItem('aegis_security_logs')).toContain(result.current.logs[0].action);
+      expect(sessionStorage.getItem('aegis_security_logs')).toContain(result.current.logs[0].action);
+      expect(localStorage.getItem('aegis_security_logs')).toBeNull();
 
       act(() => {
         result.current.addSecurityLog('Custom warning', 'warning');

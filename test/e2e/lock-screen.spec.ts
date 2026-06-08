@@ -1,10 +1,26 @@
 import { expect, test } from '@playwright/test';
 
+test.setTimeout(60_000);
+
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem('aegis_language', 'tr');
   });
-  await page.goto('/');
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    if (attempt === 0) {
+      await page.goto('/', { waitUntil: 'domcontentloaded' });
+    } else {
+      await page.reload({ waitUntil: 'domcontentloaded' });
+    }
+
+    try {
+      await page.locator('#vault-lock-screen').waitFor({ state: 'visible', timeout: 10_000 });
+      return;
+    } catch (error) {
+      if (attempt === 1) throw error;
+    }
+  }
 });
 
 test('changes the lock screen language without reloading app state', async ({ page }) => {

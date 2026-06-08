@@ -56,8 +56,8 @@ test.describe('authenticated vault lifecycle coverage', () => {
 
   test('opens security logs, records sync activity, and clears the audit log', async ({ page }) => {
     await page.getByTitle('Local Vault Sync').click();
-    await expect.poll(async () => page.evaluate(() => window.localStorage.getItem('aegis_security_logs') ?? '')).toContain('database I/O synchronization started');
-    await expect.poll(async () => page.evaluate(() => window.localStorage.getItem('aegis_security_logs') ?? ''), {
+    await expect.poll(async () => page.evaluate(() => window.sessionStorage.getItem('aegis_security_logs') ?? '')).toContain('database I/O synchronization started');
+    await expect.poll(async () => page.evaluate(() => window.sessionStorage.getItem('aegis_security_logs') ?? ''), {
       timeout: 5_000,
     }).toContain('database I/O synchronization completed');
 
@@ -66,7 +66,7 @@ test.describe('authenticated vault lifecycle coverage', () => {
     await expect(page.getByText(/synchronization completed/i)).toBeVisible();
 
     await page.getByRole('button', { name: /Clear Log/i }).click();
-    await expect.poll(async () => page.evaluate(() => window.localStorage.getItem('aegis_security_logs') ?? '')).toContain('Local software security log was cleared');
+    await expect.poll(async () => page.evaluate(() => window.sessionStorage.getItem('aegis_security_logs') ?? '')).toContain('Local software security log was cleared');
   });
 
   test('guards database encrypted and plain backup exports before downloading', async ({ page }) => {

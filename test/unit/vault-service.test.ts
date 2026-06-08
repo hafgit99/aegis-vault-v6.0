@@ -470,7 +470,7 @@ describe('VaultService', () => {
     }));
     expect(db.putPassword).toHaveBeenLastCalledWith(expect.objectContaining({
       id: 'login-excellent',
-      strength: 'EXCELLENT',
+      strength: 'GOOD',
       favorite: 0,
       website: '',
       deleted_at: null,
@@ -479,7 +479,7 @@ describe('VaultService', () => {
 
     await service.savePassword(entry({
       id: 'login-immutable',
-      password: 'VeryLongPassword123!',
+      password: 'vJ8#qP2!mZ7$wL4@rT9%',
     }));
     expect(db.putPassword).toHaveBeenLastCalledWith(expect.objectContaining({
       id: 'login-immutable',
@@ -488,7 +488,7 @@ describe('VaultService', () => {
     expect(db.flushToOPFS).toHaveBeenCalledTimes(2);
   });
 
-  it('calculates login strength from trimmed password boundary lengths', async () => {
+  it('calculates login strength from zxcvbn-backed password analysis', async () => {
     const service = new VaultService();
     const db = sqliteMock.SQLiteOPFS();
     service.sqliteDb = db;
@@ -503,25 +503,25 @@ describe('VaultService', () => {
     await service.savePassword(entry({ id: 'len-13', password: '1234567890123' }), false);
     expect(db.putPassword).toHaveBeenLastCalledWith(expect.objectContaining({
       id: 'len-13',
-      strength: 'EXCELLENT',
+      strength: 'GOOD',
     }));
 
     await service.savePassword(entry({ id: 'len-16', password: '1234567890123456' }), false);
     expect(db.putPassword).toHaveBeenLastCalledWith(expect.objectContaining({
       id: 'len-16',
-      strength: 'EXCELLENT',
+      strength: 'GOOD',
     }));
 
     await service.savePassword(entry({ id: 'len-17', password: '12345678901234567' }), false);
     expect(db.putPassword).toHaveBeenLastCalledWith(expect.objectContaining({
       id: 'len-17',
-      strength: 'IMMUTABLE',
+      strength: 'GOOD',
     }));
 
     await service.savePassword(entry({ id: 'trimmed', password: '  1234567890123  ' }), false);
     expect(db.putPassword).toHaveBeenLastCalledWith(expect.objectContaining({
       id: 'trimmed',
-      strength: 'EXCELLENT',
+      strength: 'GOOD',
     }));
   });
 

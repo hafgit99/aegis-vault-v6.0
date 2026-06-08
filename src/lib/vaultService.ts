@@ -5,6 +5,7 @@ import { EntryType, VaultEntry } from '../types';
 import { localizedMessage } from '../i18n/localizedMessages';
 import { getStoredSecretKey } from './secureSecretStore';
 import { createSecurityError } from './securityErrors';
+import { analyzePasswordStrengthWithZxcvbn } from './passwordStrength';
 
 type CardDetails = Pick<VaultEntry, 'cardholder' | 'cardNumber' | 'expiryDate' | 'cvv'>;
 type IdentityDetails = Pick<VaultEntry, 'idFullName' | 'idNumber' | 'idSerial' | 'idExpiry' | 'idNationality' | 'idGender' | 'idBirthDate'>;
@@ -36,6 +37,12 @@ const normalizeTotpAlgorithm = (value: unknown): VaultEntry['totpAlgorithm'] => 
 
 const normalizeStrength = (value: unknown): VaultEntry['strength'] => {
   return value === 'EXCELLENT' || value === 'IMMUTABLE' ? value : 'GOOD';
+};
+
+const strengthFromScore = (score: number): 'GOOD' | 'EXCELLENT' | 'IMMUTABLE' => {
+  if (score >= 95) return 'IMMUTABLE';
+  if (score >= 75) return 'EXCELLENT';
+  return 'GOOD';
 };
 
 export class VaultService {
@@ -324,13 +331,11 @@ export class VaultService {
     // 3. Prepare row details
     const attachments = entry.attachment ? [entry.attachment] : [];
 
-    // Calculate actual strength dynamically based on password content/length
+    // Calculate actual strength dynamically with zxcvbn-backed analysis.
     let calculatedStrength: 'GOOD' | 'EXCELLENT' | 'IMMUTABLE' = 'GOOD';
     if (entry.type === 'login' && entry.password) {
-      const pass = entry.password.trim();
-      if (pass.length > 16) calculatedStrength = 'IMMUTABLE';
-      else if (pass.length > 12) calculatedStrength = 'EXCELLENT';
-      else calculatedStrength = 'GOOD';
+      const analysis = await analyzePasswordStrengthWithZxcvbn(entry.password.trim());
+      calculatedStrength = strengthFromScore(analysis.score);
     } else if (entry.type === 'passkey' || entry.type === 'identity' || entry.type === 'note' || entry.type === 'card') {
       calculatedStrength = 'IMMUTABLE';
     }

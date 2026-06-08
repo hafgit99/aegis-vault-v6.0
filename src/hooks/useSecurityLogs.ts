@@ -23,7 +23,8 @@ export function useSecurityLogs() {
   const persistLogs = useCallback((nextLogs: SecurityLog[]) => {
     const normalized = normalizeSecurityLogs(nextLogs);
     try {
-      localStorage.setItem(SECURITY_LOG_STORAGE_KEY, JSON.stringify(normalized));
+      sessionStorage.setItem(SECURITY_LOG_STORAGE_KEY, JSON.stringify(normalized));
+      localStorage.removeItem(SECURITY_LOG_STORAGE_KEY);
     } catch {
       // Security logs must never break the user flow.
     }
@@ -61,7 +62,8 @@ export function useSecurityLogs() {
   }, [persistLogs, setLogs, t]);
 
   useEffect(() => {
-    const savedLogs = localStorage.getItem(SECURITY_LOG_STORAGE_KEY);
+    const savedLogs = localStorage.getItem(SECURITY_LOG_STORAGE_KEY)
+      || sessionStorage.getItem(SECURITY_LOG_STORAGE_KEY);
     if (savedLogs) {
       try {
         setLogs(persistLogs(JSON.parse(savedLogs)));

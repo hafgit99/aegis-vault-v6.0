@@ -137,8 +137,8 @@ describe('Settings', () => {
 
     expect(screen.getByText('AES-256-GCM')).toBeInTheDocument();
     expect(screen.getByText('SQLite-WASM + OPFS')).toBeInTheDocument();
-    expect(screen.getByText(/Pasif|A. .zin Verildi|Ağ İzin Verildi/i)).toBeInTheDocument();
-    expect(onAddLog).toHaveBeenCalledWith(expect.stringContaining('60'), 'info');
+    expect(screen.getAllByText(/Aktif|S.zd.rmazl.k Aktif|Sızdırmazlık Aktif/i).length).toBeGreaterThan(0);
+    expect(onAddLog).toHaveBeenCalledWith(expect.stringContaining('80'), 'info');
   });
 
   it('shows a live vault health dashboard with prioritized password risks', async () => {

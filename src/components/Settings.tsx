@@ -31,6 +31,7 @@ interface SettingsProps {
 
 export default function Settings({ onReset, entries, onImport, onAddLog }: SettingsProps) {
   const { t, i18n } = useTranslation();
+  const airgapPolicyLocked = import.meta.env.VITE_AEGIS_AIRGAP_LOCKED !== 'false';
   const importerLabels = {
     accessLogin: t('app.importer.accessLogin'),
     login: t('app.importer.login'),
@@ -61,6 +62,7 @@ export default function Settings({ onReset, entries, onImport, onAddLog }: Setti
     onAddLog(t('app.settingsPage.logs.autoLockUpdated', { value: val === 'never' ? t('app.settingsPage.never') : t('app.settingsPage.minutesShort', { count: Number(val) }) }), 'info');
   };
   const [offlineMode, setOfflineMode] = useState(() => {
+    if (airgapPolicyLocked) return true;
     try {
       const stored = localStorage.getItem('aegis_airgap');
       return stored !== null ? stored === 'true' : true;
@@ -70,6 +72,7 @@ export default function Settings({ onReset, entries, onImport, onAddLog }: Setti
   });
 
   const handleSetOfflineMode = (val: boolean) => {
+    if (airgapPolicyLocked) return;
     setOfflineMode(val);
     try {
       localStorage.setItem('aegis_airgap', String(val));
@@ -241,7 +244,8 @@ export default function Settings({ onReset, entries, onImport, onAddLog }: Setti
           <SettingsSecurityPanel
             activeLanguage={i18n.language}
             autoLock={autoLock}
-            offlineMode={offlineMode}
+            offlineMode={airgapPolicyLocked || offlineMode}
+            airgapPolicyLocked={airgapPolicyLocked}
             encryptionType={encryptionType}
             onSetLanguage={handleSetLanguage}
             onSetAutoLock={handleSetAutoLock}

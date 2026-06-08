@@ -25,6 +25,7 @@ const entry = (overrides: Partial<VaultEntry> = {}): VaultEntry => ({
 describe('vault health', () => {
   beforeEach(() => {
     localStorage.clear();
+    sessionStorage.clear();
   });
 
   it('calculates category, MFA, passkey, master audit, and plaintext export signals', () => {
@@ -76,6 +77,7 @@ describe('vault health', () => {
   it('records plaintext export audit as local evidence', () => {
     recordPlaintextExportAudit(new Date('2026-05-29T12:30:00.000Z'));
 
-    expect(localStorage.getItem(PLAINTEXT_EXPORT_AUDIT_KEY)).toBe('2026-05-29T12:30:00.000Z');
+    expect(sessionStorage.getItem(PLAINTEXT_EXPORT_AUDIT_KEY)).toBe('2026-05-29T12:30:00.000Z');
+    expect(localStorage.getItem(PLAINTEXT_EXPORT_AUDIT_KEY)).toBeNull();
   });
 });

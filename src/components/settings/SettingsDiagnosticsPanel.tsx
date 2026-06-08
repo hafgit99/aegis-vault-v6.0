@@ -32,6 +32,10 @@ export default function SettingsDiagnosticsPanel({
   onAddLog,
 }: SettingsDiagnosticsPanelProps) {
   const { t } = useTranslation();
+  const isAirgapPolicyActive = () => (
+    import.meta.env.VITE_AEGIS_AIRGAP_LOCKED !== 'false'
+    || localStorage.getItem('aegis_airgap') !== 'false'
+  );
   const [diagnosing, setDiagnosing] = useState(false);
   const [diagnosticLogs, setDiagnosticLogs] = useState<string[]>([]);
   const [diagnosticResult, setDiagnosticResult] = useState<DiagnosticResult | null>(null);
@@ -54,7 +58,7 @@ export default function SettingsDiagnosticsPanel({
       const storageBackend = await getVaultStorageBackend();
       const storedCipher = localStorage.getItem('aegis_cipher_suite');
       const cryptoEngine = storedCipher === 'AES-256-GCM' ? storedCipher : 'AES-256-GCM';
-      const airgapActive = localStorage.getItem('aegis_airgap') !== 'false';
+      const airgapActive = isAirgapPolicyActive();
       const airgapStatus = airgapActive ? t('app.settingsPage.diagnostics.airgapActive') : t('app.settingsPage.diagnostics.airgapPassive');
 
       let score = 100;
@@ -143,7 +147,7 @@ export default function SettingsDiagnosticsPanel({
 
             <div className="flex justify-between items-center border-b border-white/5 pb-1.5">
               <span className="text-on-surface-variant/75">{t('app.settingsPage.diagnosticsUi.airgap')}</span>
-              <span className={`font-semibold ${localStorage.getItem('aegis_airgap') !== 'false' ? 'text-tertiary' : 'text-primary'}`}>{diagnosticResult.airgapStatus}</span>
+              <span className={`font-semibold ${isAirgapPolicyActive() ? 'text-tertiary' : 'text-primary'}`}>{diagnosticResult.airgapStatus}</span>
             </div>
 
             <div className="flex justify-between items-center border-b border-white/5 pb-1.5">

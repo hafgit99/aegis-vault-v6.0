@@ -289,12 +289,6 @@ export class SQLiteOPFS {
 
   // ─── CRUD Passwords ───
 
-  private sqlVal(v: unknown): string {
-    if (v === null || v === undefined) return 'NULL';
-    if (typeof v === 'number') return String(v);
-    return `'${String(v).replace(/'/g, "''")}'`;
-  }
-
   putPassword(entry: Record<string, any>): void {
     if (!this.db) throw new Error('Database not open');
 

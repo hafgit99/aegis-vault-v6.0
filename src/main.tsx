@@ -6,6 +6,14 @@ import './i18n';
 import { localizedMessage } from './i18n/localizedMessages';
 import { isAllowedAirGapRequestUrl } from './lib/airgapNetworkPolicy';
 
+const isAirGapPolicyLocked = (): boolean => (
+  import.meta.env.VITE_AEGIS_AIRGAP_LOCKED !== 'false'
+);
+
+const isAirGapActive = (): boolean => (
+  isAirGapPolicyLocked() || localStorage.getItem('aegis_airgap') !== 'false'
+);
+
 const getRequestUrl = (input: RequestInfo | URL): string => {
   if (typeof input === 'string') return input;
   if (input instanceof URL) return input.href;
@@ -16,8 +24,7 @@ const getRequestUrl = (input: RequestInfo | URL): string => {
 (function enforceAirGap() {
   if (typeof window === 'undefined') return;
   try {
-    const isAirGapActive = localStorage.getItem('aegis_airgap') !== 'false';
-    if (!isAirGapActive) return;
+    if (!isAirGapActive()) return;
 
     console.warn(localizedMessage('airgapActive'));
 

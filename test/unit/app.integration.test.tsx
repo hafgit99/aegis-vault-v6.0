@@ -424,7 +424,7 @@ describe('App integration shell', () => {
     await user.click(screen.getByTitle('Güvenlik Günlüğü'));
     expect(await screen.findByRole('dialog', { name: 'security logs modal' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'clear logs' }));
-    expect(localStorage.getItem('aegis_security_logs')).toContain('günlüğü boşaltıldı');
+    expect(sessionStorage.getItem('aegis_security_logs')).toContain('günlüğü boşaltıldı');
 
     await user.click(screen.getByTitle(/Profil/));
     await user.click(await screen.findByRole('button', { name: 'update profile name' }));
@@ -456,13 +456,13 @@ describe('App integration shell', () => {
     fireEvent.click(screen.getByTitle(/Senkronizasyonu|Sync/i));
 
     await waitFor(() => {
-      expect(localStorage.getItem('aegis_security_logs')).toContain('senkronizasyonu ba');
+      expect(sessionStorage.getItem('aegis_security_logs')).toContain('senkronizasyonu ba');
     });
 
     await new Promise((resolve) => setTimeout(resolve, 1100));
 
     await waitFor(() => {
-      const logs = JSON.parse(localStorage.getItem('aegis_security_logs') ?? '[]');
+      const logs = JSON.parse(sessionStorage.getItem('aegis_security_logs') ?? '[]');
       expect(logs).toEqual(expect.arrayContaining([
         expect.objectContaining({ severity: 'info', action: expect.stringContaining('senkronizasyonu ba') }),
         expect.objectContaining({ severity: 'info', action: expect.stringContaining('senkronizasyonu tamam') }),
@@ -480,7 +480,7 @@ describe('App integration shell', () => {
     }
 
     await waitFor(() => {
-      const logs = JSON.parse(localStorage.getItem('aegis_security_logs') ?? '[]');
+      const logs = JSON.parse(sessionStorage.getItem('aegis_security_logs') ?? '[]');
       expect(logs).toHaveLength(200);
       expect(logs.every((log: { action: string }) => log.action === 'setup log')).toBe(true);
     });
@@ -571,8 +571,8 @@ describe('App integration shell', () => {
     await user.click(screen.getByTitle(/Veritabanı Yönetimi|Veritaban. Y.netimi/));
     expect(await screen.findByRole('dialog', { name: 'database modal' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'emit database log' }));
-    expect(localStorage.getItem('aegis_security_logs')).toContain('database warning');
-    const databaseWarningLog = JSON.parse(localStorage.getItem('aegis_security_logs') ?? '[]')
+    expect(sessionStorage.getItem('aegis_security_logs')).toContain('database warning');
+    const databaseWarningLog = JSON.parse(sessionStorage.getItem('aegis_security_logs') ?? '[]')
       .find((log: { action: string }) => log.action === 'database warning');
     expect(databaseWarningLog).toMatchObject({ action: 'database warning', severity: 'warning' });
     await user.click(screen.getByRole('button', { name: 'close database' }));
