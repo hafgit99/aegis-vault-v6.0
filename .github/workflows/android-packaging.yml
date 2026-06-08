@@ -96,6 +96,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Signing secret repository audit
+        run: npm run security:no-secrets
+
       - name: Android Autofill regression gate
         run: npm run test:unit -- test/unit/autofill-handoff-controller.test.tsx test/unit/autofill-handoff.test.tsx test/unit/autofill-native-bridge.test.ts test/unit/autofill-provider.test.ts test/unit/autofill-matcher.test.ts
 

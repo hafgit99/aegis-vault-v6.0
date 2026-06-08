@@ -105,7 +105,7 @@ android-artifacts\aegisvault-android\artifact-manifest.json
 - Android packaging workflow stages APK/AAB artifacts with `SHA256SUMS.txt` and `artifact-manifest.json`.
 - Android packaging can also build signed AAB artifacts for Google Play upload when run manually with `package_type: aab` or `both`.
 - Android release signing is documented in `docs/ANDROID_SIGNING.md`.
-- Local release signing is active when `.secrets/release-keystore.properties` and the matching keystore are present.
+- Local release signing is active when `AEGISVAULT_ANDROID_SIGNING_PROPERTIES` points to a repository-external `release-keystore.properties` file and the matching keystore is present.
 
 ## Real-Device Smoke Evidence
 

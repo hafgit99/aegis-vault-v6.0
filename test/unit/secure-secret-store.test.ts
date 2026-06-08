@@ -23,7 +23,9 @@ describe('secureSecretStore', () => {
     await expect(getStoredSecretKey()).resolves.toBe('A3-WEB-SECRET');
 
     await persistSecretKey('A3-REMEMBERED-SECRET', true);
-    expect(localStorage.getItem('aegis_remembered_secret_key')).toBe('A3-REMEMBERED-SECRET');
+    expect(sessionStorage.getItem('aegis_session_secret_key')).toBe('A3-REMEMBERED-SECRET');
+    expect(localStorage.getItem('aegis_remembered_secret_key')).toBeNull();
+    expect(localStorage.getItem('aegis_secret_key_session_only_warning')).toBe('session-only');
     expect(hasLocalSecretConfiguration()).toBe(true);
   });
 
@@ -50,10 +52,12 @@ describe('secureSecretStore', () => {
     localStorage.setItem('aegis_remembered_secret_key', 'A3-LOCAL-SECRET');
 
     await expect(getStoredSecretKey()).resolves.toBe('A3-LOCAL-SECRET');
+    expect(sessionStorage.getItem('aegis_session_secret_key')).toBe('A3-LOCAL-SECRET');
+    expect(localStorage.getItem('aegis_remembered_secret_key')).toBeNull();
     expect(invoke).toHaveBeenCalledWith('get_secret_key', undefined);
   });
 
-  it('falls back to local remembered storage when the desktop keychain rejects writes', async () => {
+  it('falls back to session-only storage when the desktop keychain rejects writes', async () => {
     const invoke = vi.fn(async (command: string) => {
       if (command === 'store_secret_key') throw new Error('keychain unavailable');
       return null;
@@ -62,7 +66,9 @@ describe('secureSecretStore', () => {
 
     await persistSecretKey('A3-FALLBACK-SECRET', true);
 
-    expect(localStorage.getItem('aegis_remembered_secret_key')).toBe('A3-FALLBACK-SECRET');
+    expect(sessionStorage.getItem('aegis_session_secret_key')).toBe('A3-FALLBACK-SECRET');
+    expect(localStorage.getItem('aegis_remembered_secret_key')).toBeNull();
+    expect(localStorage.getItem('aegis_secret_key_session_only_warning')).toBe('session-only');
   });
 
   it('removes remembered desktop secrets when remember device is disabled', async () => {
@@ -89,6 +95,7 @@ describe('secureSecretStore', () => {
     expect(sessionStorage.getItem('aegis_session_secret_key')).toBeNull();
     expect(localStorage.getItem('aegis_remembered_secret_key')).toBeNull();
     expect(localStorage.getItem('aegis_secret_key')).toBeNull();
+    expect(localStorage.getItem('aegis_secret_key_session_only_warning')).toBeNull();
     expect(invoke).toHaveBeenCalledWith('delete_secret_key', undefined);
   });
 });

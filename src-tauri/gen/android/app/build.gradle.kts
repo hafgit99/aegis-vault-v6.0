@@ -13,9 +13,12 @@ val tauriProperties = Properties().apply {
     }
 }
 val releaseKeystoreProperties = Properties().apply {
-    val propFile = file("../../../../.secrets/release-keystore.properties")
-    if (propFile.exists()) {
-        propFile.inputStream().use { load(it) }
+    val configuredPath = System.getenv("AEGISVAULT_ANDROID_SIGNING_PROPERTIES")?.takeIf { it.isNotBlank() }
+    if (configuredPath != null) {
+        val propFile = file(configuredPath)
+        if (propFile.exists()) {
+            propFile.inputStream().use { load(it) }
+        }
     }
 }
 
@@ -26,7 +29,13 @@ fun releaseSigningValue(name: String): String? =
 val releaseStoreFileValue = releaseSigningValue("RELEASE_STORE_FILE")
 val releaseStoreFile = releaseStoreFileValue?.let { value ->
     val explicitFile = file(value)
-    if (explicitFile.isAbsolute || explicitFile.exists()) explicitFile else file("../../../../.secrets/$value")
+    if (explicitFile.isAbsolute || explicitFile.exists()) {
+        explicitFile
+    } else {
+        val propertiesPath = System.getenv("AEGISVAULT_ANDROID_SIGNING_PROPERTIES")?.takeIf { it.isNotBlank() }
+        val propertiesDir = propertiesPath?.let { file(it).parentFile }
+        if (propertiesDir != null) propertiesDir.resolve(value) else explicitFile
+    }
 }
 val hasReleaseSigningConfig = releaseStoreFile?.exists() == true &&
     releaseSigningValue("RELEASE_STORE_PASSWORD") != null &&

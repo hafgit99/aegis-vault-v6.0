@@ -15,6 +15,7 @@ type TauriBridgeWindow = Window & {
 const SESSION_SECRET_KEY = 'aegis_session_secret_key';
 const REMEMBERED_SECRET_KEY = 'aegis_remembered_secret_key';
 const LEGACY_SECRET_KEY = 'aegis_secret_key';
+const SECRET_KEY_FALLBACK_WARNING = 'aegis_secret_key_session_only_warning';
 
 function getTauriInvoke(): TauriInvoke | null {
   if (typeof window === 'undefined') return null;
@@ -32,15 +33,24 @@ async function invokeKeychain<T>(command: string, args?: Record<string, unknown>
 }
 
 export function hasLocalSecretConfiguration(): boolean {
-  return !!localStorage.getItem(REMEMBERED_SECRET_KEY) || !!localStorage.getItem(LEGACY_SECRET_KEY);
+  return !!sessionStorage.getItem(SESSION_SECRET_KEY)
+    || !!localStorage.getItem(REMEMBERED_SECRET_KEY)
+    || !!localStorage.getItem(LEGACY_SECRET_KEY);
 }
 
 export async function getStoredSecretKey(): Promise<string | null> {
   const keychainSecret = await invokeKeychain<string | null>('get_secret_key');
   if (keychainSecret) return keychainSecret;
 
+  const rememberedSecret = localStorage.getItem(REMEMBERED_SECRET_KEY);
+  if (rememberedSecret) {
+    sessionStorage.setItem(SESSION_SECRET_KEY, rememberedSecret);
+    localStorage.removeItem(REMEMBERED_SECRET_KEY);
+    localStorage.setItem(SECRET_KEY_FALLBACK_WARNING, 'session-only');
+    return rememberedSecret;
+  }
+
   return sessionStorage.getItem(SESSION_SECRET_KEY)
-    || localStorage.getItem(REMEMBERED_SECRET_KEY)
     || localStorage.getItem(LEGACY_SECRET_KEY);
 }
 
@@ -60,8 +70,11 @@ export async function persistSecretKey(secretKey: string, rememberDevice: boolea
 
   if (storedInKeychain) {
     localStorage.removeItem(REMEMBERED_SECRET_KEY);
+    localStorage.removeItem(SECRET_KEY_FALLBACK_WARNING);
   } else {
-    localStorage.setItem(REMEMBERED_SECRET_KEY, secretKey);
+    localStorage.removeItem(REMEMBERED_SECRET_KEY);
+    localStorage.setItem(SECRET_KEY_FALLBACK_WARNING, 'session-only');
+    console.warn('AegisVault Secret Key keychain fallback is session-only in web mode.');
   }
 }
 
@@ -69,5 +82,6 @@ export async function clearStoredSecretKey(): Promise<void> {
   sessionStorage.removeItem(SESSION_SECRET_KEY);
   localStorage.removeItem(REMEMBERED_SECRET_KEY);
   localStorage.removeItem(LEGACY_SECRET_KEY);
+  localStorage.removeItem(SECRET_KEY_FALLBACK_WARNING);
   await invokeKeychain<void>('delete_secret_key').catch(() => null);
 }

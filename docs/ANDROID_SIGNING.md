@@ -2,17 +2,17 @@
 
 AegisVault Android release signing is configured to work in two modes:
 
-- Local signing through `.secrets/release-keystore.properties`.
+- Local signing through a repository-external `release-keystore.properties` file.
 - GitHub Actions signing through repository secrets.
 
 Never commit keystore files, passwords, or generated local signing files.
 
 ## Local Signing
 
-Place the Android keystore and properties file under the local `.secrets/` directory:
+Place the Android keystore and properties file outside the repository, for example:
 
 ```text
-.secrets/
+C:\Users\<you>\AegisVaultSigning\
   aegis-release.jks
   release-keystore.properties
 ```
@@ -29,10 +29,11 @@ RELEASE_KEY_PASSWORD=...
 When these values are present, Gradle signs the Android release APK automatically:
 
 ```powershell
+$env:AEGISVAULT_ANDROID_SIGNING_PROPERTIES = "C:\Users\<you>\AegisVaultSigning\release-keystore.properties"
 npm run android:build:apk:arm64
 ```
 
-If the properties file or keystore is missing, the build stays in unsigned community mode.
+If the environment variable, properties file, or keystore is missing, the build stays in unsigned community mode. Do not place signing material under the repository root.
 
 ## GitHub Actions Signing
 

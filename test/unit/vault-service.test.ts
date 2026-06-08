@@ -647,7 +647,8 @@ describe('VaultService', () => {
     service.sqliteDb = db;
     (service as any).aesKey = { type: 'secret' } as CryptoKey;
     (service as any).rawKey = rawKey;
-    (service as any).activeSecretKey = 'A3-SECRET-KEY';
+    const secretBytes = new TextEncoder().encode('A3-SECRET-KEY');
+    (service as any).activeSecretKeyBytes = secretBytes;
     service.isConnected = true;
 
     await service.lock();
@@ -655,7 +656,8 @@ describe('VaultService', () => {
     expect([...rawKey]).toEqual(new Array(32).fill(0));
     expect((service as any).aesKey).toBeNull();
     expect((service as any).rawKey).toBeNull();
-    expect((service as any).activeSecretKey).toBeNull();
+    expect([...secretBytes]).toEqual(new Array(secretBytes.length).fill(0));
+    expect((service as any).activeSecretKeyBytes).toBeNull();
     expect(db.close).toHaveBeenCalled();
     expect(service.isConnected).toBe(false);
   });

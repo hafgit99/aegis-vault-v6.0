@@ -22,6 +22,8 @@ type PasskeyDetails = Pick<
 >;
 
 const ENTRY_TYPES = new Set<EntryType>(['login', 'card', 'note', 'crypto', 'passkey', 'identity']);
+const textEncoder = new TextEncoder();
+const textDecoder = new TextDecoder();
 
 const normalizeEntryType = (value: unknown): EntryType => {
   const candidate = typeof value === 'string' ? value : 'login';
@@ -42,7 +44,7 @@ export class VaultService {
   public sqliteDb: SQLiteOPFS | null = null;
   public isConnected = false;
   private dbName = 'aegis_vault';
-  private activeSecretKey: string | null = null;
+  private activeSecretKeyBytes: Uint8Array | null = null;
 
   public isUnlocked(): boolean {
     return this.aesKey !== null;
@@ -111,7 +113,7 @@ export class VaultService {
       }
 
       this.isConnected = true;
-      this.activeSecretKey = secretKey;
+      this.setActiveSecretKey(secretKey);
       console.log('[VaultService] SQLite DB initialized and unlocked successfully.');
     } catch (error) {
       await this.lock();
@@ -416,7 +418,7 @@ export class VaultService {
     const newSalt = window.crypto.getRandomValues(new Uint8Array(16));
     const newSaltB64 = btoa(String.fromCharCode(...newSalt));
 
-    const secretKey = this.activeSecretKey || await getStoredSecretKey();
+    const secretKey = this.getActiveSecretKeyString() || await getStoredSecretKey();
     if (!secretKey) {
       throw createSecurityError('AUTH_CONFIG_MISSING', localizedMessage('dbAuthMissing'));
     }
@@ -435,7 +437,7 @@ export class VaultService {
 
     try {
       for (const entry of loadedEntries) {
-        await this.savePassword(entry);
+        await this.savePassword(entry, false);
       }
 
       // 5. Update auth credentials metadata
@@ -448,7 +450,13 @@ export class VaultService {
       await this.sqliteDb.flushToOPFS();
 
       console.log('[VaultService] Master Password changed and database re-keyed successfully.');
+      if (oldRawKey && oldRawKey !== this.rawKey) {
+        oldRawKey.fill(0);
+      }
     } catch (err) {
+      if (this.rawKey && this.rawKey !== oldRawKey) {
+        this.rawKey.fill(0);
+      }
       // Rollback on failure
       this.aesKey = oldKey;
       this.rawKey = oldRawKey;
@@ -475,13 +483,30 @@ export class VaultService {
     }
     this.aesKey = null;
     this.rawKey = null;
-    this.activeSecretKey = null;
+    this.clearActiveSecretKey();
     if (this.sqliteDb) {
       await this.sqliteDb.close();
       this.sqliteDb = null;
     }
     this.isConnected = false;
     console.log('[VaultService] Locked and SQLite closed.');
+  }
+
+  private setActiveSecretKey(secretKey: string): void {
+    this.clearActiveSecretKey();
+    this.activeSecretKeyBytes = textEncoder.encode(secretKey);
+  }
+
+  private getActiveSecretKeyString(): string | null {
+    if (!this.activeSecretKeyBytes) return null;
+    return textDecoder.decode(this.activeSecretKeyBytes);
+  }
+
+  private clearActiveSecretKey(): void {
+    if (this.activeSecretKeyBytes) {
+      this.activeSecretKeyBytes.fill(0);
+    }
+    this.activeSecretKeyBytes = null;
   }
 }
 

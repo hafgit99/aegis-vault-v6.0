@@ -86,6 +86,9 @@ jobs:
       - name: Security regression scan
         run: npm run security:scan
 
+      - name: Signing secret repository audit
+        run: npm run security:no-secrets
+
       - name: Android readiness gate
         run: npm run android:doctor
 

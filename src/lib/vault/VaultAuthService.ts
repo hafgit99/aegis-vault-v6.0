@@ -173,21 +173,26 @@ export class VaultAuthService {
         hashLength: params.hashLength,
       });
 
-      const keyMaterial = await window.crypto.subtle.importKey(
-        'raw',
-        toBufferSource(ikm),
-        'HKDF',
-        false,
-        ['deriveBits']
-      );
-
       const info = new TextEncoder().encode(`aegis-vault-v5:${secretKey}`);
-      const derivedBits = await window.crypto.subtle.deriveBits(
-        { name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(32), info },
-        keyMaterial,
-        256
-      );
-      sensitiveMaterial = new Uint8Array(derivedBits);
+      try {
+        const keyMaterial = await window.crypto.subtle.importKey(
+          'raw',
+          toBufferSource(ikm),
+          'HKDF',
+          false,
+          ['deriveBits']
+        );
+
+        const derivedBits = await window.crypto.subtle.deriveBits(
+          { name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(32), info },
+          keyMaterial,
+          256
+        );
+        sensitiveMaterial = new Uint8Array(derivedBits);
+      } finally {
+        ikm.fill(0);
+        info.fill(0);
+      }
     } else {
       const combinedMaterial = `${password}:${secretKey}`;
       sensitiveMaterial = await Argon2WorkerService.deriveBinary({

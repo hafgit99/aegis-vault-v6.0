@@ -104,6 +104,9 @@ jobs:
       - name: Security regression scan
         run: npm run security:scan
 
+      - name: Signing secret repository audit
+        run: npm run security:no-secrets
+
       - name: Generate SBOM
         run: npm run security:sbom
 

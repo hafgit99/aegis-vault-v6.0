@@ -13,12 +13,19 @@ export class VaultCryptoService {
     return analyzePasswordStrength(password).score;
   }
 
+  private static assertRawKeyShape(rawKey?: Uint8Array | null): void {
+    if (rawKey && rawKey.byteLength !== 32) {
+      throw new Error('Invalid vault raw key material');
+    }
+  }
+
   static async encryptTextField(
     aesKey: CryptoKey | null,
     value: string,
-    _rawKey?: Uint8Array | null
+    rawKey?: Uint8Array | null
   ): Promise<{ encrypted: string; iv: string }> {
     if (!aesKey) throw new Error('Vault key unavailable');
+    this.assertRawKeyShape(rawKey);
 
     const iv = generateRandomBytes(12);
     const plainBytes = new TextEncoder().encode(value || '');
@@ -38,9 +45,10 @@ export class VaultCryptoService {
     aesKey: CryptoKey | null,
     encrypted?: string,
     iv?: string,
-    _rawKey?: Uint8Array | null
+    rawKey?: Uint8Array | null
   ): Promise<string | null> {
     if (!encrypted || !iv) return null;
+    this.assertRawKeyShape(rawKey);
 
     try {
       const cipherArray = isLikelyHex(encrypted)

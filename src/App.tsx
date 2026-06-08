@@ -13,6 +13,7 @@ import { useAppNotifications } from './hooks/useAppNotifications';
 import { useAutoLock } from './hooks/useAutoLock';
 import { useSecurityLogs } from './hooks/useSecurityLogs';
 import { useVaultEntries } from './hooks/useVaultEntries';
+import { VaultCryptoService } from './lib/vault/VaultCryptoService';
 import { 
   Search, RefreshCw, UserRoundCheck, Database, 
   Filter, LayoutGrid, Network, LockKeyhole, 
@@ -49,7 +50,7 @@ const INITIAL_ENTRIES: VaultEntry[] = [
     title: "X / Twitter",
     subtitle: "@j_security_dev",
     username: "@j_security_dev",
-    password: "TwitterP@ssword2026!",
+    password: VaultCryptoService.generateSecurePassword(),
     strength: "GOOD",
     themeColor: "secondary",
     type: "login",
@@ -60,7 +61,7 @@ const INITIAL_ENTRIES: VaultEntry[] = [
     title: "Binance Pro",
     subtitle: "2FA Backup Seed",
     username: "binance_user_99",
-    password: "BinanceImmutable391!@",
+    password: VaultCryptoService.generateSecurePassword(),
     strength: "IMMUTABLE",
     themeColor: "tertiary",
     type: "login",
