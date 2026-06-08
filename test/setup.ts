@@ -5,6 +5,21 @@ import i18n from '../src/i18n';
 
 const webCrypto = globalThis.crypto;
 
+vi.mock('react-qr-code', async () => {
+  const React = await import('react');
+
+  return {
+    default: ({ title }: { title?: string; value?: string }) => React.createElement(
+      'svg',
+      {
+        'aria-label': title || 'QR code',
+        'data-testid': 'qr-code',
+        role: 'img',
+      },
+    ),
+  };
+});
+
 Object.defineProperty(window, 'crypto', {
   configurable: true,
   value: webCrypto,

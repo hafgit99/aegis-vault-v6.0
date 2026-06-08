@@ -110,6 +110,9 @@ export default function AutofillHandoffController(props: AutofillHandoffControll
     );
   }
 
+  const activeSelectionRequest = selectionRequest;
+  if (!activeSelectionRequest) return null;
+
   return (
     <div className="fixed inset-0 z-[180] flex items-end justify-center bg-black/55 p-0 sm:items-center sm:p-4">
       <div className="w-full max-w-lg rounded-t-2xl border border-outline-variant/40 bg-surface-container-high shadow-2xl shadow-black/40 sm:rounded-2xl">
@@ -123,7 +126,7 @@ export default function AutofillHandoffController(props: AutofillHandoffControll
                 {t('app.autofill.selectionTitle')}
               </h3>
               <p className="mt-1 text-xs leading-relaxed text-on-surface-variant">
-                {t('app.autofill.selectionDescription', { target: selectionRequest.targetLabel })}
+                {t('app.autofill.selectionDescription', { target: activeSelectionRequest.targetLabel })}
               </p>
             </div>
           </div>
@@ -139,7 +142,7 @@ export default function AutofillHandoffController(props: AutofillHandoffControll
 
         <div className="max-h-[55vh] overflow-y-auto px-3 py-3">
           <div className="space-y-2">
-            {selectionRequest.options.map((option) => (
+            {activeSelectionRequest.options.map((option) => (
               <button
                 key={option.entry.id}
                 type="button"
