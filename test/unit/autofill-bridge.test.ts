@@ -16,6 +16,7 @@ describe('autofillBridge', () => {
     })).toEqual({
       platform: 'android',
       webDomain: 'login.example.com',
+      origin: 'login.example.com',
       packageName: 'com.android.chrome',
       formHints: ['username', 'password'],
     });
