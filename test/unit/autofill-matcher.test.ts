@@ -89,4 +89,15 @@ describe('autofillMatcher', () => {
       formHints: ['postalAddress'],
     })).toEqual([]);
   });
+
+  it('matches package-only app forms with meaningful package tokens', () => {
+    expect(getAutofillCandidates([
+      entry({ id: 'github', title: 'GitHub Mobile', url: '' }),
+      entry({ id: 'generic', title: 'Android Account', url: '' }),
+    ], {
+      platform: 'android',
+      packageName: 'com.github.android',
+      formHints: ['username', 'password'],
+    }).map(candidate => candidate.id)).toEqual(['github']);
+  });
 });

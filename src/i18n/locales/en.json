@@ -10,14 +10,35 @@
     },
     "autofill": {
       "thisApp": "this app",
-      "locked": "Unlock AegisVault to review autofill matches for {{target}}.",
-      "ready": "Autofill match ready: {{title}} for {{target}}.",
-      "approved": "Autofill approved for {{title}}. Return to {{target}} and choose AegisVault again.",
+      "locked": "Autofill request received for {{target}}. Unlock the vault to continue.",
+      "ready": "{{title}} is ready for {{target}}. Review the record details to continue.",
+      "approved": "{{title}} approved. Return to {{target}} and choose this record from the AegisVault suggestion.",
       "noMatch": "No safe autofill match found for {{target}}.",
+      "selectionTitle": "Choose a record to fill",
+      "selectionDescription": "Multiple safe matches were found for {{target}}. Confirm the record you want to use.",
+      "cancel": "Cancel",
+      "save": {
+        "title": "Save this sign-in to the vault?",
+        "description": "A new sign-in was detected on {{target}}. Confirm the save decision here without revealing the password.",
+        "target": "Target",
+        "username": "Username",
+        "createHint": "A new login record will be created. The password is written to the local vault only after approval.",
+        "updateHint": "\"{{title}}\" already matches this target and username. You can update the existing record.",
+        "create": "Create Vault Record",
+        "update": "Update Existing Record",
+        "created": "New record created for {{target}}.",
+        "updated": "Existing record updated for {{target}}.",
+        "logs": {
+          "detected": "Android Autofill detected a sign-in awaiting save approval for {{target}}.",
+          "created": "Android Autofill save approval created a new record for {{target}}.",
+          "updated": "Android Autofill save approval updated an existing record for {{target}}.",
+          "canceled": "Android Autofill save request was canceled for {{target}}."
+        }
+      },
       "logs": {
         "locked": "Android Autofill requested {{target}} while the vault was locked.",
-        "ready": "Android Autofill opened matched record {{title}} for {{target}}.",
-        "approved": "Android Autofill prepared a one-time fill payload for {{title}} at {{target}}.",
+        "ready": "Android Autofill prepared matched record {{title}} for {{target}}.",
+        "approved": "Android Autofill prepared a one-time fill authorization for {{title}} at {{target}}.",
         "noMatch": "Android Autofill found no safe record match for {{target}}."
       }
     },

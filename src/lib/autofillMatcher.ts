@@ -23,6 +23,19 @@ export interface AutofillCandidate {
 
 const MAX_AUTOFILL_CANDIDATES = 8;
 const KNOWN_WEB_HINTS = new Set(['username', 'email', 'password', 'newPassword', 'currentPassword']);
+const GENERIC_PACKAGE_TOKENS = new Set([
+  'android',
+  'app',
+  'apps',
+  'browser',
+  'client',
+  'com',
+  'mobile',
+  'release',
+  'secure',
+  'service',
+  'web',
+]);
 
 export function normalizeAutofillDomain(value?: string): string {
   const trimmed = value?.trim().toLowerCase();
@@ -58,6 +71,13 @@ function hasUsefulFormHint(request: AutofillMatchRequest): boolean {
   return request.formHints.some(hint => KNOWN_WEB_HINTS.has(hint));
 }
 
+function packageTokens(packageName: string): string[] {
+  return packageName
+    .split(/[^a-z0-9]+/i)
+    .map(token => token.trim().toLowerCase())
+    .filter(token => token.length >= 3 && !GENERIC_PACKAGE_TOKENS.has(token));
+}
+
 export function getAutofillCandidates(
   entries: VaultEntry[],
   request: AutofillMatchRequest,
@@ -88,7 +108,7 @@ export function getAutofillCandidates(
       } else if (domain && lowerTitle.includes(domain.split('.')[0])) {
         score = 48;
         reason = 'title-fallback';
-      } else if (packageName && lowerTitle.includes(packageName.split('.').at(-1) || packageName)) {
+      } else if (packageName && packageTokens(packageName).some(token => lowerTitle.includes(token))) {
         score = 42;
         reason = 'title-fallback';
       }

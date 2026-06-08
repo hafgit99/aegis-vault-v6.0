@@ -30,7 +30,17 @@ export function getAndroidAutofillProviderResult(
     return { status: 'locked', candidates: [], targetLabel };
   }
 
-  const candidates = getAutofillCandidates(entries, request);
+  const candidates = getAutofillCandidates(entries, request)
+    .filter(candidate => {
+      if (context.hasPasswordField === true) return candidate.hasPassword;
+      return true;
+    })
+    .filter(candidate => {
+      if (context.webDomain?.trim()) {
+        return candidate.reason === 'exact-domain' || candidate.reason === 'subdomain' || candidate.reason === 'passkey-domain';
+      }
+      return true;
+    });
   return {
     status: candidates.length > 0 ? 'ready' : 'no-match',
     candidates,

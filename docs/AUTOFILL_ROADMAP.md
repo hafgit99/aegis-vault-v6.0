@@ -1,6 +1,6 @@
 # Autofill Roadmap
 
-Status: foundation in progress
+Status: Android v1 implemented and guarded; desktop browser extension POC scaffolded
 
 ## Security Model
 
@@ -21,13 +21,12 @@ Implemented in `src/lib/autofillMatcher.ts`.
 
 ## Android Path
 
-Phase 1:
+Phase 1: complete
 
 - Register `AegisAutofillService` in the Android manifest.
-- Keep the service safe by returning no datasets until the vault bridge is ready.
 - Add Android readiness checks for the service metadata and binding permission.
 
-Phase 2:
+Phase 2: complete
 
 - Parse `AssistStructure` to detect username/password fields and web domains.
 - Convert native Android Autofill context into the shared matcher request contract.
@@ -36,12 +35,20 @@ Phase 2:
 - Use a short-lived, single-use approved fill payload for Android dataset creation.
 - Bridge Android Autofill requests to the unlocked web vault session.
 - Require unlock/biometric confirmation before returning fill datasets.
-- Add save prompts only after explicit user consent.
+- Return approved datasets through `AutofillManager.EXTRA_AUTHENTICATION_RESULT` so the Android framework performs the actual fill.
+- Support multiple matching records with an explicit in-app selection sheet.
+- Return `RESULT_CANCELED` when the user cancels selection so the browser form remains unchanged.
+
+Deferred:
+
+- Expand save prompts only after explicit user consent and the dedicated save threat model stay current.
+- The Android save-prompt threat model is documented in `docs/AUTOFILL_SAVE_THREAT_MODEL.md`; `onSaveRequest` may stage short-lived local payloads, but record creation and updates must remain in the explicit AegisVault confirmation UI.
 
 Phase 3:
 
-- Real-device smoke on Chrome, Firefox, and Android app login forms.
-- Test locked vault, wrong-domain, subdomain, deleted-entry, and passkey-only flows.
+- Expand real-device smoke across Chrome, Firefox, Samsung Internet, and Android app login forms.
+- Keep release tests for locked vault, wrong-domain, subdomain, deleted-entry, passkey-only, and multiple-match flows.
+- Add CI evidence that Android Autofill regression tests ran before every APK/AAB artifact build.
 
 ## Desktop Path
 
@@ -52,5 +59,15 @@ Phase 1:
 
 Phase 2:
 
-- Evaluate browser extension integration for Chromium/Firefox.
+- Chromium browser extension scaffold is in `browser-extension/chromium`.
+- Native messaging manifest template is in `native-messaging/chromium/com.aegisvault.desktop.json`.
+- Extension readiness gate is `npm run desktop:autofill:doctor`.
+- Evaluate browser extension integration for Firefox after the Chromium native messaging host is working.
 - Evaluate OS credential-provider style integrations separately for Windows/macOS/Linux because each platform has different APIs and security review requirements.
+
+Phase 3:
+
+- Implement a native messaging host or Tauri sidecar that speaks `aegisvault.desktopAutofill.v1`.
+- Route fill requests to the running desktop app for unlock, domain matching, and explicit approval.
+- Route save requests to a short-lived desktop pending-save handoff and show an AegisVault confirmation sheet.
+- Add browser-extension smoke tests for wrong-domain, locked vault, multiple matches, save cancel, and save approve.

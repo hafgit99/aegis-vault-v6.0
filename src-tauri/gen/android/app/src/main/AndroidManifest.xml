@@ -29,6 +29,12 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".AutofillAuthActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@style/Theme.aegisvault.AutofillAuth" />
+
         <service
             android:name=".AegisAutofillService"
             android:exported="true"

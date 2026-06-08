@@ -521,6 +521,8 @@ function AppWorkspace() {
           entries={entries}
           isLocked={isLocked}
           onOpenEntry={handleOpenEntryFromAudit}
+          onSaveAutofillEntry={handleAddEntry}
+          onUpdateAutofillEntry={handleUpdateEntry}
           showToast={showToast}
           addSecurityLog={addSecurityLog}
         />

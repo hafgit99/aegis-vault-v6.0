@@ -26,7 +26,7 @@ Android artifacts are built by `.github/workflows/android-packaging.yml`.
 
 - Trigger: manual `workflow_dispatch`, `main` push, and `v*` tags.
 - Manual package choices: `apk`, `aab`, or `both`.
-- Gate: `android:doctor`, lint, Android-focused unit tests, and SBOM generation.
+- Gate: `android:doctor`, lint, Android Autofill regression tests, Android-focused unit tests, and SBOM generation.
 - Artifact: `aegisvault-android`.
 - Signing status: signed APK/AAB when Android signing secrets are configured; otherwise unsigned community APK.
 
@@ -115,7 +115,26 @@ android-artifacts\aegisvault-android\artifact-manifest.json
 - Lock screen and first master-password setup screen opened successfully.
 - Post-unlock mobile layout safe-area issues were corrected for portrait and landscape.
 - Android launcher icon was regenerated from the desktop icon source and copied into the Android resource tree.
+- Android Autofill provider smoke passed on a real device: tapping `Fill with AegisVault` opens the vault, approval writes a single-use payload, `AutofillAuthActivity` returns it through `AutofillManager.EXTRA_AUTHENTICATION_RESULT`, and returning to the browser fills the selected GitHub credential through the Android Autofill framework.
+- Android Autofill multiple-match UX is covered by an in-app selection sheet, and canceling the selection returns `RESULT_CANCELED` so the browser form remains unchanged.
+- Android Autofill save prompt staging is guarded by `SaveInfo.SAVE_DATA_TYPE_PASSWORD`, writes only a short-lived `pending_autofill_save_request.json` handoff file, and still requires AegisVault's explicit create/update/cancel confirmation sheet before any vault record changes.
 - Logcat smoke check after launch showed no `FATAL EXCEPTION` or `AndroidRuntime` crash entries.
+
+## Android Autofill Regression Gate
+
+The following targeted tests must pass before Android packaging:
+
+```powershell
+npm run test:unit -- test/unit/autofill-handoff-controller.test.tsx test/unit/autofill-handoff.test.tsx test/unit/autofill-native-bridge.test.ts test/unit/autofill-provider.test.ts test/unit/autofill-matcher.test.ts
+```
+
+This gate covers the handoff controller, approved/canceled native payload bridge, strict web-domain matching, password-field filtering, meaningful Android package-token fallback, and multiple-match selection flow.
+
+Native Kotlin compile check for the Autofill service:
+
+```powershell
+.\gradlew.bat app:compileArm64DebugKotlin
+```
 
 ## Known Warnings
 

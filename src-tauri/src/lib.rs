@@ -5,6 +5,7 @@ use tauri::Manager;
 
 const PENDING_AUTOFILL_REQUEST_FILE: &str = "pending_autofill_request.json";
 const APPROVED_AUTOFILL_PAYLOAD_FILE: &str = "approved_autofill_payload.json";
+const PENDING_AUTOFILL_SAVE_REQUEST_FILE: &str = "pending_autofill_save_request.json";
 const MAX_AUTOFILL_PAYLOAD_BYTES: usize = 16 * 1024;
 
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
@@ -172,24 +173,70 @@ fn app_private_file_path(app: &tauri::AppHandle, filename: &str) -> Result<PathB
     Ok(dir.join(safe_filename))
 }
 
-fn pending_autofill_request_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
-    let dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|error| format!("App-private storage directory could not be resolved: {error}"))?;
-    fs::create_dir_all(&dir)
-        .map_err(|error| format!("App-private storage directory could not be created: {error}"))?;
-    Ok(dir.join(PENDING_AUTOFILL_REQUEST_FILE))
+fn pending_autofill_request_path(_app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    #[cfg(target_os = "android")]
+    {
+        let dir = PathBuf::from("/data/data/com.aegisvault.desktop/files");
+        fs::create_dir_all(&dir).map_err(|error| {
+            format!("Android Autofill handoff directory could not be created: {error}")
+        })?;
+        return Ok(dir.join(PENDING_AUTOFILL_REQUEST_FILE));
+    }
+
+    #[cfg(not(target_os = "android"))]
+    {
+        let dir = _app.path().app_data_dir().map_err(|error| {
+            format!("App-private storage directory could not be resolved: {error}")
+        })?;
+        fs::create_dir_all(&dir).map_err(|error| {
+            format!("App-private storage directory could not be created: {error}")
+        })?;
+        Ok(dir.join(PENDING_AUTOFILL_REQUEST_FILE))
+    }
 }
 
-fn approved_autofill_payload_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
-    let dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|error| format!("App-private storage directory could not be resolved: {error}"))?;
-    fs::create_dir_all(&dir)
-        .map_err(|error| format!("App-private storage directory could not be created: {error}"))?;
-    Ok(dir.join(APPROVED_AUTOFILL_PAYLOAD_FILE))
+fn approved_autofill_payload_path(_app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    #[cfg(target_os = "android")]
+    {
+        let dir = PathBuf::from("/data/data/com.aegisvault.desktop/files");
+        fs::create_dir_all(&dir).map_err(|error| {
+            format!("Android Autofill handoff directory could not be created: {error}")
+        })?;
+        return Ok(dir.join(APPROVED_AUTOFILL_PAYLOAD_FILE));
+    }
+
+    #[cfg(not(target_os = "android"))]
+    {
+        let dir = _app.path().app_data_dir().map_err(|error| {
+            format!("App-private storage directory could not be resolved: {error}")
+        })?;
+        fs::create_dir_all(&dir).map_err(|error| {
+            format!("App-private storage directory could not be created: {error}")
+        })?;
+        Ok(dir.join(APPROVED_AUTOFILL_PAYLOAD_FILE))
+    }
+}
+
+fn pending_autofill_save_request_path(_app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    #[cfg(target_os = "android")]
+    {
+        let dir = PathBuf::from("/data/data/com.aegisvault.desktop/files");
+        fs::create_dir_all(&dir).map_err(|error| {
+            format!("Android Autofill handoff directory could not be created: {error}")
+        })?;
+        return Ok(dir.join(PENDING_AUTOFILL_SAVE_REQUEST_FILE));
+    }
+
+    #[cfg(not(target_os = "android"))]
+    {
+        let dir = _app.path().app_data_dir().map_err(|error| {
+            format!("App-private storage directory could not be resolved: {error}")
+        })?;
+        fs::create_dir_all(&dir).map_err(|error| {
+            format!("App-private storage directory could not be created: {error}")
+        })?;
+        Ok(dir.join(PENDING_AUTOFILL_SAVE_REQUEST_FILE))
+    }
 }
 
 #[tauri::command]
@@ -302,6 +349,29 @@ fn clear_approved_autofill_payload(app: tauri::AppHandle) -> Result<(), String> 
     }
 }
 
+#[tauri::command]
+fn read_pending_autofill_save_request(app: tauri::AppHandle) -> Result<Option<String>, String> {
+    let path = pending_autofill_save_request_path(&app)?;
+    if !path.exists() {
+        return Ok(None);
+    }
+    fs::read_to_string(path)
+        .map(Some)
+        .map_err(|error| format!("Pending autofill save request could not be read: {error}"))
+}
+
+#[tauri::command]
+fn clear_pending_autofill_save_request(app: tauri::AppHandle) -> Result<(), String> {
+    let path = pending_autofill_save_request_path(&app)?;
+    match fs::remove_file(path) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(format!(
+            "Pending autofill save request could not be cleared: {error}"
+        )),
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -319,6 +389,8 @@ pub fn run() {
             clear_pending_autofill_request,
             write_approved_autofill_payload,
             clear_approved_autofill_payload,
+            read_pending_autofill_save_request,
+            clear_pending_autofill_save_request,
         ])
         .run(tauri::generate_context!())
         .expect("failed to run AegisVault shell");

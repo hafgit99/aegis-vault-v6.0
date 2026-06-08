@@ -96,6 +96,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Android Autofill regression gate
+        run: npm run test:unit -- test/unit/autofill-handoff-controller.test.tsx test/unit/autofill-handoff.test.tsx test/unit/autofill-native-bridge.test.ts test/unit/autofill-provider.test.ts test/unit/autofill-matcher.test.ts
+
       - name: Android-focused unit tests
         run: npm run test:unit -- test/unit/android-security-bridge.test.ts test/unit/vault-storage-adapter.test.ts test/unit/settings-database.test.tsx test/unit/component-flows.test.tsx
 

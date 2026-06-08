@@ -8,6 +8,8 @@ reports/
 security-evidence/
 sbom/
 android-artifacts/
+desktop-autofill-host/
+desktop-autofill-extension/
 .stryker-tmp/
 src-tauri/target/
 src-tauri/gen/*

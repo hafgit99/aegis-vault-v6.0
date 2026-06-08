@@ -11,6 +11,7 @@ This document defines the current local-first threat model for AegisVault v6.
 - Secure Share bundle files and transfer passwords.
 - Desktop release artifacts and checksums.
 - User import files before and during parsing.
+- Android Autofill pending fill and future pending save payloads.
 
 ## Primary Security Goals
 
@@ -36,6 +37,8 @@ This document defines the current local-first threat model for AegisVault v6.
 | Import of malformed backup data | Import parsing tests and guarded import UI flows. |
 | Release artifact substitution | SHA-256 manifests and release workflow evidence. |
 | Desktop remembered-secret exposure in localStorage | OS keychain path for Tauri desktop where available. |
+| Autofill credential fill to the wrong target | Android Autofill authentication result requires a one-time approved payload whose target must match the original domain or package before a dataset is returned. |
+| Accidental Android Autofill credential capture | Native save capture only stages a short-lived app-private payload and cannot create or update records without explicit in-app confirmation. |
 
 ## Out-of-Scope Threats
 
@@ -64,12 +67,14 @@ This document defines the current local-first threat model for AegisVault v6.
 - Save and reload login, card, note, identity, passkey, and TOTP records.
 - Clear local storage and verify vault reset behavior.
 - Desktop package launch on Windows, macOS, and Linux.
+- Android Autofill fill request on locked vault, multiple matches, wrong domain, passkey-only record, and canceled selection.
 
 ## Future Threat Model Extensions
 
 The following features require separate review before implementation:
 
 - Device-to-device vault transfer.
+- Android Autofill save prompt expansion beyond guarded local staging. See `docs/AUTOFILL_SAVE_THREAT_MODEL.md`.
 - Secure share links.
 - Cloud sync.
 - Team/organization vaults.

@@ -56,6 +56,110 @@ describe('autofillProvider', () => {
     expect(JSON.stringify(result)).not.toContain('CorrectHorseBatteryStaple123!');
   });
 
+  it('excludes passkey-only records from Android password field fill results', () => {
+    const result = getAndroidAutofillProviderResult({
+      platform: 'android',
+      webDomain: 'github.com',
+      formHints: ['username', 'password'],
+      hasUsernameField: true,
+      hasPasswordField: true,
+    }, [
+      entry({
+        id: 'passkey-1',
+        title: 'GitHub Passkey',
+        type: 'passkey',
+        password: undefined,
+        url: undefined,
+        passkeyDomain: 'github.com',
+        passkeyUser: 'octo@example.com',
+      }),
+      entry({
+        id: 'login-1',
+        title: 'GitHub Login',
+        url: 'https://github.com/login',
+      }),
+    ], false);
+
+    expect(result.status).toBe('ready');
+    expect(result.candidates).toHaveLength(1);
+    expect(result.candidates[0]).toEqual(expect.objectContaining({
+      id: 'login-1',
+      hasPassword: true,
+    }));
+  });
+
+  it('returns no-match when Android password fields only match records without passwords', () => {
+    const result = getAndroidAutofillProviderResult({
+      platform: 'android',
+      webDomain: 'github.com',
+      formHints: ['password'],
+      hasUsernameField: false,
+      hasPasswordField: true,
+    }, [
+      entry({
+        id: 'passkey-1',
+        title: 'GitHub Passkey',
+        type: 'passkey',
+        password: undefined,
+        url: undefined,
+        passkeyDomain: 'github.com',
+        passkeyUser: 'octo@example.com',
+      }),
+    ], false);
+
+    expect(result).toEqual({
+      status: 'no-match',
+      candidates: [],
+      targetLabel: 'github.com',
+    });
+  });
+
+  it('rejects title-only fallback matches when an Android web domain is available', () => {
+    const result = getAndroidAutofillProviderResult({
+      platform: 'android',
+      webDomain: 'github.com',
+      packageName: 'com.android.chrome',
+      formHints: ['username', 'password'],
+      hasUsernameField: true,
+      hasPasswordField: true,
+    }, [
+      entry({
+        id: 'lookalike-title',
+        title: 'GitHub Admin',
+        url: 'https://example.com/login',
+      }),
+    ], false);
+
+    expect(result).toEqual({
+      status: 'no-match',
+      candidates: [],
+      targetLabel: 'github.com',
+    });
+  });
+
+  it('keeps package-only title fallback available for app forms without web domains', () => {
+    const result = getAndroidAutofillProviderResult({
+      platform: 'android',
+      webDomain: null,
+      packageName: 'com.github.android',
+      formHints: ['username', 'password'],
+      hasUsernameField: true,
+      hasPasswordField: true,
+    }, [
+      entry({
+        id: 'github-app',
+        title: 'GitHub Mobile',
+        url: '',
+      }),
+    ], false);
+
+    expect(result.status).toBe('ready');
+    expect(result.candidates[0]).toEqual(expect.objectContaining({
+      id: 'github-app',
+      reason: 'title-fallback',
+    }));
+  });
+
   it('distinguishes unsupported and no-match requests', () => {
     expect(getAndroidAutofillProviderResult({
       platform: 'android',

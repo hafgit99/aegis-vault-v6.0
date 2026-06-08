@@ -8,7 +8,8 @@ import android.view.autofill.AutofillId
 data class AegisAutofillField(
   val autofillId: AutofillId,
   val role: AegisAutofillFieldRole,
-  val hints: List<String>
+  val hints: List<String>,
+  val value: String? = null
 )
 
 enum class AegisAutofillFieldRole {
@@ -63,7 +64,7 @@ object AegisAutofillRequestParser {
     val role = inferRole(node)
     val id = node.autofillId
     if (id != null && role != AegisAutofillFieldRole.Unknown) {
-      fields.add(AegisAutofillField(id, role, normalizedHints(node)))
+      fields.add(AegisAutofillField(id, role, normalizedHints(node), textValue(node)))
     }
 
     for (childIndex in 0 until node.childCount) {
@@ -97,6 +98,14 @@ object AegisAutofillRequestParser {
       ?.filter { it.isNotEmpty() }
       ?.distinct()
       ?: emptyList()
+
+  private fun textValue(node: AssistStructure.ViewNode): String? =
+    node.autofillValue
+      ?.takeIf { it.isText }
+      ?.textValue
+      ?.toString()
+      ?.trim()
+      ?.takeIf { it.isNotEmpty() }
 
   private fun normalizeDomain(value: String?): String? {
     val trimmed = value?.trim()?.lowercase()?.removePrefix("www.") ?: return null

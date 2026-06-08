@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   autofillNativeBridgeInternals,
+  clearPendingAndroidAutofillSaveRequest,
   clearPendingAndroidAutofillContext,
   clearApprovedAndroidAutofillPayload,
   createApprovedAndroidAutofillPayload,
+  readPendingAndroidAutofillSaveRequest,
   readPendingAndroidAutofillContext,
   writeApprovedAndroidAutofillPayload,
+  writeCanceledAndroidAutofillPayload,
 } from '../../src/lib/autofillNativeBridge';
 
 const invokeMock = vi.hoisted(() => vi.fn());
@@ -56,9 +59,53 @@ describe('autofillNativeBridge', () => {
     expect(autofillNativeBridgeInternals.parsePendingAutofillRequest(JSON.stringify({ platform: 'desktop' }))).toBeNull();
   });
 
+  it('parses pending Android Autofill save requests only when complete and unexpired', () => {
+    expect(autofillNativeBridgeInternals.parsePendingAutofillSaveRequest(JSON.stringify({
+      platform: 'android',
+      webDomain: 'github.com',
+      packageName: 'com.android.chrome',
+      username: 'octo@example.com',
+      password: 'Secret123!',
+      formHints: ['username', 7, 'password'],
+      expiresAt: 61_000,
+    }), 1_000)).toEqual({
+      platform: 'android',
+      webDomain: 'github.com',
+      packageName: 'com.android.chrome',
+      username: 'octo@example.com',
+      password: 'Secret123!',
+      formHints: ['username', 'password'],
+      expiresAt: 61_000,
+    });
+
+    expect(autofillNativeBridgeInternals.parsePendingAutofillSaveRequest('{bad json', 1_000)).toBeNull();
+    expect(autofillNativeBridgeInternals.parsePendingAutofillSaveRequest(JSON.stringify({ platform: 'desktop' }), 1_000)).toBeNull();
+    expect(autofillNativeBridgeInternals.parsePendingAutofillSaveRequest(JSON.stringify({
+      platform: 'android',
+      webDomain: 'github.com',
+      password: 'Secret123!',
+      expiresAt: 999,
+    }), 1_000)).toBeNull();
+    expect(autofillNativeBridgeInternals.parsePendingAutofillSaveRequest(JSON.stringify({
+      platform: 'android',
+      webDomain: '',
+      packageName: '',
+      password: 'Secret123!',
+      expiresAt: 61_000,
+    }), 1_000)).toBeNull();
+    expect(autofillNativeBridgeInternals.parsePendingAutofillSaveRequest(JSON.stringify({
+      platform: 'android',
+      webDomain: 'github.com',
+      password: '',
+      expiresAt: 61_000,
+    }), 1_000)).toBeNull();
+  });
+
   it('does not call native commands outside Android Tauri runtime', async () => {
     await expect(readPendingAndroidAutofillContext()).resolves.toBeNull();
     await expect(clearPendingAndroidAutofillContext()).resolves.toBe(false);
+    await expect(readPendingAndroidAutofillSaveRequest()).resolves.toBeNull();
+    await expect(clearPendingAndroidAutofillSaveRequest()).resolves.toBe(false);
     expect(invokeMock).not.toHaveBeenCalled();
   });
 
@@ -84,6 +131,32 @@ describe('autofillNativeBridge', () => {
 
     expect(invokeMock).toHaveBeenCalledWith('read_pending_autofill_request');
     expect(invokeMock).toHaveBeenCalledWith('clear_pending_autofill_request');
+  });
+
+  it('reads and clears pending save requests through Android Tauri commands', async () => {
+    setUserAgent('Mozilla/5.0 (Linux; Android 15)');
+    setTauriRuntime(true);
+    invokeMock.mockResolvedValueOnce(JSON.stringify({
+      platform: 'android',
+      webDomain: 'github.com',
+      packageName: 'com.android.chrome',
+      username: 'octo@example.com',
+      password: 'Secret123!',
+      formHints: ['username', 'password'],
+      expiresAt: Date.now() + 60_000,
+    }));
+    invokeMock.mockResolvedValueOnce(undefined);
+
+    await expect(readPendingAndroidAutofillSaveRequest()).resolves.toMatchObject({
+      webDomain: 'github.com',
+      packageName: 'com.android.chrome',
+      username: 'octo@example.com',
+      password: 'Secret123!',
+    });
+    await expect(clearPendingAndroidAutofillSaveRequest()).resolves.toBe(true);
+
+    expect(invokeMock).toHaveBeenCalledWith('read_pending_autofill_save_request');
+    expect(invokeMock).toHaveBeenCalledWith('clear_pending_autofill_save_request');
   });
 
   it('creates short-lived approved fill payloads only for active password entries', () => {
@@ -152,5 +225,27 @@ describe('autofillNativeBridge', () => {
       payload: JSON.stringify(payload),
     });
     expect(invokeMock).toHaveBeenCalledWith('clear_approved_autofill_payload');
+  });
+
+  it('writes canceled Autofill payloads through the approved handoff channel', async () => {
+    setUserAgent('Mozilla/5.0 (Linux; Android 15)');
+    setTauriRuntime(true);
+    invokeMock.mockResolvedValue(undefined);
+
+    await expect(writeCanceledAndroidAutofillPayload({
+      platform: 'android',
+      webDomain: 'example.com',
+      packageName: 'com.android.chrome',
+    }, 1_000)).resolves.toBe(true);
+
+    expect(invokeMock).toHaveBeenCalledWith('write_approved_autofill_payload', {
+      payload: JSON.stringify({
+        platform: 'android',
+        status: 'canceled',
+        webDomain: 'example.com',
+        packageName: 'com.android.chrome',
+        expiresAt: 31_000,
+      }),
+    });
   });
 });

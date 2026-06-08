@@ -10,14 +10,35 @@
     },
     "autofill": {
       "thisApp": "此应用",
-      "locked": "请先解锁 AegisVault，以查看 {{target}} 的自动填充匹配项。",
-      "ready": "自动填充匹配已就绪：{{target}} 的 {{title}}。",
-      "approved": "{{title}} 的自动填充已批准。请返回 {{target}} 并再次选择 AegisVault。",
+      "locked": "已收到 {{target}} 的自动填充请求。请解锁保险库以继续。",
+      "ready": "{{title}} 已可用于 {{target}}。请检查记录详情以继续。",
+      "approved": "{{title}} 已批准。请返回 {{target}}，并从 AegisVault 建议中选择此记录。",
       "noMatch": "未找到适用于 {{target}} 的安全自动填充匹配项。",
+      "selectionTitle": "选择要填充的记录",
+      "selectionDescription": "已为 {{target}} 找到多个安全匹配项。请确认要使用的记录。",
+      "cancel": "取消",
+      "save": {
+        "title": "将此登录保存到保险库？",
+        "description": "在 {{target}} 检测到新的登录信息。请在此确认保存决定，密码不会显示。",
+        "target": "目标",
+        "username": "用户名",
+        "createHint": "将创建新的登录记录。只有确认后，密码才会写入本地保险库。",
+        "updateHint": "\"{{title}}\" 已匹配此目标和用户名。你可以更新现有记录。",
+        "create": "创建保险库记录",
+        "update": "更新现有记录",
+        "created": "已为 {{target}} 创建新记录。",
+        "updated": "已为 {{target}} 更新现有记录。",
+        "logs": {
+          "detected": "Android 自动填充检测到 {{target}} 有一个等待保存确认的登录信息。",
+          "created": "Android 自动填充保存确认已为 {{target}} 创建新记录。",
+          "updated": "Android 自动填充保存确认已为 {{target}} 更新现有记录。",
+          "canceled": "已取消 {{target}} 的 Android 自动填充保存请求。"
+        }
+      },
       "logs": {
         "locked": "Android 自动填充在保险库锁定时请求了 {{target}}。",
-        "ready": "Android 自动填充已打开 {{target}} 的匹配记录 {{title}}。",
-        "approved": "Android 自动填充已为 {{target}} 的 {{title}} 准备一次性填充数据。",
+        "ready": "Android 自动填充已为 {{target}} 准备匹配记录 {{title}}。",
+        "approved": "Android 自动填充已为 {{target}} 的 {{title}} 准备一次性填充授权。",
         "noMatch": "Android 自动填充未找到 {{target}} 的安全记录匹配。"
       }
     },

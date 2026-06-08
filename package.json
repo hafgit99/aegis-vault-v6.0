@@ -17,6 +17,9 @@
     "desktop:dev": "tauri dev",
     "desktop:build": "tauri build",
     "desktop:checksums": "node scripts/generate-artifact-checksums.mjs",
+    "desktop:autofill:extension:stage": "node scripts/stage-browser-extension.mjs",
+    "desktop:autofill:host:build": "cargo build --manifest-path src-tauri/Cargo.toml --bin aegisvault_native_messaging_host",
+    "desktop:autofill:host:stage": "node scripts/stage-desktop-autofill-host.mjs",
     "android:doctor": "node scripts/verify-android-readiness.mjs",
     "android:init": "tauri android init",
     "android:dev": "tauri android dev --open",
@@ -26,6 +29,7 @@
     "android:build:aab": "tauri android build --aab",
     "android:checksums": "node scripts/generate-artifact-checksums.mjs src-tauri/gen/android/app/build/outputs",
     "android:stage": "node scripts/stage-android-artifacts.mjs src-tauri/gen/android/app/build/outputs android-artifacts/aegisvault-android",
+    "desktop:autofill:doctor": "node scripts/verify-desktop-autofill-extension.mjs",
     "brand:icon:source": "node scripts/render-icon-source.mjs",
     "release:verify-version": "node scripts/verify-release-version.mjs",
     "build": "vite build",
@@ -71,7 +75,7 @@
     "test:mutation:ui": "stryker run stryker.ui.config.json",
     "test:mutation:sqlite": "stryker run stryker.sqlite-opfs.config.json",
     "test:mutation:release": "npm run test:mutation && npm run test:mutation:secure-share && npm run test:mutation:sqlite && npm run test:mutation:hooks && npm run test:mutation:settings && npm run test:mutation:database",
-    "test:all": "npm run lint && npm run security:scan && npm run security:workflows && npm run security:dependencies && npm run security:validation && npm run security:secure-share && npm run security:privacy && npm run security:signing && npm run security:branch-protection && npm run security:desktop-smoke && npm run security:logging && npm run security:errors && npm run security:release-notes && npm run security:disclosure && npm run security:sbom && npm run security:evidence && npm run audit:prod && npm run test:coverage && npm run build && npm run build:budget && npm run test:e2e:release"
+    "test:all": "npm run lint && npm run security:scan && npm run security:workflows && npm run security:dependencies && npm run security:validation && npm run security:secure-share && npm run security:privacy && npm run security:signing && npm run security:branch-protection && npm run security:desktop-smoke && npm run desktop:autofill:doctor && npm run security:logging && npm run security:errors && npm run security:release-notes && npm run security:disclosure && npm run android:doctor && npm run test:unit -- test/unit/autofill-handoff-controller.test.tsx test/unit/autofill-handoff.test.tsx test/unit/autofill-native-bridge.test.ts test/unit/autofill-provider.test.ts test/unit/autofill-matcher.test.ts && npm run security:sbom && npm run security:evidence && npm run audit:prod && npm run test:coverage && npm run build && npm run build:budget && npm run test:e2e:release"
   },
   "dependencies": {
     "@choochmeque/tauri-plugin-biometry-api": "^0.2.8",

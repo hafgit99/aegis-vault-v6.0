@@ -25,6 +25,10 @@ const cargoToml = readFileSync(join(root, 'src-tauri', 'Cargo.toml'), 'utf8');
 const roadmapPath = join(root, 'docs', 'ANDROID_ROADMAP.md');
 const androidSmokeChecklistPath = join(root, 'docs', 'ANDROID_SMOKE_CHECKLIST.md');
 const androidSigningPath = join(root, 'docs', 'ANDROID_SIGNING.md');
+const autofillRoadmapPath = join(root, 'docs', 'AUTOFILL_ROADMAP.md');
+const autofillSaveThreatModelPath = join(root, 'docs', 'AUTOFILL_SAVE_THREAT_MODEL.md');
+const securityModelPath = join(root, 'docs', 'SECURITY_MODEL.md');
+const threatModelPath = join(root, 'docs', 'THREAT_MODEL.md');
 const androidWorkflowPath = join(root, '.github', 'workflows', 'android-packaging.yml');
 const androidIconPath = join(root, 'src-tauri', 'icons', 'android');
 const androidProjectPath = join(root, 'src-tauri', 'gen', 'android');
@@ -64,10 +68,25 @@ const androidAutofillParserPath = join(
   'desktop',
   'AegisAutofillRequestParser.kt',
 );
+const androidAutofillAuthActivityPath = join(
+  androidProjectPath,
+  'app',
+  'src',
+  'main',
+  'java',
+  'com',
+  'aegisvault',
+  'desktop',
+  'AutofillAuthActivity.kt',
+);
 const androidRootBuildGradlePath = join(androidProjectPath, 'build.gradle.kts');
 const androidAppBuildGradlePath = join(androidProjectPath, 'app', 'build.gradle.kts');
 const tauriRustPath = join(root, 'src-tauri', 'src', 'lib.rs');
 const vaultStorageAdapterPath = join(root, 'src', 'lib', 'vaultStorageAdapter.ts');
+const autofillNativeBridgePath = join(root, 'src', 'lib', 'autofillNativeBridge.ts');
+const autofillProviderPath = join(root, 'src', 'lib', 'autofillProvider.ts');
+const autofillMatcherPath = join(root, 'src', 'lib', 'autofillMatcher.ts');
+const autofillHandoffHookPath = join(root, 'src', 'hooks', 'useAutofillHandoff.ts');
 
 for (const scriptName of [
   'tauri',
@@ -140,6 +159,10 @@ if (!existsSync(androidSmokeChecklistPath)) {
   const smokeChecklist = readFileSync(androidSmokeChecklistPath, 'utf8');
   for (const required of [
     'Android app-private storage',
+    'Android Autofill',
+    'Fill with AegisVault',
+    'Android Autofill framework',
+    'wrong-domain',
     'Secure Share',
     'HIBP',
     'FLAG_SECURE',
@@ -157,6 +180,9 @@ if (!existsSync(androidWorkflowPath)) {
   const androidWorkflow = readFileSync(androidWorkflowPath, 'utf8');
   for (const required of [
     'npm run android:doctor',
+    'Android Autofill regression gate',
+    'test/unit/autofill-handoff-controller.test.tsx',
+    'test/unit/autofill-native-bridge.test.ts',
     'npm run android:build:apk:arm64',
     'npm run android:build:aab',
     'npm run android:checksums',
@@ -187,6 +213,54 @@ if (!existsSync(androidSigningPath)) {
   }
 }
 
+if (!existsSync(autofillSaveThreatModelPath)) {
+  failures.push('docs/AUTOFILL_SAVE_THREAT_MODEL.md must exist before Android Autofill save prompts are implemented.');
+} else {
+  const autofillSaveThreatModel = readFileSync(autofillSaveThreatModelPath, 'utf8');
+  for (const required of [
+    'No background save',
+    'explicit in-app user confirmation',
+    'short-lived, single-use',
+    'pending_autofill_save_request.json',
+    'Existing matching records',
+    'native capture remains limited to Android app-private storage',
+  ]) {
+    if (!autofillSaveThreatModel.includes(required)) {
+      failures.push(`docs/AUTOFILL_SAVE_THREAT_MODEL.md must document "${required}".`);
+    }
+  }
+}
+
+const docsWithAutofillSaveThreatModelReferences = [
+  [autofillRoadmapPath, 'docs/AUTOFILL_ROADMAP.md'],
+  [securityModelPath, 'docs/SECURITY_MODEL.md'],
+  [threatModelPath, 'docs/THREAT_MODEL.md'],
+];
+for (const [path, label] of docsWithAutofillSaveThreatModelReferences) {
+  const content = existsSync(path) ? readFileSync(path, 'utf8') : '';
+  if (!content.includes('AUTOFILL_SAVE_THREAT_MODEL.md')) {
+    failures.push(`${label} must reference docs/AUTOFILL_SAVE_THREAT_MODEL.md before Android Autofill save prompts are enabled.`);
+  }
+}
+
+const androidBuildEvidencePath = join(root, 'docs', 'ANDROID_BUILD_EVIDENCE.md');
+if (!existsSync(androidBuildEvidencePath)) {
+  failures.push('docs/ANDROID_BUILD_EVIDENCE.md must exist.');
+} else {
+  const androidBuildEvidence = readFileSync(androidBuildEvidencePath, 'utf8');
+  for (const required of [
+    'Android Autofill regression tests',
+    'Fill with AegisVault',
+    'AutofillManager.EXTRA_AUTHENTICATION_RESULT',
+    'RESULT_CANCELED',
+    'test/unit/autofill-handoff-controller.test.tsx',
+  ]) {
+    if (!androidBuildEvidence.includes(required)) {
+      failures.push(`docs/ANDROID_BUILD_EVIDENCE.md must document "${required}".`);
+    }
+  }
+}
+
 if (!existsSync(androidProjectPath)) {
   warnings.push('Android project scaffold is not present yet. Run "npm run android:init" after installing Android Studio, SDK, NDK, and Rust Android targets.');
 } else {
@@ -204,6 +278,9 @@ if (!existsSync(androidProjectPath)) {
   const autofillParser = existsSync(androidAutofillParserPath)
     ? readFileSync(androidAutofillParserPath, 'utf8')
     : '';
+  const autofillAuthActivity = existsSync(androidAutofillAuthActivityPath)
+    ? readFileSync(androidAutofillAuthActivityPath, 'utf8')
+    : '';
   const androidRootBuildGradle = existsSync(androidRootBuildGradlePath)
     ? readFileSync(androidRootBuildGradlePath, 'utf8')
     : '';
@@ -213,6 +290,18 @@ if (!existsSync(androidProjectPath)) {
   const tauriRust = existsSync(tauriRustPath) ? readFileSync(tauriRustPath, 'utf8') : '';
   const vaultStorageAdapter = existsSync(vaultStorageAdapterPath)
     ? readFileSync(vaultStorageAdapterPath, 'utf8')
+    : '';
+  const autofillNativeBridge = existsSync(autofillNativeBridgePath)
+    ? readFileSync(autofillNativeBridgePath, 'utf8')
+    : '';
+  const autofillProvider = existsSync(autofillProviderPath)
+    ? readFileSync(autofillProviderPath, 'utf8')
+    : '';
+  const autofillMatcher = existsSync(autofillMatcherPath)
+    ? readFileSync(autofillMatcherPath, 'utf8')
+    : '';
+  const autofillHandoffHook = existsSync(autofillHandoffHookPath)
+    ? readFileSync(autofillHandoffHookPath, 'utf8')
     : '';
 
   if (!manifest.includes('android:allowBackup="false"')) {
@@ -230,6 +319,15 @@ if (!existsSync(androidProjectPath)) {
   if (!manifest.includes('android.service.autofill.AutofillService')) {
     failures.push('AndroidManifest.xml must register the Android AutofillService entry point.');
   }
+  if (!manifest.includes('.AutofillAuthActivity')) {
+    failures.push('AndroidManifest.xml must register the Android Autofill authentication result activity.');
+  }
+  if (!manifest.includes('android:launchMode="singleTask"')) {
+    failures.push('AndroidManifest.xml must keep MainActivity launchMode="singleTask" so AutofillAuthActivity can remain in the browser task while AegisVault opens in its own task.');
+  }
+  if (!manifest.includes('android:exported="false"') || !manifest.includes('android:excludeFromRecents="true"')) {
+    failures.push('AndroidManifest.xml must keep AutofillAuthActivity non-exported and excluded from recents.');
+  }
   if (!manifest.includes('android.permission.BIND_AUTOFILL_SERVICE')) {
     failures.push('Android AutofillService must be protected by android.permission.BIND_AUTOFILL_SERVICE.');
   }
@@ -246,7 +344,25 @@ if (!existsSync(androidProjectPath)) {
     failures.push('AegisAutofillService.kt must parse fill requests before bridge/dataset work starts.');
   }
   if (!autofillService.includes('setAuthentication')) {
-    failures.push('AegisAutofillService.kt must use OS-mediated authentication before returning fill data.');
+    failures.push('AegisAutofillService.kt must use OS-mediated dataset authentication before returning fill data.');
+  }
+  if (!autofillService.includes('AutofillAuthActivity::class.java')) {
+    failures.push('AegisAutofillService.kt must route authentication PendingIntents through AutofillAuthActivity.');
+  }
+  const authenticationResponseStart = autofillService.indexOf('private fun buildAuthenticationResponse');
+  const authenticationPresentationStart = autofillService.indexOf('private fun authenticationPresentation');
+  const authenticationResponseBlock =
+    authenticationResponseStart >= 0 && authenticationPresentationStart > authenticationResponseStart
+      ? autofillService.slice(authenticationResponseStart, authenticationPresentationStart)
+      : '';
+  if (authenticationResponseBlock.includes('Intent.FLAG_ACTIVITY_NEW_TASK')) {
+    failures.push('AegisAutofillService.kt must not launch Autofill authentication as a new task because Android cancels authentication results for new-task launches.');
+  }
+  if (!autofillService.includes('putParcelableArrayListExtra("aegis_autofill_ids"')) {
+    failures.push('AegisAutofillService.kt must pass AutofillId values to AutofillAuthActivity for framework result datasets.');
+  }
+  if (!autofillService.includes('.addDataset(dataset.build())')) {
+    failures.push('AegisAutofillService.kt must return a dataset-level authentication response so SaveInfo remains visible for manually typed credentials.');
   }
   if (!autofillService.includes('aegis_autofill_request')) {
     failures.push('AegisAutofillService.kt must carry a scoped autofill request marker into MainActivity.');
@@ -260,11 +376,62 @@ if (!existsSync(androidProjectPath)) {
   if (autofillService.includes('Unlock AegisVault for')) {
     failures.push('AegisAutofillService.kt must use a neutral Autofill presentation label because the service cannot know the live vault lock state.');
   }
+  for (const required of [
+    'SaveInfo.SAVE_DATA_TYPE_PASSWORD',
+    'SaveInfo.FLAG_SAVE_ON_ALL_VIEWS_INVISIBLE',
+    'setOptionalIds',
+    'PENDING_AUTOFILL_SAVE_REQUEST_FILE',
+    'SAVE_REQUEST_TTL_MS = 300_000L',
+    'request.fillContexts.lastOrNull()',
+    'password.isBlank()',
+    'context.webDomain.isNullOrBlank() && context.packageName.isBlank()',
+    'BROWSER_PACKAGES_REQUIRING_WEB_DOMAIN',
+    'browser package did not expose a web domain',
+    'requiredPasswordIds',
+    'passwordIds.drop(1)',
+    'buildSaveApprovalIntentSender',
+    'aegis_autofill_save_request',
+    'Autofill save request staged for explicit in-app approval',
+  ]) {
+    if (!autofillService.includes(required)) {
+      failures.push(`AegisAutofillService.kt must implement guarded Autofill save capture with "${required}".`);
+    }
+  }
+  if (autofillService.includes('Log.i(TAG, "Autofill save request staged') && autofillService.includes('username=$')) {
+    failures.push('AegisAutofillService.kt must not log captured Autofill save usernames or passwords.');
+  }
+  if (!autofillParser.includes('val value: String? = null') || !autofillParser.includes('textValue(node)')) {
+    failures.push('AegisAutofillRequestParser.kt must expose text values only for guarded Android Autofill save request staging.');
+  }
   if (!autofillParser.includes('AssistStructure')) {
     failures.push('AegisAutofillRequestParser.kt must parse AssistStructure field context.');
   }
   if (!autofillParser.includes('TYPE_TEXT_VARIATION_WEB_PASSWORD')) {
     failures.push('AegisAutofillRequestParser.kt must recognize web password input variations.');
+  }
+  if (!autofillAuthActivity.includes('AutofillManager.EXTRA_AUTHENTICATION_RESULT')) {
+    failures.push('AutofillAuthActivity.kt must return Dataset results through AutofillManager.EXTRA_AUTHENTICATION_RESULT.');
+  }
+  if (!autofillAuthActivity.includes('Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP')) {
+    failures.push('AutofillAuthActivity.kt must launch MainActivity in the AegisVault task while the authentication result activity waits in the browser task.');
+  }
+  if (autofillAuthActivity.includes('FillResponse.Builder()')) {
+    failures.push('AutofillAuthActivity.kt must return an authenticated Dataset, not a nested FillResponse, so the original SaveInfo stays active.');
+  }
+  if (!autofillAuthActivity.includes('dataset.build()')) {
+    failures.push('AutofillAuthActivity.kt must return a populated Dataset for dataset-level authentication results.');
+  }
+  if (!autofillAuthActivity.includes('setResult(RESULT_OK')) {
+    failures.push('AutofillAuthActivity.kt must call setResult(RESULT_OK, ...) after building an approved dataset.');
+  }
+  if (!autofillAuthActivity.includes('approved_autofill_payload.json')) {
+    failures.push('AutofillAuthActivity.kt must consume the one-time approved Autofill payload.');
+  }
+  if (!autofillAuthActivity.includes('POLL_TIMEOUT_MS = 300_000L')) {
+    failures.push('AutofillAuthActivity.kt must allow enough time for vault unlock and approval before canceling authentication.');
+  }
+  if (!autofillAuthActivity.includes('payload.optString("status", "") == "canceled"')) {
+    failures.push('AutofillAuthActivity.kt must honor canceled Autofill payloads and return RESULT_CANCELED promptly.');
   }
   if (!networkSecurityConfig.includes('api.pwnedpasswords.com')) {
     failures.push('network_security_config.xml must include the HIBP range API domain allowlist.');
@@ -314,10 +481,45 @@ if (!existsSync(androidProjectPath)) {
     'clear_pending_autofill_request',
     'write_approved_autofill_payload',
     'clear_approved_autofill_payload',
+    'read_pending_autofill_save_request',
+    'clear_pending_autofill_save_request',
   ]) {
     if (!tauriRust.includes(commandName)) {
       failures.push(`src-tauri/src/lib.rs must expose the Android Autofill handoff command "${commandName}".`);
     }
+  }
+  if (!tauriRust.includes('pending_autofill_save_request.json')) {
+    failures.push('src-tauri/src/lib.rs must reserve the Android pending Autofill save request filename.');
+  }
+  if (!tauriRust.includes('/data/data/com.aegisvault.desktop/files')) {
+    failures.push('src-tauri/src/lib.rs must route Android Autofill handoff files through the same app-private filesDir used by native Kotlin.');
+  }
+  if (!autofillNativeBridge.includes('writeCanceledAndroidAutofillPayload')) {
+    failures.push('src/lib/autofillNativeBridge.ts must expose a canceled Autofill handoff payload writer.');
+  }
+  if (!autofillNativeBridge.includes('parsePendingAutofillSaveRequest')) {
+    failures.push('src/lib/autofillNativeBridge.ts must parse pending Android Autofill save request payloads before any UI can consume them.');
+  }
+  if (!autofillNativeBridge.includes('readPendingAndroidAutofillSaveRequest') || !autofillNativeBridge.includes('clearPendingAndroidAutofillSaveRequest')) {
+    failures.push('src/lib/autofillNativeBridge.ts must expose read and clear helpers for pending Android Autofill save requests.');
+  }
+  if (!autofillNativeBridge.includes("status: 'canceled'")) {
+    failures.push('src/lib/autofillNativeBridge.ts must encode canceled Autofill payloads with status: "canceled".');
+  }
+  if (!autofillHandoffHook.includes('writeCanceledAndroidAutofillPayload')) {
+    failures.push('src/hooks/useAutofillHandoff.ts must cancel pending native Autofill authentication when the user dismisses selection.');
+  }
+  if (!autofillHandoffHook.includes('selectionRequest')) {
+    failures.push('src/hooks/useAutofillHandoff.ts must keep explicit selection state for multiple Autofill matches.');
+  }
+  if (!autofillProvider.includes('context.hasPasswordField === true') || !autofillProvider.includes('candidate.hasPassword')) {
+    failures.push('src/lib/autofillProvider.ts must filter Android password-field results to candidates that actually contain passwords.');
+  }
+  if (!autofillProvider.includes("candidate.reason === 'exact-domain'") || !autofillProvider.includes("candidate.reason === 'subdomain'")) {
+    failures.push('src/lib/autofillProvider.ts must reject weak title-only fallback matches when a web domain is available.');
+  }
+  if (!autofillMatcher.includes('GENERIC_PACKAGE_TOKENS') || !autofillMatcher.includes('packageTokens(packageName)')) {
+    failures.push('src/lib/autofillMatcher.ts must use meaningful package tokens for package-only Android app Autofill matches.');
   }
 }
 

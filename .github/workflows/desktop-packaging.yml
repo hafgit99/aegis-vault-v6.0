@@ -80,6 +80,9 @@ jobs:
       - name: Desktop smoke policy audit
         run: npm run security:desktop-smoke
 
+      - name: Desktop Autofill extension gate
+        run: npm run desktop:autofill:doctor
+
       - name: Security logging policy audit
         run: npm run security:logging
 
@@ -195,6 +198,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Stage desktop Autofill browser extension
+        if: runner.os == 'Windows'
+        run: npm run desktop:autofill:extension:stage
+
       - name: Generate platform SBOM
         run: npm run security:sbom
 
@@ -299,6 +306,17 @@ jobs:
         if: (runner.os == 'Windows' && env.SIGNING_MODE != 'windows' && env.SIGNING_MODE != 'all') || runner.os == 'Linux'
         run: npm run desktop:build
 
+      - name: Build desktop Autofill native host
+        if: runner.os == 'Windows'
+        run: npm run desktop:autofill:host:build
+
+      - name: Stage desktop Autofill native host
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          AEGISVAULT_CHROMIUM_EXTENSION_ID: ${{ vars.AEGISVAULT_CHROMIUM_EXTENSION_ID || 'fbegblomolojcldifclfljlkddkcdehl' }}
+        run: npm run desktop:autofill:host:stage
+
       - name: Notarize macOS desktop artifacts
         if: runner.os == 'macOS' && (env.SIGNING_MODE == 'macos' || env.SIGNING_MODE == 'all')
         shell: bash
@@ -323,6 +341,22 @@ jobs:
 
       - name: Stage desktop release artifacts
         run: node scripts/stage-desktop-artifacts.mjs ${{ matrix.bundle-path }} desktop-artifacts/${{ matrix.artifact-name }}
+
+      - name: Upload desktop Autofill native host
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: aegisvault-desktop-autofill-host
+          path: desktop-autofill-host/
+          retention-days: 30
+
+      - name: Upload desktop Autofill browser extension
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: aegisvault-desktop-autofill-extension
+          path: desktop-autofill-extension/
+          retention-days: 30
 
       - name: Attest desktop artifact provenance
         continue-on-error: true

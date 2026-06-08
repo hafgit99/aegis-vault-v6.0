@@ -35,6 +35,7 @@ The current privacy disclosure is documented in `docs/PRIVACY_NOTICE.md`.
 | Passkeys | WebAuthn `navigator.credentials.create/get` for AegisVault origin credentials | Authenticator-backed passkey metadata storage and verification. |
 | TOTP | RFC 6238-compatible HMAC-based code generation | Optional one-time codes stored as encrypted vault fields. |
 | Clipboard | Secret writes use desktop sensitive clipboard flags where available and are cleared after a short delay | Reduces accidental long-lived clipboard exposure; clipboard is still a shared OS surface. |
+| Android Autofill | Android AutofillService plus explicit AegisVault approval before returning datasets or saving staged credentials | Fills credentials through the OS framework only after a single-use approved payload; save prompts stage short-lived app-private payloads and still require explicit in-app approval. |
 
 ## HKDF Salt Decision
 
@@ -85,6 +86,14 @@ Security properties and limits:
 - Users who require maximum separation can leave biometric unlock disabled and continue using the master password plus device secret flow.
 
 The frontend CSP blocks arbitrary external connections. The only default external API exception is `https://api.pwnedpasswords.com` for user-started HIBP k-anonymity password checks. Air-Gap mode also blocks arbitrary external runtime requests while preserving this range-lookup exception, so strict no-network sessions should not start HIBP scanning.
+
+## Android Autofill Model
+
+Android Autofill uses `AegisAutofillService` to parse OS-provided form context and return an authentication response instead of raw datasets. The authentication activity opens AegisVault, the React vault session performs matching and explicit approval, and a short-lived approved payload is written into Android app-private storage. `AutofillAuthActivity` consumes that payload once, validates the original domain or package target, and returns a dataset through `AutofillManager.EXTRA_AUTHENTICATION_RESULT`.
+
+The suggestion list must not expose raw passwords. Multiple matches require an in-app selection sheet. Canceling selection writes a canceled payload so Android receives `RESULT_CANCELED` and the browser or app form remains unchanged.
+
+Android Autofill save prompts use a guarded staging flow. `AegisAutofillService.onSaveRequest` only writes a short-lived `pending_autofill_save_request.json` file when a password value and a web domain or Android package target are present. AegisVault then shows an explicit confirmation sheet with create, update, and cancel paths. Native save capture must never create or update records directly; all persistence goes through the existing vault save/update handlers after user approval. The detailed design gate is documented in `docs/AUTOFILL_SAVE_THREAT_MODEL.md`.
 
 ## Clipboard Model
 

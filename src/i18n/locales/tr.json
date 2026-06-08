@@ -10,14 +10,35 @@
     },
     "autofill": {
       "thisApp": "bu uygulama",
-      "locked": "{{target}} için otomatik doldurma eşleşmelerini görmek üzere AegisVault kilidini açın.",
-      "ready": "Otomatik doldurma eşleşmesi hazır: {{target}} için {{title}}.",
-      "approved": "{{title}} için otomatik doldurma onaylandı. {{target}} ekranına dönüp AegisVault'u tekrar seçin.",
+      "locked": "{{target}} için otomatik doldurma isteği alındı. Devam etmek için kasanın kilidini açın.",
+      "ready": "{{target}} için {{title}} kaydı hazır. Devam etmek için kayıt ayrıntısını kontrol edin.",
+      "approved": "{{title}} onaylandı. {{target}} ekranına dönün ve görünen AegisVault önerisinden bu kaydı seçin.",
       "noMatch": "{{target}} için güvenli otomatik doldurma eşleşmesi bulunamadı.",
+      "selectionTitle": "Doldurulacak kaydı seçin",
+      "selectionDescription": "{{target}} için birden fazla güvenli eşleşme bulundu. Kullanmak istediğiniz kaydı onaylayın.",
+      "cancel": "İptal et",
+      "save": {
+        "title": "Bu girişi kasaya kaydet?",
+        "description": "{{target}} üzerinde yeni giriş bilgisi algılandı. Şifre gösterilmeden kaydetme kararını burada onaylayın.",
+        "target": "Hedef",
+        "username": "Kullanıcı adı",
+        "createHint": "Yeni bir login kaydı oluşturulacak. Şifre yalnızca onaydan sonra yerel kasaya yazılır.",
+        "updateHint": "\"{{title}}\" kaydı aynı hedef ve kullanıcı adıyla eşleşiyor. Mevcut kaydı güncelleyebilirsiniz.",
+        "create": "Kasa Kaydı Oluştur",
+        "update": "Mevcut Kaydı Güncelle",
+        "created": "{{target}} için yeni kayıt oluşturuldu.",
+        "updated": "{{target}} için mevcut kayıt güncellendi.",
+        "logs": {
+          "detected": "Android Otomatik Doldurma, {{target}} için kaydetme onayı bekleyen bir giriş algıladı.",
+          "created": "Android Otomatik Doldurma kaydetme onayıyla {{target}} için yeni kayıt oluşturuldu.",
+          "updated": "Android Otomatik Doldurma kaydetme onayıyla {{target}} için mevcut kayıt güncellendi.",
+          "canceled": "Android Otomatik Doldurma kaydetme isteği {{target}} için iptal edildi."
+        }
+      },
       "logs": {
         "locked": "Android Otomatik Doldurma, kasa kilitliyken {{target}} için istek gönderdi.",
-        "ready": "Android Otomatik Doldurma, {{target}} için eşleşen {{title}} kaydını açtı.",
-        "approved": "Android Otomatik Doldurma, {{target}} üzerindeki {{title}} için tek kullanımlık doldurma payload'u hazırladı.",
+        "ready": "Android Otomatik Doldurma, {{target}} için eşleşen {{title}} kaydını hazır duruma getirdi.",
+        "approved": "Android Otomatik Doldurma, {{target}} üzerindeki {{title}} için tek kullanımlık doldurma izni hazırladı.",
         "noMatch": "Android Otomatik Doldurma, {{target}} için güvenli kayıt eşleşmesi bulamadı."
       }
     },
