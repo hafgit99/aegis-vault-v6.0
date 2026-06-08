@@ -325,8 +325,31 @@ fn candidate_app_path() -> Option<PathBuf> {
 
     #[cfg(target_os = "windows")]
     {
-        for candidate in ["AegisVault.exe", "aegisvault.exe"] {
-            let path = dir.join(candidate);
+        if let Some(path) = candidate_from_env("AEGISVAULT_DESKTOP_APP_PATH") {
+            return Some(path);
+        }
+        if let Some(path) = candidate_from_host_config(dir) {
+            return Some(path);
+        }
+
+        let mut candidates = vec![
+            dir.join("AegisVault.exe"),
+            dir.join("aegisvault.exe"),
+        ];
+
+        for env_name in ["LOCALAPPDATA", "ProgramFiles", "ProgramFiles(x86)"] {
+            if let Some(base) = env::var_os(env_name) {
+                let base = PathBuf::from(base);
+                candidates.push(base.join("AegisVault").join("AegisVault.exe"));
+                candidates.push(base.join("Programs").join("AegisVault").join("AegisVault.exe"));
+            }
+        }
+
+        if let Some(app_data) = env::var_os("APPDATA") {
+            candidates.push(PathBuf::from(app_data).join("AegisVault").join("AegisVault.exe"));
+        }
+
+        for path in candidates {
             if path.exists() {
                 return Some(path);
             }
@@ -352,4 +375,24 @@ fn candidate_app_path() -> Option<PathBuf> {
     }
 
     None
+}
+
+fn candidate_from_env(name: &str) -> Option<PathBuf> {
+    let value = env::var_os(name)?;
+    let path = PathBuf::from(value);
+    if path.exists() {
+        Some(path)
+    } else {
+        None
+    }
+}
+
+fn candidate_from_host_config(host_dir: &std::path::Path) -> Option<PathBuf> {
+    let content = fs::read_to_string(host_dir.join("aegisvault-app-path.txt")).ok()?;
+    let path = PathBuf::from(content.trim());
+    if path.exists() {
+        Some(path)
+    } else {
+        None
+    }
 }
