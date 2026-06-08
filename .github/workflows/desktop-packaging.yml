@@ -198,6 +198,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Clean stale desktop bundle outputs
+        run: node scripts/clean-desktop-bundles.mjs
+
       - name: Stage desktop Autofill browser extension
         if: runner.os == 'Windows'
         run: npm run desktop:autofill:extension:stage

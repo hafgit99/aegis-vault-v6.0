@@ -22,6 +22,15 @@ const releaseEvidenceNames = new Set([
   'artifact-manifest.json',
 ]);
 
+const minimumDistributableSizes = new Map([
+  ['.appimage', 1024 * 1024],
+  ['.deb', 1024 * 1024],
+  ['.dmg', 1024 * 1024],
+  ['.exe', 1024 * 1024],
+  ['.msi', 1024 * 1024],
+  ['.rpm', 1024 * 1024],
+]);
+
 async function collectFiles(dir) {
   const entries = await readdir(dir, { withFileTypes: true });
   const files = [];
@@ -75,6 +84,18 @@ const stagedStats = await Promise.all(stagedFiles.map(async fileName => ({
   fileName,
   sizeBytes: (await stat(path.join(resolvedStageRoot, fileName))).size,
 })));
+
+const undersizedArtifacts = stagedStats.filter(({ fileName, sizeBytes }) => {
+  const minimumSize = minimumDistributableSizes.get(path.extname(fileName).toLowerCase());
+  return minimumSize !== undefined && sizeBytes < minimumSize;
+});
+
+if (undersizedArtifacts.length > 0) {
+  const details = undersizedArtifacts
+    .map(({ fileName, sizeBytes }) => `- ${fileName} (${sizeBytes} bytes)`)
+    .join('\n');
+  throw new Error(`Desktop release artifact is unexpectedly small and may be corrupt:\n${details}`);
+}
 
 console.log(`Staged ${stagedStats.length} desktop release artifact(s) in ${resolvedStageRoot}`);
 for (const artifact of stagedStats) {
