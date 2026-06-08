@@ -11,6 +11,7 @@ import org.json.JSONObject
 
 private const val TAG = "AegisMainActivity"
 private const val PENDING_AUTOFILL_REQUEST_FILE = "pending_autofill_request.json"
+private const val EXTRA_AUTOFILL_HANDOFF_KEY = "aegis_autofill_handoff_key"
 
 class MainActivity : TauriActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,6 +39,7 @@ class MainActivity : TauriActivity() {
       .put("hasUsernameField", intent.getBooleanExtra("aegis_autofill_has_username", false))
       .put("hasPasswordField", intent.getBooleanExtra("aegis_autofill_has_password", false))
       .put("formHints", JSONArray(hints.toList()))
+      .put("handoffKeyB64", intent.getStringExtra(EXTRA_AUTOFILL_HANDOFF_KEY))
       .put("receivedAt", System.currentTimeMillis())
 
     try {

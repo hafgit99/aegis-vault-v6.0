@@ -46,6 +46,7 @@ describe('autofillNativeBridge', () => {
       formHints: ['username', 1, 'password'],
       hasUsernameField: true,
       hasPasswordField: true,
+      handoffKeyB64: btoa(String.fromCharCode(...new Uint8Array(32).fill(5))),
     }))).toEqual({
       platform: 'android',
       webDomain: 'example.com',
@@ -53,6 +54,7 @@ describe('autofillNativeBridge', () => {
       formHints: ['username', 'password'],
       hasUsernameField: true,
       hasPasswordField: true,
+      handoffKeyB64: btoa(String.fromCharCode(...new Uint8Array(32).fill(5))),
     });
 
     expect(autofillNativeBridgeInternals.parsePendingAutofillRequest('{bad json')).toBeNull();
@@ -225,6 +227,44 @@ describe('autofillNativeBridge', () => {
       payload: JSON.stringify(payload),
     });
     expect(invokeMock).toHaveBeenCalledWith('clear_approved_autofill_payload');
+  });
+
+  it('seals approved fill payloads with a one-time Autofill handoff key', async () => {
+    setUserAgent('Mozilla/5.0 (Linux; Android 15)');
+    setTauriRuntime(true);
+    invokeMock.mockResolvedValue(undefined);
+    const handoffKeyB64 = btoa(String.fromCharCode(...new Uint8Array(32).fill(9)));
+    const payload = createApprovedAndroidAutofillPayload({
+      platform: 'android',
+      webDomain: 'example.com',
+      packageName: 'com.android.chrome',
+      handoffKeyB64,
+    }, {
+      id: 'entry',
+      title: 'Example',
+      subtitle: 'octo@example.com',
+      username: 'octo@example.com',
+      password: 'Secret123!',
+      url: 'https://example.com',
+      strength: 'EXCELLENT',
+      themeColor: 'primary',
+      type: 'login',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    }, 1_000);
+
+    expect(payload).toMatchObject({ handoffKeyB64 });
+    await expect(writeApprovedAndroidAutofillPayload(payload!)).resolves.toBe(true);
+    const sealed = JSON.parse(invokeMock.mock.calls.at(-1)?.[1]?.payload);
+
+    expect(sealed).toMatchObject({
+      version: 2,
+      algorithm: 'AES-256-GCM',
+      expiresAt: 16_000,
+    });
+    expect(sealed.ciphertext).toEqual(expect.any(String));
+    expect(sealed.iv).toEqual(expect.any(String));
+    expect(JSON.stringify(sealed)).not.toContain('Secret123!');
+    expect(JSON.stringify(sealed)).not.toContain(handoffKeyB64);
   });
 
   it('writes canceled Autofill payloads through the approved handoff channel', async () => {

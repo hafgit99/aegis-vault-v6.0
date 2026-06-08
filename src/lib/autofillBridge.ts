@@ -9,6 +9,7 @@ export interface NativeAutofillContext {
   formHints?: string[] | null;
   hasUsernameField?: boolean;
   hasPasswordField?: boolean;
+  handoffKeyB64?: string | null;
 }
 
 export function createAndroidAutofillMatchRequest(

@@ -11,8 +11,12 @@ import android.view.autofill.AutofillId
 import android.view.autofill.AutofillManager
 import android.view.autofill.AutofillValue
 import android.widget.RemoteViews
+import android.util.Base64
 import org.json.JSONObject
 import java.io.File
+import javax.crypto.Cipher
+import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.SecretKeySpec
 
 private const val AUTOFILL_AUTH_TAG = "AegisAutofillAuth"
 private const val APPROVED_AUTOFILL_PAYLOAD_FILE = "approved_autofill_payload.json"
@@ -20,6 +24,7 @@ private const val EXTRA_AUTOFILL_IDS = "aegis_autofill_ids"
 private const val EXTRA_AUTOFILL_ROLES = "aegis_autofill_roles"
 private const val EXTRA_AUTOFILL_WEB_DOMAIN = "aegis_autofill_web_domain"
 private const val EXTRA_AUTOFILL_PACKAGE = "aegis_autofill_package"
+private const val EXTRA_AUTOFILL_HANDOFF_KEY = "aegis_autofill_handoff_key"
 private const val POLL_INTERVAL_MS = 500L
 private const val POLL_TIMEOUT_MS = 300_000L
 
@@ -92,6 +97,7 @@ class AutofillAuthActivity : Activity() {
       putExtra("aegis_autofill_has_username", roleList().contains(AegisAutofillFieldRole.Username.name))
       putExtra("aegis_autofill_has_password", roleList().contains(AegisAutofillFieldRole.Password.name))
       putExtra("aegis_autofill_form_hints", emptyArray<String>())
+      putExtra(EXTRA_AUTOFILL_HANDOFF_KEY, intent.getStringExtra(EXTRA_AUTOFILL_HANDOFF_KEY))
     }
     Log.i(AUTOFILL_AUTH_TAG, "Launching AegisVault approval UI for domain=${intent.getStringExtra(EXTRA_AUTOFILL_WEB_DOMAIN) ?: "none"}.")
     startActivity(launchIntent)
@@ -103,7 +109,7 @@ class AutofillAuthActivity : Activity() {
 
     Log.i(AUTOFILL_AUTH_TAG, "Approved Autofill payload file detected; validating before result handoff.")
     val payload = try {
-      JSONObject(payloadFile.readText(Charsets.UTF_8))
+      readApprovedPayload(payloadFile)
     } catch (error: Exception) {
       payloadFile.delete()
       Log.w(AUTOFILL_AUTH_TAG, "Approved Autofill payload was malformed and has been cleared.", error)
@@ -173,6 +179,36 @@ class AutofillAuthActivity : Activity() {
 
     Log.i(AUTOFILL_AUTH_TAG, "Returning authenticated Autofill response with ${ids.size} candidate fields and hasValue=$hasValue.")
     return Intent().putExtra(AutofillManager.EXTRA_AUTHENTICATION_RESULT, approvedDataset)
+  }
+
+  private fun readApprovedPayload(payloadFile: File): JSONObject {
+    val raw = JSONObject(payloadFile.readText(Charsets.UTF_8))
+    if (raw.optInt("version", 1) != 2) return raw
+    if (raw.optString("algorithm", "") != "AES-256-GCM") {
+      throw IllegalArgumentException("Unsupported Autofill handoff envelope.")
+    }
+
+    val handoffKey = intent.getStringExtra(EXTRA_AUTOFILL_HANDOFF_KEY)
+      ?: throw IllegalArgumentException("Missing Autofill handoff key.")
+    val keyBytes = Base64.decode(handoffKey, Base64.NO_WRAP)
+    if (keyBytes.size != 32) {
+      throw IllegalArgumentException("Invalid Autofill handoff key length.")
+    }
+
+    val iv = Base64.decode(raw.getString("iv"), Base64.NO_WRAP)
+    val ciphertext = Base64.decode(raw.getString("ciphertext"), Base64.NO_WRAP)
+    try {
+      val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+      cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(keyBytes, "AES"), GCMParameterSpec(128, iv))
+      val plaintext = cipher.doFinal(ciphertext)
+      try {
+        return JSONObject(String(plaintext, Charsets.UTF_8))
+      } finally {
+        plaintext.fill(0)
+      }
+    } finally {
+      keyBytes.fill(0)
+    }
   }
 
   private fun matchesTarget(payload: JSONObject): Boolean {

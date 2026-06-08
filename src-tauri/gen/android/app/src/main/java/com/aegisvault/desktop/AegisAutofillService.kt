@@ -17,10 +17,13 @@ import android.widget.RemoteViews
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import android.util.Base64
+import java.security.SecureRandom
 
 private const val TAG = "AegisAutofillService"
 private const val APPROVED_AUTOFILL_PAYLOAD_FILE = "approved_autofill_payload.json"
 private const val PENDING_AUTOFILL_SAVE_REQUEST_FILE = "pending_autofill_save_request.json"
+private const val EXTRA_AUTOFILL_HANDOFF_KEY = "aegis_autofill_handoff_key"
 private const val SAVE_REQUEST_TTL_MS = 300_000L
 private val BROWSER_PACKAGES_REQUIRING_WEB_DOMAIN = setOf(
   "com.android.chrome",
@@ -148,6 +151,7 @@ class AegisAutofillService : AutofillService() {
   private fun buildAuthenticationResponse(context: AegisAutofillContext): FillResponse? {
     if (context.fields.isEmpty()) return null
 
+    val handoffKey = createHandoffKey()
     val intent = Intent(this, AutofillAuthActivity::class.java).apply {
       putExtra("aegis_autofill_request", true)
       putExtra("aegis_autofill_web_domain", context.webDomain)
@@ -155,6 +159,7 @@ class AegisAutofillService : AutofillService() {
       putExtra("aegis_autofill_has_username", context.hasUsernameField)
       putExtra("aegis_autofill_has_password", context.hasPasswordField)
       putExtra("aegis_autofill_form_hints", context.formHints.toTypedArray())
+      putExtra(EXTRA_AUTOFILL_HANDOFF_KEY, handoffKey)
       putParcelableArrayListExtra("aegis_autofill_ids", ArrayList(context.fields.map { it.autofillId }))
       putExtra("aegis_autofill_roles", context.fields.map { it.role.name }.toTypedArray())
     }
@@ -177,6 +182,12 @@ class AegisAutofillService : AutofillService() {
       .addDataset(dataset.build())
     buildSaveInfo(context)?.let { response.setSaveInfo(it) }
     return response.build()
+  }
+
+  private fun createHandoffKey(): String {
+    val bytes = ByteArray(32)
+    SecureRandom().nextBytes(bytes)
+    return Base64.encodeToString(bytes, Base64.NO_WRAP)
   }
 
   private fun authenticationPresentation(context: AegisAutofillContext): RemoteViews {

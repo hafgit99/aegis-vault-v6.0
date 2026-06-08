@@ -1,3 +1,9 @@
+use aes_gcm::aead::{Aead, KeyInit};
+use aes_gcm::{Aes256Gcm, Nonce};
+use base64::engine::general_purpose::STANDARD as BASE64;
+use base64::Engine;
+use rand::rngs::OsRng;
+use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::env;
@@ -62,6 +68,16 @@ struct ApprovedPayload {
     web_domain: Option<String>,
     username: String,
     password: String,
+    expires_at: u64,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ApprovedPayloadEnvelope {
+    version: u8,
+    algorithm: String,
+    iv: String,
+    ciphertext: String,
     expires_at: u64,
 }
 
@@ -132,6 +148,7 @@ fn handle_fill(message: NativeMessage) -> Result<NativeResponse, String> {
     let app_dir = app_data_dir()?;
     fs::create_dir_all(&app_dir).map_err(|_| "app-data-unavailable".to_string())?;
     clear_file(&app_dir.join(APPROVED_AUTOFILL_PAYLOAD_FILE));
+    let handoff_key_b64 = create_handoff_key_b64();
 
     let pending = serde_json::json!({
         "platform": "desktop",
@@ -143,12 +160,13 @@ fn handle_fill(message: NativeMessage) -> Result<NativeResponse, String> {
         "hasPasswordField": has_password_field,
         "formHints": ["username", "password"],
         "formSignature": safe_string(message.form_signature.as_deref(), 256),
+        "handoffKeyB64": handoff_key_b64,
         "receivedAt": now_millis()
     });
     write_json_file(&app_dir.join(PENDING_AUTOFILL_REQUEST_FILE), &pending)?;
     launch_aegisvault();
 
-    let approved = wait_for_approved_payload(&app_dir, &origin, &domain)?;
+    let approved = wait_for_approved_payload(&app_dir, &origin, &domain, &handoff_key_b64)?;
     Ok(NativeResponse {
         ok: true,
         status: "approved".to_string(),
@@ -194,7 +212,12 @@ fn handle_save(message: NativeMessage) -> Result<NativeResponse, String> {
     })
 }
 
-fn wait_for_approved_payload(app_dir: &PathBuf, origin: &str, domain: &str) -> Result<ApprovedPayload, String> {
+fn wait_for_approved_payload(
+    app_dir: &PathBuf,
+    origin: &str,
+    domain: &str,
+    handoff_key_b64: &str,
+) -> Result<ApprovedPayload, String> {
     let approved_path = app_dir.join(APPROVED_AUTOFILL_PAYLOAD_FILE);
     let deadline = SystemTime::now()
         .checked_add(FILL_APPROVAL_TIMEOUT)
@@ -204,8 +227,7 @@ fn wait_for_approved_payload(app_dir: &PathBuf, origin: &str, domain: &str) -> R
         if approved_path.exists() {
             let content = fs::read_to_string(&approved_path).map_err(|_| "approved-payload-unreadable".to_string())?;
             clear_file(&approved_path);
-            let payload: ApprovedPayload =
-                serde_json::from_str(&content).map_err(|_| "approved-payload-malformed".to_string())?;
+            let payload = parse_approved_payload(&content, handoff_key_b64)?;
             if payload.platform != "desktop" {
                 return Err("approved-payload-platform-mismatch".to_string());
             }
@@ -226,6 +248,43 @@ fn wait_for_approved_payload(app_dir: &PathBuf, origin: &str, domain: &str) -> R
     }
 
     Err("approval-timeout".to_string())
+}
+
+fn parse_approved_payload(content: &str, handoff_key_b64: &str) -> Result<ApprovedPayload, String> {
+    let value: Value = serde_json::from_str(content).map_err(|_| "approved-payload-malformed".to_string())?;
+    if value.get("version").and_then(Value::as_u64) != Some(2) {
+        return serde_json::from_value(value).map_err(|_| "approved-payload-malformed".to_string());
+    }
+
+    let envelope: ApprovedPayloadEnvelope =
+        serde_json::from_value(value).map_err(|_| "approved-payload-malformed".to_string())?;
+    if envelope.version != 2 || envelope.algorithm != "AES-256-GCM" || envelope.expires_at <= now_millis() {
+        return Err("approved-payload-envelope-invalid".to_string());
+    }
+
+    let key = BASE64.decode(handoff_key_b64).map_err(|_| "approved-payload-key-invalid".to_string())?;
+    if key.len() != 32 {
+        return Err("approved-payload-key-invalid".to_string());
+    }
+    let iv = BASE64.decode(envelope.iv).map_err(|_| "approved-payload-envelope-invalid".to_string())?;
+    if iv.len() != 12 {
+        return Err("approved-payload-envelope-invalid".to_string());
+    }
+    let ciphertext = BASE64
+        .decode(envelope.ciphertext)
+        .map_err(|_| "approved-payload-envelope-invalid".to_string())?;
+
+    let cipher = Aes256Gcm::new_from_slice(&key).map_err(|_| "approved-payload-key-invalid".to_string())?;
+    let plaintext = cipher
+        .decrypt(Nonce::from_slice(&iv), ciphertext.as_ref())
+        .map_err(|_| "approved-payload-decryption-failed".to_string())?;
+    serde_json::from_slice(&plaintext).map_err(|_| "approved-payload-malformed".to_string())
+}
+
+fn create_handoff_key_b64() -> String {
+    let mut key = [0u8; 32];
+    OsRng.fill_bytes(&mut key);
+    BASE64.encode(key)
 }
 
 fn write_json_file(path: &PathBuf, value: &Value) -> Result<(), String> {

@@ -31,6 +31,7 @@ function parsePendingAutofillRequest(value: string): NativeAutofillContext | nul
     };
     if (typeof parsed.origin === 'string') context.origin = parsed.origin;
     if (typeof parsed.url === 'string') context.url = parsed.url;
+    if (typeof parsed.handoffKeyB64 === 'string') context.handoffKeyB64 = parsed.handoffKeyB64;
     if (!context.hasUsernameField && !context.hasPasswordField) return null;
     if (!context.webDomain?.trim() && !context.origin?.trim() && !context.packageName?.trim()) return null;
     return context;
@@ -65,6 +66,7 @@ export interface ApprovedAndroidAutofillPayload {
   username: string;
   password: string;
   expiresAt: number;
+  handoffKeyB64?: string | null;
 }
 
 export interface PendingAndroidAutofillSaveRequest {
@@ -77,6 +79,72 @@ export interface PendingAndroidAutofillSaveRequest {
   password: string;
   formHints: string[];
   expiresAt: number;
+  handoffKeyB64?: string | null;
+}
+
+interface SealedAndroidAutofillPayload {
+  version: 2;
+  algorithm: 'AES-256-GCM';
+  iv: string;
+  ciphertext: string;
+  expiresAt: number;
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  return btoa(String.fromCharCode(...bytes));
+}
+
+function base64ToBytes(value: string): Uint8Array {
+  return Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
+}
+
+function bufferToBase64(buffer: ArrayBuffer): string {
+  return bytesToBase64(new Uint8Array(buffer));
+}
+
+async function sealApprovedAutofillPayload(
+  payload: ApprovedAndroidAutofillPayload | CanceledAndroidAutofillPayload,
+): Promise<string> {
+  const handoffKeyB64 = payload.handoffKeyB64?.trim();
+  const plaintextPayload = { ...payload };
+  delete plaintextPayload.handoffKeyB64;
+
+  if (!handoffKeyB64) {
+    return JSON.stringify(plaintextPayload);
+  }
+
+  const keyBytes = base64ToBytes(handoffKeyB64);
+  if (keyBytes.byteLength !== 32) {
+    throw new Error('Autofill handoff key must be 32 bytes.');
+  }
+
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const plaintext = new TextEncoder().encode(JSON.stringify(plaintextPayload));
+  try {
+    const cryptoKey = await crypto.subtle.importKey(
+      'raw',
+      keyBytes,
+      { name: 'AES-GCM' },
+      false,
+      ['encrypt'],
+    );
+    const ciphertext = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv },
+      cryptoKey,
+      plaintext,
+    );
+    const sealed: SealedAndroidAutofillPayload = {
+      version: 2,
+      algorithm: 'AES-256-GCM',
+      iv: bytesToBase64(iv),
+      ciphertext: bufferToBase64(ciphertext),
+      expiresAt: payload.expiresAt,
+    };
+    return JSON.stringify(sealed);
+  } finally {
+    plaintext.fill(0);
+    keyBytes.fill(0);
+  }
 }
 
 interface CanceledAndroidAutofillPayload {
@@ -86,6 +154,7 @@ interface CanceledAndroidAutofillPayload {
   origin?: string | null;
   packageName?: string | null;
   expiresAt: number;
+  handoffKeyB64?: string | null;
 }
 
 function parsePendingAutofillSaveRequest(
@@ -142,6 +211,7 @@ export function createApprovedAndroidAutofillPayload(
     password: entry.password,
     expiresAt: now + 15_000,
   };
+  if (context.handoffKeyB64?.trim()) payload.handoffKeyB64 = context.handoffKeyB64.trim();
   if (origin) payload.origin = origin;
   return payload;
 }
@@ -152,7 +222,7 @@ export async function writeApprovedAndroidAutofillPayload(
   const invoke = await getNativeInvoke();
   if (!invoke) return false;
 
-  await invoke('write_approved_autofill_payload', { payload: JSON.stringify(payload) });
+  await invoke('write_approved_autofill_payload', { payload: await sealApprovedAutofillPayload(payload) });
   return true;
 }
 
@@ -172,8 +242,9 @@ export async function writeCanceledAndroidAutofillPayload(
   };
   const origin = context.origin?.trim();
   if (origin) payload.origin = origin;
+  if (context.handoffKeyB64?.trim()) payload.handoffKeyB64 = context.handoffKeyB64.trim();
 
-  await invoke('write_approved_autofill_payload', { payload: JSON.stringify(payload) });
+  await invoke('write_approved_autofill_payload', { payload: await sealApprovedAutofillPayload(payload) });
   return true;
 }
 
@@ -205,4 +276,5 @@ export async function clearPendingAndroidAutofillSaveRequest(): Promise<boolean>
 export const autofillNativeBridgeInternals = {
   parsePendingAutofillRequest,
   parsePendingAutofillSaveRequest,
+  sealApprovedAutofillPayload,
 };
