@@ -22,6 +22,11 @@ updates:
       time: "04:30"
       timezone: Europe/Istanbul
     open-pull-requests-limit: 5
+    ignore:
+      # The `windows` crate is target-specific and used only by the Windows
+      # sensitive clipboard bridge. Keep it on manual review so Dependabot does
+      # not publish broken updater runs when the Win32 binding graph changes.
+      - dependency-name: windows
 
   - package-ecosystem: github-actions
     directory: /
