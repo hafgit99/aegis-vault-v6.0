@@ -3,6 +3,7 @@
   "productName": "AegisVault",
   "version": "6.0.0",
   "identifier": "com.aegisvault.desktop",
+  "mainBinaryName": "aegisvault",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:3000",

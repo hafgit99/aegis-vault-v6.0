@@ -6,6 +6,7 @@ authors = ["AegisVault"]
 edition = "2021"
 license = "UNLICENSED"
 repository = "https://github.com/hafgit99/aegis-vault-v6.0"
+default-run = "aegisvault"
 
 [lib]
 crate-type = ["staticlib", "cdylib", "rlib"]
