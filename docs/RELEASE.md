@@ -65,6 +65,14 @@ The packaging workflow depends on the same release gate and does not replace it.
 
 Each uploaded desktop artifact includes `SHA256SUMS.txt` and `artifact-manifest.json`. The desktop packaging workflow also creates GitHub artifact attestations for build provenance and SBOM evidence. Publish checksums and manifests with release artifacts so users and maintainers can verify downloads before installing.
 
+After downloading the GitHub Actions artifacts into a single local directory, verify the release payload before creating the GitHub Release:
+
+```bash
+npm run release:verify-artifacts -- C:\path\to\downloaded-release-artifacts
+```
+
+The verification command requires `aegisvault-windows` and `aegisvault-android`, validates `SHA256SUMS.txt`, checks `artifact-manifest.json`, verifies SHA-256 digests, and rejects undersized installer/APK/AAB files. macOS and Linux artifact directories are checked when present.
+
 Use [RELEASE_NOTES_TEMPLATE.md](RELEASE_NOTES_TEMPLATE.md) for every public release. The template requires signing mode disclosure, checksums, SBOM, artifact attestations, security evidence, and desktop smoke evidence before publishing.
 
 For the first public `v6.0.0` desktop release, let the tag-triggered `Desktop Packaging` workflow produce **unsigned community build** artifacts first. Release notes, artifact names, and download descriptions must clearly state that these binaries are unsigned community builds and may trigger operating system trust prompts. After unsigned Windows/macOS/Linux artifacts are stable, rerun the workflow manually in the relevant signed mode once certificate secrets are configured.
