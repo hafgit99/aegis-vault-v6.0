@@ -1,7 +1,7 @@
 # AegisVault v6.0.0 Release Notes Draft
 
 Release date: 2026-06-08 release candidate
-Verified code commit: `84a57a557d56180f8cf88631e661c72392eb6de4`
+Verified code commit: `c584b1fb06ca2c5aacc9444d5a5cc68ffbdc6301`
 Quality Gate run: latest green GitHub Actions run for the verified commit
 CodeQL run: latest green GitHub Actions run for the verified commit
 Desktop Packaging run: latest green GitHub Actions run for the verified commit
