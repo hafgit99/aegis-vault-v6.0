@@ -67,7 +67,8 @@ const hookRequired = [
   'SECURITY_LOG_MAX_ENTRIES = 200',
   'normalizeSecurityLogs',
   '.slice(-SECURITY_LOG_MAX_ENTRIES)',
-  'localStorage.setItem(SECURITY_LOG_STORAGE_KEY',
+  'sessionStorage.setItem(SECURITY_LOG_STORAGE_KEY',
+  'localStorage.removeItem(SECURITY_LOG_STORAGE_KEY',
   'logsClearedRecord',
 ];
 
