@@ -84,13 +84,13 @@
   "dependencies": {
     "@choochmeque/tauri-plugin-biometry-api": "^0.2.8",
     "hash-wasm": "^4.12.0",
-    "i18next": "^26.2.0",
-    "lucide-react": "^0.546.0",
+    "i18next": "^26.3.1",
+    "lucide-react": "^1.17.0",
     "motion": "^12.23.24",
-    "react": "^19.0.1",
-    "react-dom": "^19.0.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "react-i18next": "^17.0.8",
-    "react-qr-code": "^2.0.21",
+    "react-qr-code": "^2.1.1",
     "sql.js": "^1.14.1",
     "zxcvbn": "^4.4.2"
   },
