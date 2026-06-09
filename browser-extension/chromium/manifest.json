@@ -10,6 +10,14 @@
     "service_worker": "src/background.js",
     "type": "module"
   },
+  "action": {
+    "default_title": "AegisVault Autofill",
+    "default_icon": {
+      "32": "icons/aegisvault-32.png",
+      "64": "icons/aegisvault-64.png",
+      "128": "icons/aegisvault-128.png"
+    }
+  },
   "content_scripts": [
     {
       "matches": ["https://*/*", "http://localhost/*", "http://127.0.0.1/*"],
@@ -19,6 +27,8 @@
     }
   ],
   "icons": {
+    "32": "icons/aegisvault-32.png",
+    "64": "icons/aegisvault-64.png",
     "128": "icons/aegisvault-128.png"
   }
 }
