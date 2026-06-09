@@ -165,6 +165,8 @@ jobs:
     env:
       CI: true
       SIGNING_MODE: ${{ github.event.inputs.signing || 'unsigned' }}
+      AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+      AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -207,6 +209,10 @@ jobs:
       - name: Stage desktop Autofill browser extension
         if: runner.os == 'Windows'
         run: npm run desktop:autofill:extension:stage
+
+      - name: Package desktop Autofill browser extension
+        if: runner.os == 'Windows'
+        run: npm run desktop:autofill:extension:package
 
       - name: Generate platform SBOM
         run: npm run security:sbom
@@ -323,6 +329,23 @@ jobs:
           AEGISVAULT_CHROMIUM_EXTENSION_ID: ${{ vars.AEGISVAULT_CHROMIUM_EXTENSION_ID || 'fbegblomolojcldifclfljlkddkcdehl' }}
         run: npm run desktop:autofill:host:stage
 
+      - name: Sign Firefox Autofill XPI for self-distribution
+        if: runner.os == 'Windows' && env.AMO_JWT_ISSUER != '' && env.AMO_JWT_SECRET != ''
+        shell: pwsh
+        run: |
+          $signedDir = "browser-extension-artifacts/firefox-signed"
+          New-Item -ItemType Directory -Force -Path $signedDir | Out-Null
+          npx --yes web-ext sign `
+            --channel unlisted `
+            --source-dir desktop-autofill-extension/firefox `
+            --artifacts-dir $signedDir `
+            --api-key $env:AMO_JWT_ISSUER `
+            --api-secret $env:AMO_JWT_SECRET
+
+      - name: Finalize desktop Autofill browser extension artifacts
+        if: runner.os == 'Windows'
+        run: npm run desktop:autofill:extension:finalize
+
       - name: Notarize macOS desktop artifacts
         if: runner.os == 'macOS' && (env.SIGNING_MODE == 'macos' || env.SIGNING_MODE == 'all')
         shell: bash
@@ -361,7 +384,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: aegisvault-desktop-autofill-extension
-          path: desktop-autofill-extension/
+          path: |
+            desktop-autofill-extension/
+            browser-extension-artifacts/
           retention-days: 30
 
       - name: Attest desktop artifact provenance

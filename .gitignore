@@ -10,6 +10,7 @@ sbom/
 android-artifacts/
 desktop-autofill-host/
 desktop-autofill-extension/
+browser-extension-artifacts/
 .stryker-tmp/
 src-tauri/target/
 src-tauri/gen/*

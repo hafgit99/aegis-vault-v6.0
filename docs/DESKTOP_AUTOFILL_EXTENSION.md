@@ -113,14 +113,24 @@ $env:AEGISVAULT_FIREFOX_EXTENSION_ID = "aegisvault-autofill@aegisvault.com"
 npm run desktop:autofill:host:stage
 ```
 
+Create website/release-ready browser extension packages:
+
+```powershell
+npm run desktop:autofill:extension:package
+npm run desktop:autofill:extension:finalize
+```
+
 The extension staging command writes:
 
 - `desktop-autofill-extension/chromium`
 - `desktop-autofill-extension/firefox`
+- `browser-extension-artifacts/` after packaging.
 
 Use this directory with Chrome, Edge, or Brave `Load unpacked` during local testing. The Chromium manifest includes a stable public `key`, so Chrome, Edge, and Brave should all use the same local extension ID: `cpocoejkonndmdedimnoklhhajkiccoc`. The legacy Brave development ID `fbegblomolojcldifclfljlkddkcdehl` remains accepted during migration, but new installs should use the stable ID.
 
 Use `desktop-autofill-extension/firefox` with Firefox `about:debugging#/runtime/this-firefox` during local testing. Load the staged `manifest.json` as a temporary add-on. The default Firefox Gecko ID is `aegisvault-autofill@aegisvault.com`; if the published add-on ID changes, rerun host staging with `AEGISVAULT_FIREFOX_EXTENSION_ID`.
+
+For normal public Firefox users, publish only the Mozilla-signed `.xpi` generated through AMO self-distribution signing. Unsigned `.xpi` artifacts are development validation files and must not be promoted as public install links. See [BROWSER_EXTENSION_DISTRIBUTION.md](BROWSER_EXTENSION_DISTRIBUTION.md).
 
 The host staging command writes:
 

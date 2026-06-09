@@ -41,12 +41,16 @@ const firefoxIcon128Path = 'browser-extension/firefox/icons/aegisvault-128.png';
 const nativeManifestPath = 'native-messaging/chromium/com.aegisvault.desktop.json';
 const firefoxNativeManifestPath = 'native-messaging/firefox/com.aegisvault.desktop.json';
 const docsPath = 'docs/DESKTOP_AUTOFILL_EXTENSION.md';
+const distributionDocsPath = 'docs/BROWSER_EXTENSION_DISTRIBUTION.md';
 const nativeHostPath = 'src-tauri/src/bin/aegisvault_native_messaging_host.rs';
 const tauriLibPath = 'src-tauri/src/lib.rs';
 const cargoTomlPath = 'src-tauri/Cargo.toml';
 const packageJsonPath = 'package.json';
 const stageHostScriptPath = 'scripts/stage-desktop-autofill-host.mjs';
 const stageExtensionScriptPath = 'scripts/stage-browser-extension.mjs';
+const packageExtensionScriptPath = 'scripts/package-browser-extension.mjs';
+const finalizeExtensionScriptPath = 'scripts/finalize-browser-extension-artifacts.mjs';
+const desktopPackagingWorkflowPath = '.github/workflows/desktop-packaging.yml';
 
 if (requireFile(manifestPath)) {
   const manifest = readJson(manifestPath);
@@ -220,7 +224,13 @@ if (requireFile(tauriLibPath)) {
 
 if (requireFile(packageJsonPath)) {
   const packageJson = readJson(packageJsonPath);
-  for (const requiredScript of ['desktop:autofill:extension:stage', 'desktop:autofill:host:build', 'desktop:autofill:host:stage']) {
+  for (const requiredScript of [
+    'desktop:autofill:extension:stage',
+    'desktop:autofill:extension:package',
+    'desktop:autofill:extension:finalize',
+    'desktop:autofill:host:build',
+    'desktop:autofill:host:stage',
+  ]) {
     if (!packageJson.scripts?.[requiredScript]) {
       failures.push(`package.json must define "${requiredScript}".`);
     }
@@ -237,6 +247,31 @@ if (requireFile(stageExtensionScriptPath)) {
     'allowedExtensions',
   ]) {
     if (!stageScript.includes(required)) failures.push(`stage-browser-extension.mjs must include "${required}".`);
+  }
+}
+
+if (requireFile(packageExtensionScriptPath)) {
+  const packageScript = read(packageExtensionScriptPath);
+  for (const required of [
+    'browser-extension-artifacts',
+    'aegisvault-autofill-chromium',
+    'unsigned.xpi',
+    'SHA256SUMS.txt',
+    'artifact-manifest.json',
+  ]) {
+    if (!packageScript.includes(required)) failures.push(`package-browser-extension.mjs must include "${required}".`);
+  }
+}
+
+if (requireFile(finalizeExtensionScriptPath)) {
+  const finalizeScript = read(finalizeExtensionScriptPath);
+  for (const required of [
+    'Firefox signed XPI',
+    'Firefox unsigned validation XPI',
+    'Chromium package for Chrome Web Store',
+    'SHA256SUMS.txt',
+  ]) {
+    if (!finalizeScript.includes(required)) failures.push(`finalize-browser-extension-artifacts.mjs must include "${required}".`);
   }
 }
 
@@ -276,8 +311,36 @@ if (requireFile(docsPath)) {
     'AEGISVAULT_CHROMIUM_EXTENSION_ID',
     'AEGISVAULT_FIREFOX_EXTENSION_ID',
     'Firefox',
+    'BROWSER_EXTENSION_DISTRIBUTION.md',
   ]) {
     if (!docs.includes(required)) failures.push(`docs/DESKTOP_AUTOFILL_EXTENSION.md must document "${required}".`);
+  }
+}
+
+if (requireFile(distributionDocsPath)) {
+  const docs = read(distributionDocsPath);
+  for (const required of [
+    'AMO_JWT_ISSUER',
+    'AMO_JWT_SECRET',
+    'signed `.xpi`',
+    'Do not publish `*.unsigned.xpi`',
+    'Chrome Web Store',
+    'browser-extension-artifacts/SHA256SUMS.txt',
+  ]) {
+    if (!docs.includes(required)) failures.push(`docs/BROWSER_EXTENSION_DISTRIBUTION.md must document "${required}".`);
+  }
+}
+
+if (requireFile(desktopPackagingWorkflowPath)) {
+  const workflow = read(desktopPackagingWorkflowPath);
+  for (const required of [
+    'Package desktop Autofill browser extension',
+    'Sign Firefox Autofill XPI for self-distribution',
+    'AMO_JWT_ISSUER',
+    'browser-extension-artifacts/',
+    'desktop:autofill:extension:finalize',
+  ]) {
+    if (!workflow.includes(required)) failures.push(`desktop-packaging.yml must include "${required}".`);
   }
 }
 

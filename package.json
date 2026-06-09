@@ -18,6 +18,8 @@
     "desktop:build": "tauri build",
     "desktop:checksums": "node scripts/generate-artifact-checksums.mjs",
     "desktop:autofill:extension:stage": "node scripts/stage-browser-extension.mjs",
+    "desktop:autofill:extension:package": "npm run desktop:autofill:extension:stage && node scripts/package-browser-extension.mjs",
+    "desktop:autofill:extension:finalize": "node scripts/finalize-browser-extension-artifacts.mjs",
     "desktop:autofill:host:build": "cargo build --manifest-path src-tauri/Cargo.toml --bin aegisvault_native_messaging_host",
     "desktop:autofill:host:stage": "node scripts/stage-desktop-autofill-host.mjs",
     "android:doctor": "node scripts/verify-android-readiness.mjs",
