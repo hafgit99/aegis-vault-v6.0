@@ -12,9 +12,11 @@ The extension must detect login forms, verify the active origin, and ask the loc
 
 | Component | Location | Responsibility |
 | --- | --- | --- |
-| Chromium extension | `browser-extension/chromium` | Detect login forms, show user-triggered fill/save controls, and call native messaging. |
-| Native messaging manifest | `native-messaging/chromium/com.aegisvault.desktop.json` | Registers the local native bridge host for Chrome, Edge, and Brave. |
-| Native messaging host | `src-tauri/src/bin/aegisvault_native_messaging_host.rs` | Reads Chrome native messaging frames, stages fill/save handoff files, launches AegisVault, and returns approved fill credentials. |
+| Chromium extension | `browser-extension/chromium` | Detect login forms, show user-triggered fill/save controls, and call native messaging in Chrome, Edge, and Brave. |
+| Firefox extension | `browser-extension/firefox` | Provides the Firefox WebExtension manifest with a stable Gecko ID while reusing the same audited scripts and styles. |
+| Chromium native messaging manifest | `native-messaging/chromium/com.aegisvault.desktop.json` | Registers the local native bridge host for Chrome, Edge, and Brave with `allowed_origins`. |
+| Firefox native messaging manifest | `native-messaging/firefox/com.aegisvault.desktop.json` | Registers the local native bridge host for Firefox with `allowed_extensions`. |
+| Native messaging host | `src-tauri/src/bin/aegisvault_native_messaging_host.rs` | Reads browser native messaging frames, stages fill/save handoff files, launches AegisVault, and returns approved fill credentials. |
 | AegisVault desktop app | Tauri shell | Owns unlock, matching, approval, and persistence. |
 
 ## Message Protocol
@@ -82,16 +84,18 @@ Save response:
 - The extension must never log usernames, passwords, or raw form values.
 - The native host must perform origin matching against the unlocked vault and require explicit AegisVault approval before returning a fill credential.
 - Save requests must be staged for AegisVault confirmation, not persisted directly by the extension.
-- The native messaging manifest must restrict `allowed_origins` to the real extension ID before release.
+- The Chromium native messaging manifest must restrict `allowed_origins` to the real extension ID before release.
+- The Firefox native messaging manifest must restrict `allowed_extensions` to the stable Gecko extension ID before release.
 
 ## Current Status
 
 Phase 1 is scaffolded:
 
 - Chromium MV3 manifest.
+- Firefox MV2 manifest for Firefox native messaging compatibility.
 - Content script for login form detection and user-triggered fill/save controls.
-- Background service worker with native messaging protocol validation.
-- Native messaging manifest template.
+- Shared background bridge with `chrome.runtime` and `browser.runtime` compatibility.
+- Native messaging manifest templates for Chromium and Firefox.
 - Rust native messaging host POC.
 - Readiness gate: `npm run desktop:autofill:doctor`.
 - Extension staging command: `npm run desktop:autofill:extension:stage`.
@@ -106,28 +110,34 @@ Build and stage the Chromium native host:
 npm run desktop:autofill:extension:stage
 npm run desktop:autofill:host:build
 $env:AEGISVAULT_CHROMIUM_EXTENSION_ID = "fbegblomolojcldifclfljlkddkcdehl"
+$env:AEGISVAULT_FIREFOX_EXTENSION_ID = "aegisvault-autofill@aegisvault.com"
 npm run desktop:autofill:host:stage
 ```
 
 The extension staging command writes:
 
 - `desktop-autofill-extension/chromium`
+- `desktop-autofill-extension/firefox`
 
 Use this directory with Chrome, Edge, or Brave `Load unpacked` during local testing. The current Brave development extension ID is `fbegblomolojcldifclfljlkddkcdehl`. After loading a different build, copy the generated extension ID and rerun the host staging command with `AEGISVAULT_CHROMIUM_EXTENSION_ID`.
+
+Use `desktop-autofill-extension/firefox` with Firefox `about:debugging#/runtime/this-firefox` during local testing. Load the staged `manifest.json` as a temporary add-on. The default Firefox Gecko ID is `aegisvault-autofill@aegisvault.com`; if the published add-on ID changes, rerun host staging with `AEGISVAULT_FIREFOX_EXTENSION_ID`.
 
 The host staging command writes:
 
 - `desktop-autofill-host/<platform>/AegisVaultNativeMessagingHost.exe` on Windows.
-- `desktop-autofill-host/<platform>/com.aegisvault.desktop.json`.
-- Windows Chrome, Edge, and Brave registration files:
+- `desktop-autofill-host/<platform>/com.aegisvault.desktop.json` for Chromium browsers.
+- `desktop-autofill-host/<platform>/com.aegisvault.desktop.firefox.json` for Firefox.
+- Windows Chrome, Edge, Brave, and Firefox registration files:
   - `install-chrome-native-host.reg`
   - `install-edge-native-host.reg`
   - `install-brave-native-host.reg`
+  - `install-firefox-native-host.reg`
   - `install-native-host.ps1`
 
 For Windows development, import one of the `.reg` files or run the PowerShell installer after reviewing the generated manifest path. Production installers should perform the same registration during install and remove it during uninstall.
 
-The environment variable `AEGISVAULT_CHROMIUM_EXTENSION_ID` must be set to the packed/published extension ID before release packaging. The current default is the Brave development ID `fbegblomolojcldifclfljlkddkcdehl`. For broad public distribution, publish the extension or pack it with a stable extension key so every user receives the same ID.
+The environment variables `AEGISVAULT_CHROMIUM_EXTENSION_ID` and `AEGISVAULT_FIREFOX_EXTENSION_ID` must be set to the packed/published extension IDs before release packaging. The current Chromium default is the Brave development ID `fbegblomolojcldifclfljlkddkcdehl`. The current Firefox default is `aegisvault-autofill@aegisvault.com`. For broad public distribution, publish the extension or pack it with a stable extension key/Gecko ID so every user receives the same trusted native messaging binding.
 
 Next implementation step:
 

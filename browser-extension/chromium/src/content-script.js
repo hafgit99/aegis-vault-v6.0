@@ -10,6 +10,31 @@
   let activePrompt = null;
   let pendingSave = null;
   let pendingSaveTimer = null;
+  const usesPromiseRuntime = typeof browser !== 'undefined';
+  const runtimeApi = usesPromiseRuntime ? browser.runtime : chrome.runtime;
+
+  function sendRuntimeMessage(message) {
+    return new Promise(resolve => {
+      if (usesPromiseRuntime) {
+        runtimeApi.sendMessage(message)
+          .then(response => resolve(response || { ok: false, status: 'empty-extension-response' }))
+          .catch(error => resolve({
+            ok: false,
+            status: error?.message || 'AegisVault extension bridge unavailable',
+          }));
+        return;
+      }
+
+      runtimeApi.sendMessage(message, response => {
+        const lastError = typeof chrome !== 'undefined' ? chrome.runtime?.lastError : null;
+        if (lastError) {
+          resolve({ ok: false, status: lastError.message || 'AegisVault extension bridge unavailable' });
+          return;
+        }
+        resolve(response || { ok: false, status: 'empty-extension-response' });
+      });
+    });
+  }
 
   function isVisibleInput(input) {
     const rect = input.getBoundingClientRect();
@@ -80,7 +105,7 @@
   async function requestFill(passwordField) {
     const form = passwordField.form;
     const usernameField = findUsernameField(form, passwordField);
-    const response = await chrome.runtime.sendMessage({
+    const response = await sendRuntimeMessage({
       channel: 'aegisvault-autofill',
       action: 'fill',
       payload: {
@@ -156,7 +181,7 @@
       const payload = pendingSave;
       clearPendingSave();
       removePrompt();
-      const response = await chrome.runtime.sendMessage({
+      const response = await sendRuntimeMessage({
         channel: 'aegisvault-autofill',
         action: 'save',
         payload,

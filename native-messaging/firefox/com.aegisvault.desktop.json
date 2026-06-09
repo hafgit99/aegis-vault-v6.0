@@ -1,0 +1,9 @@
+{
+  "name": "com.aegisvault.desktop",
+  "description": "AegisVault desktop native messaging bridge",
+  "path": "AegisVaultNativeMessagingHost.exe",
+  "type": "stdio",
+  "allowed_extensions": [
+    "aegisvault-autofill@aegisvault.com"
+  ]
+}

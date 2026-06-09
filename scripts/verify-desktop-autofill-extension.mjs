@@ -21,11 +21,13 @@ function requireFile(relativePath) {
 }
 
 const manifestPath = 'browser-extension/chromium/manifest.json';
+const firefoxManifestPath = 'browser-extension/firefox/manifest.json';
 const backgroundPath = 'browser-extension/chromium/src/background.js';
 const contentPath = 'browser-extension/chromium/src/content-script.js';
 const stylesPath = 'browser-extension/chromium/src/content-styles.css';
 const iconPath = 'browser-extension/chromium/icons/aegisvault-128.png';
 const nativeManifestPath = 'native-messaging/chromium/com.aegisvault.desktop.json';
+const firefoxNativeManifestPath = 'native-messaging/firefox/com.aegisvault.desktop.json';
 const docsPath = 'docs/DESKTOP_AUTOFILL_EXTENSION.md';
 const nativeHostPath = 'src-tauri/src/bin/aegisvault_native_messaging_host.rs';
 const cargoTomlPath = 'src-tauri/Cargo.toml';
@@ -44,12 +46,29 @@ if (requireFile(manifestPath)) {
   }
 }
 
+if (requireFile(firefoxManifestPath)) {
+  const firefoxManifest = readJson(firefoxManifestPath);
+  if (firefoxManifest.manifest_version !== 2) failures.push('Firefox extension must use Manifest V2 for native messaging compatibility.');
+  if (firefoxManifest.permissions?.includes('storage')) failures.push('Firefox extension must not request storage permission for vault data.');
+  if (!firefoxManifest.permissions?.includes('nativeMessaging')) failures.push('Firefox extension must request nativeMessaging permission.');
+  if (!firefoxManifest.applications?.gecko?.id?.includes('aegisvault-autofill')) {
+    failures.push('Firefox extension must define a stable Gecko extension ID.');
+  }
+  if (!firefoxManifest.background?.scripts?.some(value => value.includes('background.js'))) {
+    failures.push('Firefox extension must define the shared background script.');
+  }
+  if (!firefoxManifest.content_scripts?.[0]?.js?.some(value => value.includes('content-script.js'))) {
+    failures.push('Firefox extension must include the credential form content script.');
+  }
+}
+
 if (requireFile(backgroundPath)) {
   const background = read(backgroundPath);
   for (const required of [
     "NATIVE_HOST = 'com.aegisvault.desktop'",
     "PROTOCOL = 'aegisvault.desktopAutofill.v1'",
-    'chrome.runtime.sendNativeMessage',
+    'runtimeApi.sendNativeMessage',
+    "typeof browser !== 'undefined'",
     'sanitizeOrigin',
     'invalid-save-payload',
     'native-host-unavailable',
@@ -65,6 +84,7 @@ if (requireFile(contentPath)) {
   const content = read(contentPath);
   for (const required of [
     'input[type="password"]',
+    'sendRuntimeMessage',
     'requestFill',
     'stageSavePrompt',
     "channel: 'aegisvault-autofill'",
@@ -98,6 +118,20 @@ if (requireFile(nativeManifestPath)) {
   }
   if (!nativeManifest.allowed_origins?.[0]?.startsWith('chrome-extension://')) {
     failures.push('Native messaging manifest must restrict allowed_origins to extension IDs.');
+  }
+}
+
+if (requireFile(firefoxNativeManifestPath)) {
+  const firefoxNativeManifest = readJson(firefoxNativeManifestPath);
+  if (firefoxNativeManifest.name !== 'com.aegisvault.desktop') {
+    failures.push('Firefox native messaging manifest name must be com.aegisvault.desktop.');
+  }
+  if (firefoxNativeManifest.type !== 'stdio') failures.push('Firefox native messaging manifest must use stdio.');
+  if (!firefoxNativeManifest.path?.includes('AegisVaultNativeMessagingHost')) {
+    failures.push('Firefox native messaging manifest path must point to the packaged AegisVault native messaging host.');
+  }
+  if (!firefoxNativeManifest.allowed_extensions?.[0]?.includes('aegisvault-autofill')) {
+    failures.push('Firefox native messaging manifest must restrict allowed_extensions to the Gecko extension ID.');
   }
 }
 
@@ -142,6 +176,7 @@ if (requireFile(stageExtensionScriptPath)) {
   for (const required of [
     'browser-extension',
     'desktop-autofill-extension',
+    'firefox',
     'manifest.json',
     'allowedExtensions',
   ]) {
@@ -153,11 +188,15 @@ if (requireFile(stageHostScriptPath)) {
   const stageScript = read(stageHostScriptPath);
   for (const required of [
     'AEGISVAULT_CHROMIUM_EXTENSION_ID',
+    'AEGISVAULT_FIREFOX_EXTENSION_ID',
+    'aegisvault-autofill@aegisvault.com',
     'fbegblomolojcldifclfljlkddkcdehl',
     'AegisVaultNativeMessagingHost.exe',
     'install-chrome-native-host.reg',
     'install-edge-native-host.reg',
     'install-brave-native-host.reg',
+    'install-firefox-native-host.reg',
+    'Mozilla\\\\NativeMessagingHosts',
     'BraveSoftware\\\\Brave-Browser',
     'NativeMessagingHosts',
   ]) {
@@ -176,6 +215,8 @@ if (requireFile(docsPath)) {
     'desktop:autofill:host:stage',
     'desktop:autofill:extension:stage',
     'AEGISVAULT_CHROMIUM_EXTENSION_ID',
+    'AEGISVAULT_FIREFOX_EXTENSION_ID',
+    'Firefox',
   ]) {
     if (!docs.includes(required)) failures.push(`docs/DESKTOP_AUTOFILL_EXTENSION.md must document "${required}".`);
   }

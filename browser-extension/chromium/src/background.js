@@ -1,6 +1,8 @@
 const NATIVE_HOST = 'com.aegisvault.desktop';
 const PROTOCOL = 'aegisvault.desktopAutofill.v1';
 const MAX_PASSWORD_LENGTH = 4096;
+const usesPromiseRuntime = typeof browser !== 'undefined';
+const runtimeApi = usesPromiseRuntime ? browser.runtime : chrome.runtime;
 
 function randomId() {
   const bytes = new Uint8Array(16);
@@ -39,12 +41,24 @@ function sanitizeCredentialPayload(payload) {
 
 function sendNativeMessage(message) {
   return new Promise(resolve => {
-    chrome.runtime.sendNativeMessage(NATIVE_HOST, message, response => {
-      if (chrome.runtime.lastError) {
+    if (usesPromiseRuntime) {
+      runtimeApi.sendNativeMessage(NATIVE_HOST, message)
+        .then(response => resolve(response || { ok: false, status: 'empty-native-response' }))
+        .catch(error => resolve({
+          ok: false,
+          status: 'native-host-unavailable',
+          error: error?.message || 'Native messaging host is unavailable.',
+        }));
+      return;
+    }
+
+    runtimeApi.sendNativeMessage(NATIVE_HOST, message, response => {
+      const lastError = typeof chrome !== 'undefined' ? chrome.runtime?.lastError : null;
+      if (lastError) {
         resolve({
           ok: false,
           status: 'native-host-unavailable',
-          error: chrome.runtime.lastError.message,
+          error: lastError.message,
         });
         return;
       }
@@ -83,7 +97,7 @@ async function handleSaveRequest(payload) {
   });
 }
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+runtimeApi.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.channel !== 'aegisvault-autofill') return false;
 
   const action = message.action;

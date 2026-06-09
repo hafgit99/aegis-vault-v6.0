@@ -3,7 +3,9 @@ import path from 'node:path';
 
 const root = process.cwd();
 const defaultChromiumExtensionId = 'fbegblomolojcldifclfljlkddkcdehl';
+const defaultFirefoxExtensionId = 'aegisvault-autofill@aegisvault.com';
 const extensionId = process.env.AEGISVAULT_CHROMIUM_EXTENSION_ID || process.argv[2] || defaultChromiumExtensionId;
+const firefoxExtensionId = process.env.AEGISVAULT_FIREFOX_EXTENSION_ID || process.argv[3] || defaultFirefoxExtensionId;
 const hostName = 'com.aegisvault.desktop';
 const hostBinaryName = process.platform === 'win32'
   ? 'AegisVaultNativeMessagingHost.exe'
@@ -15,10 +17,12 @@ const sourceBinaryPath = path.join(root, 'src-tauri', 'target', 'debug', sourceB
 const stageRoot = path.join(root, 'desktop-autofill-host', process.platform);
 const stagedBinaryPath = path.join(stageRoot, hostBinaryName);
 const stagedManifestPath = path.join(stageRoot, `${hostName}.json`);
+const stagedFirefoxManifestPath = path.join(stageRoot, `${hostName}.firefox.json`);
 const stagedAppPathConfigPath = path.join(stageRoot, 'aegisvault-app-path.txt');
 const chromeRegPath = path.join(stageRoot, 'install-chrome-native-host.reg');
 const edgeRegPath = path.join(stageRoot, 'install-edge-native-host.reg');
 const braveRegPath = path.join(stageRoot, 'install-brave-native-host.reg');
+const firefoxRegPath = path.join(stageRoot, 'install-firefox-native-host.reg');
 const browserRegistryKeys = [
   ['Chrome', 'Google\\Chrome'],
   ['Edge', 'Microsoft\\Edge'],
@@ -40,11 +44,30 @@ function registryFile(browserKey) {
   ].join('\r\n');
 }
 
+function firefoxRegistryFile() {
+  const escapedPath = stagedFirefoxManifestPath.replaceAll('\\', '\\\\');
+  return [
+    'Windows Registry Editor Version 5.00',
+    '',
+    `[HKEY_CURRENT_USER\\Software\\Mozilla\\NativeMessagingHosts\\${hostName}]`,
+    `@="${escapedPath}"`,
+    '',
+  ].join('\r\n');
+}
+
 function shellInstallSnippet(browserKey) {
   return [
     `# ${browserKey} native host registration`,
     `New-Item -Path "HKCU:\\Software\\${browserKey}\\NativeMessagingHosts\\${hostName}" -Force | Out-Null`,
     `Set-ItemProperty -Path "HKCU:\\Software\\${browserKey}\\NativeMessagingHosts\\${hostName}" -Name "(default)" -Value "${stagedManifestPath}"`,
+  ].join('\n');
+}
+
+function shellFirefoxInstallSnippet() {
+  return [
+    '# Firefox native host registration',
+    `New-Item -Path "HKCU:\\Software\\Mozilla\\NativeMessagingHosts\\${hostName}" -Force | Out-Null`,
+    `Set-ItemProperty -Path "HKCU:\\Software\\Mozilla\\NativeMessagingHosts\\${hostName}" -Name "(default)" -Value "${stagedFirefoxManifestPath}"`,
   ].join('\n');
 }
 
@@ -97,15 +120,25 @@ const manifest = {
 };
 await writeFile(stagedManifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 
+const firefoxManifestTemplate = JSON.parse(await readFile(path.join(root, 'native-messaging', 'firefox', `${hostName}.json`), 'utf8'));
+const firefoxManifest = {
+  ...firefoxManifestTemplate,
+  path: stagedBinaryPath,
+  allowed_extensions: [firefoxExtensionId],
+};
+await writeFile(stagedFirefoxManifestPath, `${JSON.stringify(firefoxManifest, null, 2)}\n`);
+
 if (process.platform === 'win32') {
   await writeFile(chromeRegPath, registryFile('Google\\Chrome'));
   await writeFile(edgeRegPath, registryFile('Microsoft\\Edge'));
   await writeFile(braveRegPath, registryFile('BraveSoftware\\Brave-Browser'));
+  await writeFile(firefoxRegPath, firefoxRegistryFile());
   await writeFile(path.join(stageRoot, 'install-native-host.ps1'), [
     '$ErrorActionPreference = "Stop"',
     shellAppPathSnippet(),
     ...browserRegistryKeys.map(([, browserKey]) => shellInstallSnippet(browserKey)),
-    'Write-Host "AegisVault native messaging host registered for Chrome, Edge, and Brave."',
+    shellFirefoxInstallSnippet(),
+    'Write-Host "AegisVault native messaging host registered for Chrome, Edge, Brave, and Firefox."',
     '',
   ].join('\n'));
 }
@@ -113,11 +146,14 @@ if (process.platform === 'win32') {
 console.log(`Staged desktop Autofill native host in ${stageRoot}`);
 console.log(`- ${path.basename(stagedBinaryPath)}`);
 console.log(`- ${path.basename(stagedManifestPath)}`);
+console.log(`- ${path.basename(stagedFirefoxManifestPath)}`);
 console.log(`- ${path.basename(stagedAppPathConfigPath)}`);
 if (process.platform === 'win32') {
   console.log(`- ${path.basename(chromeRegPath)}`);
   console.log(`- ${path.basename(edgeRegPath)}`);
   console.log(`- ${path.basename(braveRegPath)}`);
+  console.log(`- ${path.basename(firefoxRegPath)}`);
   console.log('- install-native-host.ps1');
 }
 console.log(`Allowed Chromium extension ID: ${extensionId}`);
+console.log(`Allowed Firefox extension ID: ${firefoxExtensionId}`);

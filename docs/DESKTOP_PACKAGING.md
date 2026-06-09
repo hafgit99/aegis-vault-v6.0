@@ -110,7 +110,7 @@ Every desktop artifact upload should include:
 - GitHub artifact provenance attestation.
 - GitHub SBOM attestation linked to the generated CycloneDX SBOM.
 
-Windows desktop packaging also stages the Chromium native messaging host for the desktop Autofill extension as `aegisvault-desktop-autofill-host`. The current Brave development extension ID is `fbegblomolojcldifclfljlkddkcdehl`. Set the repository variable `AEGISVAULT_CHROMIUM_EXTENSION_ID` before release packaging if the packed or published extension ID changes, so the generated native messaging manifest restricts `allowed_origins` to the real extension ID.
+Windows desktop packaging also stages the Chromium and Firefox native messaging host manifests for the desktop Autofill extension as `aegisvault-desktop-autofill-host`. The current Brave development extension ID is `fbegblomolojcldifclfljlkddkcdehl`, and the default Firefox Gecko ID is `aegisvault-autofill@aegisvault.com`. Set the repository variables `AEGISVAULT_CHROMIUM_EXTENSION_ID` and `AEGISVAULT_FIREFOX_EXTENSION_ID` before release packaging if the packed or published extension IDs change, so the generated native messaging manifests restrict `allowed_origins` and `allowed_extensions` to the real extension IDs.
 
 Generate them locally after a desktop build with:
 
