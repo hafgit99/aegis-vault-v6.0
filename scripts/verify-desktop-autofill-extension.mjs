@@ -207,6 +207,9 @@ if (requireFile(tauriLibPath)) {
   const tauriLib = read(tauriLibPath);
   for (const required of [
     'tauri_plugin_single_instance::init',
+    'register_desktop_native_messaging_hosts',
+    'desktop_native_host_exe_path',
+    'HKCU\\\\Software\\\\BraveSoftware\\\\Brave-Browser\\\\NativeMessagingHosts',
     'get_webview_window("main")',
     'window.show()',
     'window.set_focus()',

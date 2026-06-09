@@ -1,5 +1,7 @@
+use std::env;
 use std::fs;
 use std::path::PathBuf;
+use std::process::Command;
 
 use tauri::Manager;
 
@@ -7,6 +9,10 @@ const PENDING_AUTOFILL_REQUEST_FILE: &str = "pending_autofill_request.json";
 const APPROVED_AUTOFILL_PAYLOAD_FILE: &str = "approved_autofill_payload.json";
 const PENDING_AUTOFILL_SAVE_REQUEST_FILE: &str = "pending_autofill_save_request.json";
 const MAX_AUTOFILL_PAYLOAD_BYTES: usize = 16 * 1024;
+const DESKTOP_NATIVE_HOST_NAME: &str = "com.aegisvault.desktop";
+const STABLE_CHROMIUM_AUTOFILL_EXTENSION_ID: &str = "cpocoejkonndmdedimnoklhhajkiccoc";
+const LEGACY_CHROMIUM_AUTOFILL_EXTENSION_ID: &str = "fbegblomolojcldifclfljlkddkcdehl";
+const FIREFOX_AUTOFILL_EXTENSION_ID: &str = "aegisvault-autofill@aegisvault.com";
 
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 const KEYCHAIN_SERVICE: &str = "AegisVault";
@@ -390,6 +396,102 @@ fn clear_pending_autofill_save_request(app: tauri::AppHandle) -> Result<(), Stri
     }
 }
 
+#[cfg(windows)]
+fn register_registry_default_value(path: &str, value: &str) -> Result<(), String> {
+    let status = Command::new("reg.exe")
+        .args(["add", path, "/ve", "/t", "REG_SZ", "/d", value, "/f"])
+        .status()
+        .map_err(|error| format!("Native messaging registry command could not run: {error}"))?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!("Native messaging registry command failed for {path}."))
+    }
+}
+
+#[cfg(windows)]
+fn desktop_native_host_exe_path() -> Result<PathBuf, String> {
+    let current_exe =
+        env::current_exe().map_err(|error| format!("Current executable could not be resolved: {error}"))?;
+    let app_dir = current_exe
+        .parent()
+        .ok_or_else(|| "Current executable directory could not be resolved.".to_string())?;
+    for filename in [
+        "aegisvault_native_messaging_host.exe",
+        "AegisVaultNativeMessagingHost.exe",
+    ] {
+        let candidate = app_dir.join(filename);
+        if candidate.exists() {
+            return Ok(candidate);
+        }
+    }
+    Err("AegisVault native messaging host executable was not found next to the desktop app.".to_string())
+}
+
+#[cfg(windows)]
+fn register_desktop_native_messaging_hosts(app: &tauri::AppHandle) -> Result<(), String> {
+    let host_exe = desktop_native_host_exe_path()?;
+    let manifest_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| format!("Native messaging manifest directory could not be resolved: {error}"))?
+        .join("native-messaging");
+    fs::create_dir_all(&manifest_dir)
+        .map_err(|error| format!("Native messaging manifest directory could not be created: {error}"))?;
+
+    let chromium_manifest_path = manifest_dir.join(format!("{DESKTOP_NATIVE_HOST_NAME}.json"));
+    let firefox_manifest_path = manifest_dir.join(format!("{DESKTOP_NATIVE_HOST_NAME}.firefox.json"));
+    let host_path = host_exe.to_string_lossy().to_string();
+
+    let chromium_manifest = serde_json::json!({
+        "name": DESKTOP_NATIVE_HOST_NAME,
+        "description": "AegisVault desktop native messaging bridge",
+        "path": host_path,
+        "type": "stdio",
+        "allowed_origins": [
+            format!("chrome-extension://{STABLE_CHROMIUM_AUTOFILL_EXTENSION_ID}/"),
+            format!("chrome-extension://{LEGACY_CHROMIUM_AUTOFILL_EXTENSION_ID}/")
+        ]
+    });
+    let firefox_manifest = serde_json::json!({
+        "name": DESKTOP_NATIVE_HOST_NAME,
+        "description": "AegisVault desktop native messaging bridge",
+        "path": host_path,
+        "type": "stdio",
+        "allowed_extensions": [FIREFOX_AUTOFILL_EXTENSION_ID]
+    });
+
+    fs::write(
+        &chromium_manifest_path,
+        serde_json::to_string_pretty(&chromium_manifest)
+            .map_err(|_| "Chromium native messaging manifest could not be serialized.".to_string())?,
+    )
+    .map_err(|error| format!("Chromium native messaging manifest could not be written: {error}"))?;
+    fs::write(
+        &firefox_manifest_path,
+        serde_json::to_string_pretty(&firefox_manifest)
+            .map_err(|_| "Firefox native messaging manifest could not be serialized.".to_string())?,
+    )
+    .map_err(|error| format!("Firefox native messaging manifest could not be written: {error}"))?;
+
+    let chromium_manifest_value = chromium_manifest_path.to_string_lossy().to_string();
+    let firefox_manifest_value = firefox_manifest_path.to_string_lossy().to_string();
+    for browser_key in [
+        "HKCU\\Software\\Google\\Chrome\\NativeMessagingHosts",
+        "HKCU\\Software\\Microsoft\\Edge\\NativeMessagingHosts",
+        "HKCU\\Software\\BraveSoftware\\Brave-Browser\\NativeMessagingHosts",
+    ] {
+        register_registry_default_value(
+            &format!("{browser_key}\\{DESKTOP_NATIVE_HOST_NAME}"),
+            &chromium_manifest_value,
+        )?;
+    }
+    register_registry_default_value(
+        &format!("HKCU\\Software\\Mozilla\\NativeMessagingHosts\\{DESKTOP_NATIVE_HOST_NAME}"),
+        &firefox_manifest_value,
+    )
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let builder = tauri::Builder::default();
@@ -405,6 +507,13 @@ pub fn run() {
 
     builder
         .plugin(tauri_plugin_biometry::init())
+        .setup(|app| {
+            #[cfg(windows)]
+            {
+                let _ = register_desktop_native_messaging_hosts(app.handle());
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             store_secret_key,
             get_secret_key,
