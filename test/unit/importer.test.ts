@@ -164,6 +164,32 @@ describe('importer', () => {
     });
   });
 
+  it('derives KeePass fallback titles from usernames and record numbers', () => {
+    const rows = parseKeePassCSV([
+      'Group,Title,Username,Password,URL,Notes',
+      ',,jane@example.com,secret,,',
+      ',,,,,standalone recovery note',
+      '/,,,,,root group note',
+    ].join('\n'), labels);
+
+    expect(rows[0]).toMatchObject({
+      type: 'login',
+      title: 'Login (jane@example.com)',
+      username: 'jane@example.com',
+      password: 'secret',
+    });
+    expect(rows[1]).toMatchObject({
+      type: 'note',
+      title: 'Record #2',
+      notes: 'standalone recovery note',
+    });
+    expect(rows[2]).toMatchObject({
+      type: 'note',
+      title: 'Record #3',
+      notes: 'root group note\n\nKeePass group: /',
+    });
+  });
+
   it('converts imported partial entries to complete vault entries', () => {
     const entry = convertImportedToVaultEntry({ type: 'note', notes: 'private' }, labels);
 
@@ -258,6 +284,8 @@ describe('importer', () => {
 
   it('parses empty Bitwarden exports and optional card fallbacks', () => {
     expect(parseBitwardenJSON(JSON.stringify({}), labels)).toEqual([]);
+    expect(parseBitwardenJSON(JSON.stringify(null), labels)).toEqual([]);
+    expect(parseBitwardenJSON(JSON.stringify({ items: { not: 'an array' } }), labels)).toEqual([]);
 
     const rows = parseBitwardenJSON(JSON.stringify({
       items: [
@@ -366,6 +394,8 @@ describe('importer', () => {
 
   it('handles empty 1Password exports and missing matching fields without throwing', () => {
     expect(parse1PasswordJSON(JSON.stringify({}), labels)).toEqual([]);
+    expect(parse1PasswordJSON(JSON.stringify(false), labels)).toEqual([]);
+    expect(parse1PasswordJSON(JSON.stringify({ items: { not: 'an array' } }), labels)).toEqual([]);
 
     const rows = parse1PasswordJSON(JSON.stringify([
       {
