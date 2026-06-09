@@ -56,18 +56,18 @@ function firefoxRegistryFile() {
 }
 
 function shellInstallSnippet(browserKey) {
+  const registryPath = `HKCU\\Software\\${browserKey}\\NativeMessagingHosts\\${hostName}`;
   return [
     `# ${browserKey} native host registration`,
-    `New-Item -Path "HKCU:\\Software\\${browserKey}\\NativeMessagingHosts\\${hostName}" -Force | Out-Null`,
-    `Set-ItemProperty -Path "HKCU:\\Software\\${browserKey}\\NativeMessagingHosts\\${hostName}" -Name "(default)" -Value "${stagedManifestPath}"`,
+    `& reg.exe add "${registryPath}" /ve /t REG_SZ /d "${stagedManifestPath}" /f | Out-Null`,
   ].join('\n');
 }
 
 function shellFirefoxInstallSnippet() {
+  const registryPath = `HKCU\\Software\\Mozilla\\NativeMessagingHosts\\${hostName}`;
   return [
     '# Firefox native host registration',
-    `New-Item -Path "HKCU:\\Software\\Mozilla\\NativeMessagingHosts\\${hostName}" -Force | Out-Null`,
-    `Set-ItemProperty -Path "HKCU:\\Software\\Mozilla\\NativeMessagingHosts\\${hostName}" -Name "(default)" -Value "${stagedFirefoxManifestPath}"`,
+    `& reg.exe add "${registryPath}" /ve /t REG_SZ /d "${stagedFirefoxManifestPath}" /f | Out-Null`,
   ].join('\n');
 }
 

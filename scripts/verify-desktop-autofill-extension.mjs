@@ -69,6 +69,9 @@ if (requireFile(firefoxManifestPath)) {
   if (!firefoxManifest.applications?.gecko?.id?.includes('aegisvault-autofill')) {
     failures.push('Firefox extension must define a stable Gecko extension ID.');
   }
+  if (!firefoxManifest.browser_specific_settings?.gecko?.id?.includes('aegisvault-autofill')) {
+    failures.push('Firefox extension must define browser_specific_settings.gecko.id for modern Firefox builds.');
+  }
   if (!firefoxManifest.background?.scripts?.some(value => value.includes('background.js'))) {
     failures.push('Firefox extension must define the shared background script.');
   }
@@ -226,6 +229,8 @@ if (requireFile(stageHostScriptPath)) {
     'install-edge-native-host.reg',
     'install-brave-native-host.reg',
     'install-firefox-native-host.reg',
+    'reg.exe add',
+    '/ve /t REG_SZ',
     'Mozilla\\\\NativeMessagingHosts',
     'BraveSoftware\\\\Brave-Browser',
     'NativeMessagingHosts',
