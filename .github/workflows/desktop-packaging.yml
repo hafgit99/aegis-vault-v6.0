@@ -112,7 +112,7 @@ jobs:
 
       - name: Upload SBOM
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sbom
           path: sbom/
@@ -123,7 +123,7 @@ jobs:
 
       - name: Upload security evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: security-evidence
           path: security-evidence/
@@ -373,7 +373,7 @@ jobs:
 
       - name: Upload desktop Autofill native host
         if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: aegisvault-desktop-autofill-host
           path: desktop-autofill-host/
@@ -381,7 +381,7 @@ jobs:
 
       - name: Upload desktop Autofill browser extension
         if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: aegisvault-desktop-autofill-extension
           path: |
@@ -403,14 +403,14 @@ jobs:
           sbom-path: sbom/aegisvault.cdx.json
 
       - name: Upload desktop SBOM
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact-name }}-sbom
           path: sbom/
           retention-days: 30
 
       - name: Upload desktop artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact-name }}
           path: desktop-artifacts/${{ matrix.artifact-name }}/
