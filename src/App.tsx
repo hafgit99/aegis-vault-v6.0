@@ -585,7 +585,7 @@ function AppWorkspace() {
                       initial={{ opacity: 0, y: -6, scale: 0.98 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -6, scale: 0.98 }}
-                      className="absolute right-0 top-11 z-50 w-44 rounded-xl border border-outline-variant/25 bg-surface-container-high shadow-2xl shadow-black/30 p-1.5"
+                      className="fixed left-3 right-3 top-[calc(env(safe-area-inset-top)+7rem)] z-[120] max-h-[45vh] overflow-y-auto rounded-xl border border-outline-variant/25 bg-surface-container-high shadow-2xl shadow-black/30 p-1.5 sm:absolute sm:left-auto sm:right-0 sm:top-11 sm:z-50 sm:w-44"
                       role="menu"
                     >
                       {supportedLanguages.map((language) => (
