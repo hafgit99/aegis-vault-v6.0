@@ -66,8 +66,7 @@ export class VaultCryptoService {
         toBufferSource(cipherArray)
       );
       return new TextDecoder().decode(plain);
-    } catch (error) {
-      console.error('DECRYPTION REAL ERROR:', error);
+    } catch {
       return null;
     }
   }

@@ -1,5 +1,5 @@
 import { VaultEntry } from '../types';
-import { analyzePasswordStrength, readMasterPasswordAudit } from './passwordStrength';
+import { readMasterPasswordAudit } from './passwordStrength';
 
 export interface VaultHealthSnapshot {
   activeEntries: VaultEntry[];
@@ -34,7 +34,7 @@ const isWeakLoginEntry = (entry: VaultEntry): boolean => (
   entry.type === 'login'
   && !!entry.password
   && entry.password.trim().length > 0
-  && (entry.password.length < 12 || analyzePasswordStrength(entry.password).score < 75)
+  && (entry.password.length < 12 || entry.strength === 'GOOD')
 );
 
 export function getActiveVaultEntries(entries: VaultEntry[]): VaultEntry[] {

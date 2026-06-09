@@ -74,6 +74,24 @@ describe('vault health', () => {
     expect(health.overallScore).toBe(100);
   });
 
+  it('uses persisted zxcvbn-backed strength labels instead of the synchronous fallback', () => {
+    const health = calculateVaultHealth([
+      entry({
+        id: 'numeric-pattern',
+        password: '1234567890ab',
+        strength: 'GOOD',
+      }),
+      entry({
+        id: 'zxcvbn-strong',
+        password: 'Correct-Horse-Battery-Staple-2026!',
+        strength: 'EXCELLENT',
+      }),
+    ]);
+
+    expect(health.weakEntries.map((item) => item.id)).toEqual(['numeric-pattern']);
+    expect(health.weakCount).toBe(1);
+  });
+
   it('records plaintext export audit as local evidence', () => {
     recordPlaintextExportAudit(new Date('2026-05-29T12:30:00.000Z'));
 

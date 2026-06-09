@@ -84,7 +84,6 @@ export async function encryptData(plaintext: string, password: string): Promise<
       kdf: BACKUP_ARGON2,
     };
   } catch (err) {
-    console.error("Encryption failed:", err);
     throw createSecurityError('BACKUP_ENCRYPTION_FAILED', localizedMessage('encryptionFailed'), err);
   }
 }
@@ -119,7 +118,6 @@ export async function decryptData(
   } catch (err) {
     if (!kdf) {
       if (!options.allowLegacyPBKDF2) {
-        console.error("Decryption failed:", err);
         throw createSecurityError('BACKUP_DECRYPTION_FAILED', localizedMessage('decryptionFailed'), err);
       }
       try {
@@ -130,7 +128,6 @@ export async function decryptData(
         }, options);
       } catch {}
     }
-    console.error("Decryption failed:", err);
     throw createSecurityError('BACKUP_DECRYPTION_FAILED', localizedMessage('decryptionFailed'), err);
   }
 }

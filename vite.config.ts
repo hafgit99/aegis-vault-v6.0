@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), tailwindcss()],
     esbuild: mode === 'production'
       ? {
+          drop: ['console'],
           pure: ['console.log', 'console.debug', 'console.info', 'console.warn', 'console.error'],
         }
       : undefined,

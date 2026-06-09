@@ -271,7 +271,7 @@ export class SQLiteOPFS {
     this.isDirty = true;
     if (this.saveTimeout) clearTimeout(this.saveTimeout);
     this.saveTimeout = setTimeout(() => {
-      this.persistToOPFS().catch(console.error);
+      this.persistToOPFS().catch(() => {});
     }, 500);
   }
 
