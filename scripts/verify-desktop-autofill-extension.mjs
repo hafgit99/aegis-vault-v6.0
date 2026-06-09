@@ -26,8 +26,18 @@ const backgroundPath = 'browser-extension/chromium/src/background.js';
 const contentPath = 'browser-extension/chromium/src/content-script.js';
 const stylesPath = 'browser-extension/chromium/src/content-styles.css';
 const iconPath = 'browser-extension/chromium/icons/aegisvault-128.png';
+const icon16Path = 'browser-extension/chromium/icons/aegisvault-16.png';
 const icon32Path = 'browser-extension/chromium/icons/aegisvault-32.png';
+const icon48Path = 'browser-extension/chromium/icons/aegisvault-48.png';
 const icon64Path = 'browser-extension/chromium/icons/aegisvault-64.png';
+const firefoxBackgroundPath = 'browser-extension/firefox/src/background.js';
+const firefoxContentPath = 'browser-extension/firefox/src/content-script.js';
+const firefoxStylesPath = 'browser-extension/firefox/src/content-styles.css';
+const firefoxIcon16Path = 'browser-extension/firefox/icons/aegisvault-16.png';
+const firefoxIcon32Path = 'browser-extension/firefox/icons/aegisvault-32.png';
+const firefoxIcon48Path = 'browser-extension/firefox/icons/aegisvault-48.png';
+const firefoxIcon64Path = 'browser-extension/firefox/icons/aegisvault-64.png';
+const firefoxIcon128Path = 'browser-extension/firefox/icons/aegisvault-128.png';
 const nativeManifestPath = 'native-messaging/chromium/com.aegisvault.desktop.json';
 const firefoxNativeManifestPath = 'native-messaging/firefox/com.aegisvault.desktop.json';
 const docsPath = 'docs/DESKTOP_AUTOFILL_EXTENSION.md';
@@ -43,7 +53,7 @@ if (requireFile(manifestPath)) {
   if (!manifest.permissions?.includes('nativeMessaging')) failures.push('Extension must request nativeMessaging permission.');
   if (manifest.permissions?.includes('storage')) failures.push('Extension must not request storage permission for vault data.');
   if (!manifest.background?.service_worker?.includes('background.js')) failures.push('Extension must define a background service worker.');
-  if (!manifest.action?.default_icon?.['32']?.includes('aegisvault-32.png')) {
+  if (!manifest.action?.default_icon?.['16']?.includes('aegisvault-16.png') || !manifest.action?.default_icon?.['48']?.includes('aegisvault-48.png')) {
     failures.push('Chromium extension must define a toolbar action icon.');
   }
   if (!manifest.content_scripts?.[0]?.js?.some(value => value.includes('content-script.js'))) {
@@ -62,7 +72,7 @@ if (requireFile(firefoxManifestPath)) {
   if (!firefoxManifest.background?.scripts?.some(value => value.includes('background.js'))) {
     failures.push('Firefox extension must define the shared background script.');
   }
-  if (!firefoxManifest.browser_action?.default_icon?.['32']?.includes('aegisvault-32.png')) {
+  if (!firefoxManifest.browser_action?.default_icon?.['16']?.includes('aegisvault-16.png') || !firefoxManifest.browser_action?.default_icon?.['48']?.includes('aegisvault-48.png')) {
     failures.push('Firefox extension must define a toolbar browser_action icon.');
   }
   if (!firefoxManifest.content_scripts?.[0]?.js?.some(value => value.includes('content-script.js'))) {
@@ -108,8 +118,18 @@ if (requireFile(contentPath)) {
 }
 
 requireFile(stylesPath);
+requireFile(icon16Path);
 requireFile(icon32Path);
+requireFile(icon48Path);
 requireFile(icon64Path);
+requireFile(firefoxBackgroundPath);
+requireFile(firefoxContentPath);
+requireFile(firefoxStylesPath);
+requireFile(firefoxIcon16Path);
+requireFile(firefoxIcon32Path);
+requireFile(firefoxIcon48Path);
+requireFile(firefoxIcon64Path);
+requireFile(firefoxIcon128Path);
 
 if (requireFile(iconPath)) {
   if (statSync(join(root, iconPath)).size < 1024) {

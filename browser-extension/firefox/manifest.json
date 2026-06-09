@@ -23,7 +23,9 @@
   "browser_action": {
     "default_title": "AegisVault Autofill",
     "default_icon": {
+      "16": "icons/aegisvault-16.png",
       "32": "icons/aegisvault-32.png",
+      "48": "icons/aegisvault-48.png",
       "64": "icons/aegisvault-64.png",
       "128": "icons/aegisvault-128.png"
     }
@@ -37,7 +39,9 @@
     }
   ],
   "icons": {
+    "16": "icons/aegisvault-16.png",
     "32": "icons/aegisvault-32.png",
+    "48": "icons/aegisvault-48.png",
     "64": "icons/aegisvault-64.png",
     "128": "icons/aegisvault-128.png"
   }
