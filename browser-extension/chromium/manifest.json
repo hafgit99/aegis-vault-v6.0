@@ -3,6 +3,7 @@
   "name": "AegisVault Autofill",
   "description": "Secure local-first form fill and save handoff for AegisVault desktop.",
   "version": "0.1.0",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArfIq4okHY85oQnijOSjAEqjyDbRaa/GJLZjZapNp8KBlFYwzlX9M7jXS4+ZKnT4kto+JHtzH8+aYS+/WPWWmu5qmLJETBsLhmsFTS2M+Qa+L1xkKXMRrpcucL6GcIgIQWdJAkPIZlraqeFRKdfNqL5KmnY55KtZRCdQP7KOCUyAU9sy4D8Dxevy4UD+sEtSRxPUnw741I5LMjirvkhomrocnI0bt7eZo53gOyXP0VJPvSyjLbiPRsVSTpED2PdiUJo6u123zPn4Zj3672kjxoDj4TvTMamioOXgaBZNZeevw7ahHahneiN+QzOamKhI0L2d0sRwYAg2Ph/XNY3Q4OwIDAQAB",
   "minimum_chrome_version": "116",
   "permissions": ["nativeMessaging", "activeTab"],
   "host_permissions": ["https://*/*", "http://localhost/*", "http://127.0.0.1/*"],

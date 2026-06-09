@@ -1,8 +1,11 @@
 import { copyFile, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 const root = process.cwd();
-const defaultChromiumExtensionId = 'fbegblomolojcldifclfljlkddkcdehl';
+const stableChromiumExtensionId = 'cpocoejkonndmdedimnoklhhajkiccoc';
+const legacyChromiumExtensionId = 'fbegblomolojcldifclfljlkddkcdehl';
+const defaultChromiumExtensionId = stableChromiumExtensionId;
 const defaultFirefoxExtensionId = 'aegisvault-autofill@aegisvault.com';
 const extensionId = process.env.AEGISVAULT_CHROMIUM_EXTENSION_ID || process.argv[2] || defaultChromiumExtensionId;
 const firefoxExtensionId = process.env.AEGISVAULT_FIREFOX_EXTENSION_ID || process.argv[3] || defaultFirefoxExtensionId;
@@ -33,6 +36,22 @@ function chromeOrigin(id) {
   return `chrome-extension://${id}/`;
 }
 
+function uniqueOrigins(ids) {
+  return [...new Set(ids.filter(Boolean).map(chromeOrigin))];
+}
+
+function resolveInstalledAppPath() {
+  if (process.platform !== 'win32') return '';
+  const candidates = [
+    path.join(stageRoot, 'AegisVault.exe'),
+    process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'AegisVault', 'AegisVault.exe') : '',
+    process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'Programs', 'AegisVault', 'AegisVault.exe') : '',
+    process.env.ProgramFiles ? path.join(process.env.ProgramFiles, 'AegisVault', 'AegisVault.exe') : '',
+    process.env['ProgramFiles(x86)'] ? path.join(process.env['ProgramFiles(x86)'], 'AegisVault', 'AegisVault.exe') : '',
+  ];
+  return candidates.find(candidate => candidate && existsSync(candidate)) || '';
+}
+
 function registryFile(browserKey) {
   const escapedPath = stagedManifestPath.replaceAll('\\', '\\\\');
   return [
@@ -57,17 +76,25 @@ function firefoxRegistryFile() {
 
 function shellInstallSnippet(browserKey) {
   const registryPath = `HKCU\\Software\\${browserKey}\\NativeMessagingHosts\\${hostName}`;
+  const userRegistryPath = `HKEY_USERS\\$currentUserSid\\Software\\${browserKey}\\NativeMessagingHosts\\${hostName}`;
   return [
     `# ${browserKey} native host registration`,
     `& reg.exe add "${registryPath}" /ve /t REG_SZ /d "${stagedManifestPath}" /f | Out-Null`,
+    'if ($currentUserSid) {',
+    `  & reg.exe add "${userRegistryPath}" /ve /t REG_SZ /d "${stagedManifestPath}" /f | Out-Null`,
+    '}',
   ].join('\n');
 }
 
 function shellFirefoxInstallSnippet() {
   const registryPath = `HKCU\\Software\\Mozilla\\NativeMessagingHosts\\${hostName}`;
+  const userRegistryPath = `HKEY_USERS\\$currentUserSid\\Software\\Mozilla\\NativeMessagingHosts\\${hostName}`;
   return [
     '# Firefox native host registration',
     `& reg.exe add "${registryPath}" /ve /t REG_SZ /d "${stagedFirefoxManifestPath}" /f | Out-Null`,
+    'if ($currentUserSid) {',
+    `  & reg.exe add "${userRegistryPath}" /ve /t REG_SZ /d "${stagedFirefoxManifestPath}" /f | Out-Null`,
+    '}',
   ].join('\n');
 }
 
@@ -110,13 +137,13 @@ await assertBuiltHost();
 await rm(stageRoot, { recursive: true, force: true });
 await mkdir(stageRoot, { recursive: true });
 await copyFile(sourceBinaryPath, stagedBinaryPath);
-await writeFile(stagedAppPathConfigPath, '');
+await writeFile(stagedAppPathConfigPath, resolveInstalledAppPath());
 
 const manifestTemplate = JSON.parse(await readFile(path.join(root, 'native-messaging', 'chromium', `${hostName}.json`), 'utf8'));
 const manifest = {
   ...manifestTemplate,
   path: stagedBinaryPath,
-  allowed_origins: [chromeOrigin(extensionId)],
+  allowed_origins: uniqueOrigins([extensionId, stableChromiumExtensionId, legacyChromiumExtensionId]),
 };
 await writeFile(stagedManifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 
@@ -135,6 +162,7 @@ if (process.platform === 'win32') {
   await writeFile(firefoxRegPath, firefoxRegistryFile());
   await writeFile(path.join(stageRoot, 'install-native-host.ps1'), [
     '$ErrorActionPreference = "Stop"',
+    '$currentUserSid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value',
     shellAppPathSnippet(),
     ...browserRegistryKeys.map(([, browserKey]) => shellInstallSnippet(browserKey)),
     shellFirefoxInstallSnippet(),

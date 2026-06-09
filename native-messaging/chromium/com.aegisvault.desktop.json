@@ -4,6 +4,7 @@
   "path": "AegisVaultNativeMessagingHost.exe",
   "type": "stdio",
   "allowed_origins": [
-    "chrome-extension://REPLACE_WITH_CHROME_EXTENSION_ID/"
+    "chrome-extension://cpocoejkonndmdedimnoklhhajkiccoc/",
+    "chrome-extension://fbegblomolojcldifclfljlkddkcdehl/"
   ]
 }

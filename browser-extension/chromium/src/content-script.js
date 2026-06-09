@@ -88,6 +88,11 @@
     activePrompt = null;
   }
 
+  function statusMessage(response, fallback) {
+    if (!response) return fallback;
+    return response.error ? `${response.status || fallback}: ${response.error}` : response.status || fallback;
+  }
+
   function showInlineButton(passwordField) {
     if (document.querySelector(`.${BUTTON_CLASS}`)) return;
 
@@ -118,7 +123,7 @@
     });
 
     if (!response?.ok || !response.credential?.password) {
-      showStatus(response?.status || 'AegisVault unavailable');
+      showStatus(statusMessage(response, 'AegisVault unavailable'));
       return;
     }
 
@@ -186,7 +191,7 @@
         action: 'save',
         payload,
       });
-      showStatus(response?.ok ? 'Open AegisVault to confirm save.' : response?.status || 'Save failed');
+      showStatus(response?.ok ? 'Open AegisVault to confirm save.' : statusMessage(response, 'Save failed'));
     });
     prompt.appendChild(save);
 

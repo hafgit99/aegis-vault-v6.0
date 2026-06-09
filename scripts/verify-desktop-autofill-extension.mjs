@@ -50,6 +50,7 @@ const stageExtensionScriptPath = 'scripts/stage-browser-extension.mjs';
 if (requireFile(manifestPath)) {
   const manifest = readJson(manifestPath);
   if (manifest.manifest_version !== 3) failures.push('Chromium extension must use Manifest V3.');
+  if (!manifest.key || manifest.key.length < 300) failures.push('Chromium extension must define a stable public key so unpacked installs keep the same extension ID.');
   if (!manifest.permissions?.includes('nativeMessaging')) failures.push('Extension must request nativeMessaging permission.');
   if (manifest.permissions?.includes('storage')) failures.push('Extension must not request storage permission for vault data.');
   if (!manifest.background?.service_worker?.includes('background.js')) failures.push('Extension must define a background service worker.');
@@ -152,6 +153,12 @@ if (requireFile(nativeManifestPath)) {
   if (!nativeManifest.allowed_origins?.[0]?.startsWith('chrome-extension://')) {
     failures.push('Native messaging manifest must restrict allowed_origins to extension IDs.');
   }
+  if (!nativeManifest.allowed_origins?.includes('chrome-extension://cpocoejkonndmdedimnoklhhajkiccoc/')) {
+    failures.push('Native messaging manifest must allow the stable Chromium extension ID.');
+  }
+  if (!nativeManifest.allowed_origins?.includes('chrome-extension://fbegblomolojcldifclfljlkddkcdehl/')) {
+    failures.push('Native messaging manifest must keep the legacy Chromium extension ID during migration.');
+  }
 }
 
 if (requireFile(firefoxNativeManifestPath)) {
@@ -222,6 +229,7 @@ if (requireFile(stageHostScriptPath)) {
   for (const required of [
     'AEGISVAULT_CHROMIUM_EXTENSION_ID',
     'AEGISVAULT_FIREFOX_EXTENSION_ID',
+    'cpocoejkonndmdedimnoklhhajkiccoc',
     'aegisvault-autofill@aegisvault.com',
     'fbegblomolojcldifclfljlkddkcdehl',
     'AegisVaultNativeMessagingHost.exe',

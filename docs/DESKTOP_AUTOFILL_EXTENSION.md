@@ -84,7 +84,7 @@ Save response:
 - The extension must never log usernames, passwords, or raw form values.
 - The native host must perform origin matching against the unlocked vault and require explicit AegisVault approval before returning a fill credential.
 - Save requests must be staged for AegisVault confirmation, not persisted directly by the extension.
-- The Chromium native messaging manifest must restrict `allowed_origins` to the real extension ID before release.
+- The Chromium native messaging manifest must restrict `allowed_origins` to the stable extension ID before release.
 - The Firefox native messaging manifest must restrict `allowed_extensions` to the stable Gecko extension ID before release.
 
 ## Current Status
@@ -109,7 +109,6 @@ Build and stage the Chromium native host:
 ```powershell
 npm run desktop:autofill:extension:stage
 npm run desktop:autofill:host:build
-$env:AEGISVAULT_CHROMIUM_EXTENSION_ID = "fbegblomolojcldifclfljlkddkcdehl"
 $env:AEGISVAULT_FIREFOX_EXTENSION_ID = "aegisvault-autofill@aegisvault.com"
 npm run desktop:autofill:host:stage
 ```
@@ -119,7 +118,7 @@ The extension staging command writes:
 - `desktop-autofill-extension/chromium`
 - `desktop-autofill-extension/firefox`
 
-Use this directory with Chrome, Edge, or Brave `Load unpacked` during local testing. The current Brave development extension ID is `fbegblomolojcldifclfljlkddkcdehl`. After loading a different build, copy the generated extension ID and rerun the host staging command with `AEGISVAULT_CHROMIUM_EXTENSION_ID`.
+Use this directory with Chrome, Edge, or Brave `Load unpacked` during local testing. The Chromium manifest includes a stable public `key`, so Chrome, Edge, and Brave should all use the same local extension ID: `cpocoejkonndmdedimnoklhhajkiccoc`. The legacy Brave development ID `fbegblomolojcldifclfljlkddkcdehl` remains accepted during migration, but new installs should use the stable ID.
 
 Use `desktop-autofill-extension/firefox` with Firefox `about:debugging#/runtime/this-firefox` during local testing. Load the staged `manifest.json` as a temporary add-on. The default Firefox Gecko ID is `aegisvault-autofill@aegisvault.com`; if the published add-on ID changes, rerun host staging with `AEGISVAULT_FIREFOX_EXTENSION_ID`.
 
@@ -135,9 +134,9 @@ The host staging command writes:
   - `install-firefox-native-host.reg`
   - `install-native-host.ps1`
 
-For Windows development, import one of the `.reg` files or run the PowerShell installer after reviewing the generated manifest path. Production installers should perform the same registration during install and remove it during uninstall.
+For Windows development, import one of the `.reg` files or run the PowerShell installer after reviewing the generated manifest path. The PowerShell installer writes both `HKCU` and the current `HKEY_USERS\<sid>` path so elevated repair runs still register the native host for the interactive user. Production installers should perform the same registration during install and remove it during uninstall.
 
-The environment variables `AEGISVAULT_CHROMIUM_EXTENSION_ID` and `AEGISVAULT_FIREFOX_EXTENSION_ID` must be set to the packed/published extension IDs before release packaging. The current Chromium default is the Brave development ID `fbegblomolojcldifclfljlkddkcdehl`. The current Firefox default is `aegisvault-autofill@aegisvault.com`. For broad public distribution, publish the extension or pack it with a stable extension key/Gecko ID so every user receives the same trusted native messaging binding.
+The environment variables `AEGISVAULT_CHROMIUM_EXTENSION_ID` and `AEGISVAULT_FIREFOX_EXTENSION_ID` can override the packed/published extension IDs before release packaging. The current Chromium default is the stable local ID `cpocoejkonndmdedimnoklhhajkiccoc`; the legacy Brave ID `fbegblomolojcldifclfljlkddkcdehl` is also allowed for migration. The current Firefox default is `aegisvault-autofill@aegisvault.com`. For broad public distribution, publish the extension or pack it with a stable extension key/Gecko ID so every user receives the same trusted native messaging binding.
 
 Next implementation step:
 
