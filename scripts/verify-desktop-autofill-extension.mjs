@@ -42,6 +42,7 @@ const nativeManifestPath = 'native-messaging/chromium/com.aegisvault.desktop.jso
 const firefoxNativeManifestPath = 'native-messaging/firefox/com.aegisvault.desktop.json';
 const docsPath = 'docs/DESKTOP_AUTOFILL_EXTENSION.md';
 const nativeHostPath = 'src-tauri/src/bin/aegisvault_native_messaging_host.rs';
+const tauriLibPath = 'src-tauri/src/lib.rs';
 const cargoTomlPath = 'src-tauri/Cargo.toml';
 const packageJsonPath = 'package.json';
 const stageHostScriptPath = 'scripts/stage-desktop-autofill-host.mjs';
@@ -197,8 +198,20 @@ if (requireFile(nativeHostPath)) {
 
 if (requireFile(cargoTomlPath)) {
   const cargoToml = read(cargoTomlPath);
-  for (const required of ['serde =', 'serde_json =']) {
+  for (const required of ['serde =', 'serde_json =', 'tauri-plugin-single-instance']) {
     if (!cargoToml.includes(required)) failures.push(`src-tauri/Cargo.toml must include "${required}" for the native messaging host.`);
+  }
+}
+
+if (requireFile(tauriLibPath)) {
+  const tauriLib = read(tauriLibPath);
+  for (const required of [
+    'tauri_plugin_single_instance::init',
+    'get_webview_window("main")',
+    'window.show()',
+    'window.set_focus()',
+  ]) {
+    if (!tauriLib.includes(required)) failures.push(`src-tauri/src/lib.rs must include "${required}" so browser Autofill reuses the unlocked desktop window.`);
   }
 }
 

@@ -342,8 +342,9 @@ fn restrict_approved_autofill_payload_permissions(path: &PathBuf) -> Result<(), 
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        fs::set_permissions(path, fs::Permissions::from_mode(0o600))
-            .map_err(|error| format!("Approved autofill payload permissions could not be restricted: {error}"))?;
+        fs::set_permissions(path, fs::Permissions::from_mode(0o600)).map_err(|error| {
+            format!("Approved autofill payload permissions could not be restricted: {error}")
+        })?;
     }
 
     #[cfg(not(unix))]
@@ -391,7 +392,18 @@ fn clear_pending_autofill_save_request(app: tauri::AppHandle) -> Result<(), Stri
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+        if let Some(window) = app.get_webview_window("main") {
+            let _ = window.unminimize();
+            let _ = window.show();
+            let _ = window.set_focus();
+        }
+    }));
+
+    builder
         .plugin(tauri_plugin_biometry::init())
         .invoke_handler(tauri::generate_handler![
             store_secret_key,
